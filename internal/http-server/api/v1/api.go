@@ -2,10 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
@@ -31,8 +30,6 @@ func New(router *chi.Mux, logger *logging.Logger, storage *postgres.Storage, cfg
 		r.Get("/category", h.getCategoriesByType)
 		r.Get("/login", h.checkAccountType)
 	})
-
-	router.Get("/date/video/{filename}", h.serveVideoFile)
 }
 
 type CategoryResponse struct {
@@ -40,32 +37,15 @@ type CategoryResponse struct {
 	Categories  []string `json:"categories"`
 }
 
-func (h *Handler) serveVideoFile(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "filename")
-	if filename == "" {
-		http.Error(w, "Filename not specified", http.StatusBadRequest)
-		return
-	}
-
-	// Безопасное формирование пути к файлу
-	filePath := filepath.Join(h.cfg.Media.VideoPath, filename)
-
-	// Проверяем, что файл существует
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		h.logger.Error("File not found", "filename", filename, sl.Err(err))
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-
-	// Устанавливаем правильный Content-Type
-	w.Header().Set("Content-Type", "video/mp4")
-
-	// Отдаем файл
-	http.ServeFile(w, r, filePath)
-}
-
 // GET /v1/video?type={type}&category={category}
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.video.get"
+
+	h.logger = h.logger.With(
+		"op", op,
+		"request_id", middleware.GetReqID(r.Context()),
+	)
+
 	contentType := r.URL.Query().Get("type")
 	category := r.URL.Query().Get("category")
 
@@ -84,6 +64,13 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 // GET /v1/category?type={type}
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.category.get"
+
+	h.logger = h.logger.With(
+		"op", op,
+		"request_id", middleware.GetReqID(r.Context()),
+	)
+
 	contentType := r.URL.Query().Get("type")
 
 	categories, err := h.storage.GetCategoriesByContentType(r.Context(), contentType)
@@ -106,6 +93,13 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 // GET /v1/login?username={username}&type={type}
 func (h *Handler) checkAccountType(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.user.get"
+
+	h.logger = h.logger.With(
+		"op", op,
+		"request_id", middleware.GetReqID(r.Context()),
+	)
+
 	username := r.URL.Query().Get("username")
 	contentType := r.URL.Query().Get("type")
 

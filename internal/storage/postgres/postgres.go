@@ -156,7 +156,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
         JOIN categories c ON vc.category_id = c.id
         JOIN category_content_types cct ON c.id = cct.category_id
         JOIN content_types ct ON cct.content_type_id = ct.id
-        WHERE ct.name = $1 AND c.name = $2
+        WHERE LOWER(ct.name) = LOWER($1) AND LOWER(c.name) = LOWER($2)
         ORDER BY v.created_at DESC
     `
 
@@ -195,7 +195,7 @@ func (s *Storage) GetCategoriesByContentType(ctx context.Context, contentType st
 		FROM categories c
 		JOIN category_content_types cct ON c.id = cct.category_id
 		JOIN content_types ct ON cct.content_type_id = ct.id
-		WHERE ct.name = $1
+		WHERE LOWER(ct.name) = LOWER($1)
 		ORDER BY c.name
 	`
 
@@ -229,7 +229,7 @@ func (s *Storage) CheckAccountType(ctx context.Context, username, contentType st
 			SELECT 1 
 			FROM accounts a
 			JOIN content_types ct ON a.content_type_id = ct.id
-			WHERE a.username = $1 AND ct.name = $2
+			WHERE LOWER(a.username) = LOWER($1) AND LOWER(ct.name) = LOWER($2)
 		)
 	`
 
@@ -245,5 +245,5 @@ func (s *Storage) constructFullMediaURL(relativePath string) string {
 	if relativePath == "" {
 		return ""
 	}
-	return s.cfg.Media.BaseURL + relativePath
+	return s.cfg.Media.BaseURL + "video/" + relativePath
 }

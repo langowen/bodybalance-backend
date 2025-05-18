@@ -23,12 +23,13 @@ var (
 )
 
 func main() {
+	// Инициализируем конфиг
 	cfg := config.MustGetConfig()
 
+	// Инициализируем лог
 	logger := newLogger(cfg)
 
-	var err error
-
+	// Добавляем логер в контекст
 	ctx, cancel := context.WithCancel(logging.ContextWithLogger(context.Background(), logger))
 	defer cancel()
 
@@ -46,6 +47,10 @@ func main() {
 
 	logger.With(
 		"Config params", cfg,
+		"go_version", runtime.Version(),
+		"build_time", BuildTime,
+		"git_commit", GitCommit,
+		"version", Version,
 	).Info("starting server")
 
 	done := make(chan os.Signal, 1)
@@ -69,8 +74,6 @@ func main() {
 
 	if err := srv.Shutdown(ctxServer); err != nil {
 		logger.Error("failed to stop server", sl.Err(err))
-
-		return
 	}
 
 	logger.Info("server stopped")
@@ -87,10 +90,6 @@ func newLogger(cfg *config.Config) *logging.Logger {
 		slog.Group("program_info",
 			slog.Int("num_goroutines", runtime.NumGoroutine()),
 			slog.Int("pid", os.Getpid()),
-			slog.String("go_version", runtime.Version()),
-			slog.String("build_time", BuildTime),
-			slog.String("git_commit", GitCommit),
-			slog.String("version", Version),
 		))
 
 	return logger

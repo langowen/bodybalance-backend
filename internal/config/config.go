@@ -39,7 +39,7 @@ type DatabaseConfig struct {
 }
 
 type HTTPServer struct {
-	Address     string        `yaml:"address" env:"HTTP_ADDRESS" env-default:"localhost:8083"`
+	Port        string        `yaml:"port" env:"HTTP_PORT" env-default:"8083"`
 	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"20s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 }
@@ -99,7 +99,7 @@ func (c *Config) LogValue() logging.Value {
 		logging.StringAttr("db_timeout", formatDuration(c.Database.Timeout)), // Форматируем
 
 		//HTTPServer
-		logging.StringAttr("http_host", c.HTTPServer.Address),
+		logging.StringAttr("http_host", c.HTTPServer.Port),
 		logging.StringAttr("http_timeout", formatDuration(c.HTTPServer.Timeout)),
 		logging.StringAttr("http_idle_timeout", formatDuration(c.HTTPServer.IdleTimeout)),
 
