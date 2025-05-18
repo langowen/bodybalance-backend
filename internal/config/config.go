@@ -5,6 +5,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/theartofdevel/logging"
+	"log"
 	"log/slog"
 	"sync"
 	"time"
@@ -45,7 +46,7 @@ type HTTPServer struct {
 }
 
 type Media struct {
-	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083/"` // https://api.7375.org
+	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083/"` //адрес сервера https://api.7375.org
 	VideoPath string `yaml:"video_path" env:"VIDEO_PATH" env-default:"date/video"`
 }
 
@@ -63,19 +64,19 @@ func MustGetConfig() *Config {
 		// Загружаем переменные окружения из .env файла
 		err := godotenv.Load(".env")
 		if err != nil {
-			slog.Error("Error loading .env file", sl.Err(err))
+			slog.Info("Cant loading .env file", sl.Err(err))
 		}
 
 		//сначала загружаем переменные окружения
 		err = cleanenv.ReadEnv(instance)
 		if err != nil {
-			slog.Error("Error reading env", sl.Err(err))
+			log.Fatalln("Error reading env", sl.Err(err))
 		}
 
 		// Затем загружаем переменные окружения из YAML файла
 		err = cleanenv.ReadConfig(instance.PatchConfig, instance)
 		if err != nil {
-			slog.Error("Error loading .yaml file", sl.Err(err))
+			slog.Info("Cant loading .yaml file", sl.Err(err))
 		}
 
 	})

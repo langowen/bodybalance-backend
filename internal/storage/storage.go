@@ -7,4 +7,12 @@ type Video struct {
 	URL         string  `json:"url"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
+	Category    string  `json:"category"`
+}
+
+// CategoryWithVideos представляет категорию с ID из БД
+type CategoryWithVideos struct {
+	ID     int     `json:"id"`
+	Name   string  `json:"name"`
+	Videos []Video `json:"videos,omitempty"`
 }

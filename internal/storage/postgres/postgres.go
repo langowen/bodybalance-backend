@@ -146,11 +146,11 @@ func (s *Storage) Close() error {
 	return nil
 }
 
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]storage.Video, error) {
+func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]storage.Video, error) {
 	const op = "storage.postgres.GetVideosByCategoryAndType"
 
 	query := `
-        SELECT v.id, v.url, v.name, v.description
+        SELECT v.id, v.url, v.name, v.description, c.name as category
         FROM videos v
         JOIN video_categories vc ON v.id = vc.video_id
         JOIN categories c ON vc.category_id = c.id
@@ -160,7 +160,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
         ORDER BY v.created_at DESC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, contentType, category)
+	rows, err := s.db.QueryContext(ctx, query, contentType, categoryName)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
@@ -169,14 +169,10 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	var videos []storage.Video
 	for rows.Next() {
 		var v storage.Video
-		var relativeURL string
-
-		if err := rows.Scan(&v.ID, &relativeURL, &v.Name, &v.Description); err != nil {
+		if err := rows.Scan(&v.ID, &v.URL, &v.Name, &v.Description, &v.Category); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
-
-		// Преобразуем относительный путь в полный URL
-		v.URL = s.constructFullMediaURL(relativeURL)
+		v.URL = s.constructFullMediaURL(v.URL)
 		videos = append(videos, v)
 	}
 
@@ -185,40 +181,6 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	}
 
 	return videos, nil
-}
-
-func (s *Storage) GetCategoriesByContentType(ctx context.Context, contentType string) ([]string, error) {
-	const op = "storage.postgres.GetCategoriesByContentType"
-
-	query := `
-		SELECT DISTINCT c.name
-		FROM categories c
-		JOIN category_content_types cct ON c.id = cct.category_id
-		JOIN content_types ct ON cct.content_type_id = ct.id
-		WHERE LOWER(ct.name) = LOWER($1)
-		ORDER BY c.name
-	`
-
-	rows, err := s.db.QueryContext(ctx, query, contentType)
-	if err != nil {
-		return nil, fmt.Errorf("%s: query failed: %w", op, err)
-	}
-	defer rows.Close()
-
-	var categories []string
-	for rows.Next() {
-		var category string
-		if err := rows.Scan(&category); err != nil {
-			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
-		}
-		categories = append(categories, category)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: rows error: %w", op, err)
-	}
-
-	return categories, nil
 }
 
 func (s *Storage) CheckAccountType(ctx context.Context, username, contentType string) (bool, error) {
@@ -239,6 +201,90 @@ func (s *Storage) CheckAccountType(ctx context.Context, username, contentType st
 	}
 
 	return exists, nil
+}
+
+// GetCategoriesWithVideos возвращает все категории с видео для указанного типа
+func (s *Storage) GetCategoriesWithVideos(ctx context.Context, contentType string) ([]storage.CategoryWithVideos, error) {
+	const op = "storage.postgres.GetCategoriesWithVideos"
+
+	query := `
+		WITH cat AS (
+			SELECT c.id, c.name 
+			FROM categories c
+			JOIN category_content_types cct ON c.id = cct.category_id
+			JOIN content_types ct ON cct.content_type_id = ct.id
+			WHERE LOWER(ct.name) = LOWER($1)
+		)
+		SELECT 
+			cat.id as category_id,
+			cat.name as category_name,
+			v.id as video_id,
+			v.url,
+			v.name as video_name,
+			v.description
+		FROM cat
+		LEFT JOIN video_categories vc ON cat.id = vc.category_id
+		LEFT JOIN videos v ON vc.video_id = v.id
+		ORDER BY cat.name, v.created_at DESC
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, contentType)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	var results []storage.CategoryWithVideos
+	var currentCategory *storage.CategoryWithVideos
+
+	for rows.Next() {
+		var (
+			catID     int
+			catName   string
+			videoID   sql.NullInt64
+			videoURL  sql.NullString
+			videoName sql.NullString
+			videoDesc sql.NullString
+		)
+
+		if err := rows.Scan(&catID, &catName, &videoID, &videoURL, &videoName, &videoDesc); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// Если это новая категория
+		if currentCategory == nil || currentCategory.ID != catID {
+			if currentCategory != nil {
+				results = append(results, *currentCategory)
+			}
+			currentCategory = &storage.CategoryWithVideos{
+				ID:     catID,
+				Name:   catName,
+				Videos: []storage.Video{},
+			}
+		}
+
+		// Добавляем видео, если оно есть
+		if videoID.Valid {
+			currentCategory.Videos = append(currentCategory.Videos, storage.Video{
+				ID:          float64(videoID.Int64),
+				URL:         s.constructFullMediaURL(videoURL.String),
+				Name:        videoName.String,
+				Description: videoDesc.String,
+				Category:    catName, // Заполняем поле category
+			})
+		}
+	}
+
+	// Добавляем последнюю категорию
+	if currentCategory != nil {
+		results = append(results, *currentCategory)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	return results, nil
 }
 
 func (s *Storage) constructFullMediaURL(relativePath string) string {

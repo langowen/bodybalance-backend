@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/storage"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +17,12 @@ type Handler struct {
 	logger  *logging.Logger
 	storage *postgres.Storage
 	cfg     *config.Config
+}
+
+type CategoryResponse struct {
+	ID        int             `json:"id"`         // ID из БД
+	Category  string          `json:"category"`   // Название категории
+	VideoList []storage.Video `json:"videoItems"` // Список видео
 }
 
 func New(router *chi.Mux, logger *logging.Logger, storage *postgres.Storage, cfg *config.Config) {
@@ -32,14 +39,9 @@ func New(router *chi.Mux, logger *logging.Logger, storage *postgres.Storage, cfg
 	})
 }
 
-type CategoryResponse struct {
-	ContentType string   `json:"content_type"`
-	Categories  []string `json:"categories"`
-}
-
 // GET /v1/video?type={type}&category={category}
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.api.video.get"
+	const op = "handlers.api.getVideosByCategoryAndType"
 
 	h.logger = h.logger.With(
 		"op", op,
@@ -47,11 +49,15 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 	)
 
 	contentType := r.URL.Query().Get("type")
-	category := r.URL.Query().Get("category")
+	categoryName := r.URL.Query().Get("category")
 
-	videos, err := h.storage.GetVideosByCategoryAndType(r.Context(), contentType, category)
+	videos, err := h.storage.GetVideosByCategoryAndType(r.Context(), contentType, categoryName)
 	if err != nil {
-		h.logger.Error("Failed to get videos", sl.Err(err))
+		h.logger.Error("Failed to get videos",
+			"type", contentType,
+			"category", categoryName,
+			sl.Err(err))
+
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -64,7 +70,7 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 // GET /v1/category?type={type}
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.api.category.get"
+	const op = "handlers.api.getCategoriesByType"
 
 	h.logger = h.logger.With(
 		"op", op,
@@ -73,27 +79,24 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 	contentType := r.URL.Query().Get("type")
 
-	categories, err := h.storage.GetCategoriesByContentType(r.Context(), contentType)
+	categories, err := h.storage.GetCategoriesWithVideos(r.Context(), contentType)
 	if err != nil {
-		h.logger.Error("Failed to get categories", sl.Err(err))
+		h.logger.Error("Failed to get categories with videos",
+			"type", contentType,
+			sl.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	response := CategoryResponse{
-		ContentType: contentType,
-		Categories:  categories,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if err := json.NewEncoder(w).Encode(categories); err != nil {
 		h.logger.Error("Failed to encode response", sl.Err(err))
 	}
 }
 
 // GET /v1/login?username={username}&type={type}
 func (h *Handler) checkAccountType(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.api.user.get"
+	const op = "handlers.api.checkAccountType"
 
 	h.logger = h.logger.With(
 		"op", op,

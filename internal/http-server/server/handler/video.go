@@ -13,7 +13,7 @@ import (
 
 func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.video.get.download"
+		const op = "handlers.video.ServeVideoFile"
 
 		logger = logger.With(
 			"op", op,
