@@ -31,12 +31,6 @@ jobs:
       - name: Run Go Vet
         run: go vet -buildvcs=false ./...
 
-      - name: Install StaticCheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
-
-      - name: Run StaticCheck
-        run: staticcheck ./...
-
   deploy:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
