@@ -7,7 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     container: golang:1.24.3
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -25,7 +28,7 @@ jobs:
 
       - name: Static Analysis (Vet + StaticCheck)
         run: |
-          go vet -buildvcs=false ./...
+          go vet ./...
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck -buildvcs=false ./...
 
