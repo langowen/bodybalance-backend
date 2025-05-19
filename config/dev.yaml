@@ -1,0 +1,8 @@
+http_server:
+  Port: "80"
+  timeout: 30s
+  idle_timeout: 60s
+
+media:
+  base_url: "https://api.7375.org"
+  root_path: "data/video"
