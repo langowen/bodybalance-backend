@@ -13,19 +13,11 @@ import (
 
 // Config содержит всю конфигурацию приложения.
 type Config struct {
-	Telegram    TelegramConfig `yaml:"telegram"` // Конфигурация Telegram.
 	Database    DatabaseConfig `yaml:"database"` // Конфигурация базы данных.
 	HTTPServer  HTTPServer     `yaml:"http_server"`
 	Media       Media          `yaml:"media"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
-}
-
-// TelegramConfig содержит конфигурацию для работы с Telegram API.
-type TelegramConfig struct {
-	Token     string `yaml:"token" env:"TG_TOKEN" env-required:"true"`          // Токен для доступа к API Telegram.
-	Host      string `yaml:"host" env:"TG_HOST" env-default:"api.telegram.org"` // Хост API Telegram (по умолчанию "api.telegram.org").
-	BatchSize int    `yaml:"batch_size" env:"TG_BATCH_SIZE" env-default:"100"`  // Размер пакета для обработки данных.
 }
 
 // DatabaseConfig содержит конфигурацию для работы с базой данных.
@@ -46,8 +38,8 @@ type HTTPServer struct {
 }
 
 type Media struct {
-	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083/"` //адрес сервера https://api.7375.org
-	VideoPath string `yaml:"video_path" env:"VIDEO_PATH" env-default:"date/video"`
+	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083"` //адрес сервера https://api.7375.org
+	VideoPath string `yaml:"video_path" env:"VIDEO_PATH" env-default:"data/video"`
 }
 
 var (
@@ -64,19 +56,19 @@ func MustGetConfig() *Config {
 		// Загружаем переменные окружения из .env файла
 		err := godotenv.Load(".env")
 		if err != nil {
-			slog.Info("Cant loading .env file", sl.Err(err))
+			slog.Info("Cant loading .env config file", sl.Err(err))
 		}
 
 		//сначала загружаем переменные окружения
 		err = cleanenv.ReadEnv(instance)
 		if err != nil {
-			log.Fatalln("Error reading env", sl.Err(err))
+			log.Fatal("Error reading env", sl.Err(err))
 		}
 
 		// Затем загружаем переменные окружения из YAML файла
 		err = cleanenv.ReadConfig(instance.PatchConfig, instance)
 		if err != nil {
-			slog.Info("Cant loading .yaml file", sl.Err(err))
+			slog.Info("Cant loading .yaml config file", sl.Err(err))
 		}
 
 	})
@@ -86,11 +78,6 @@ func MustGetConfig() *Config {
 // LogValue определяет форматирование при выводе в лог
 func (c *Config) LogValue() logging.Value {
 	return logging.GroupValue(
-		// Telegram
-		logging.StringAttr("telegram_host", c.Telegram.Host),
-		logging.StringAttr("telegram_token", maskToken(c.Telegram.Token)),
-		logging.IntAttr("batch_size", c.Telegram.BatchSize),
-
 		// Database
 		logging.StringAttr("db_host", c.Database.Host),
 		logging.IntAttr("db_port", c.Database.Port),
@@ -116,12 +103,4 @@ func (c *Config) LogValue() logging.Value {
 // Форматирует Duration в читаемый вид (например, "20s", "1h30m")
 func formatDuration(d time.Duration) string {
 	return d.String() // Используем встроенный метод String()
-}
-
-// Вспомогательная функция для маскировки токенов
-func maskToken(token string) string {
-	if len(token) <= 5 {
-		return "*****"
-	}
-	return token[:5] + "*****"
 }

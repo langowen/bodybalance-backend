@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
@@ -21,25 +22,28 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		)
 
 		filename := chi.URLParam(r, "filename")
-		if filename == "" {
-			http.Error(w, "Filename not specified", http.StatusBadRequest)
-			return
-		}
-
-		// Безопасное формирование пути к файлу
 		filePath := filepath.Join(cfg.Media.VideoPath, filename)
 
-		// Проверяем, что файл существует
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			logger.Error("File not found", "filename", filename, sl.Err(err))
-			http.Error(w, "File not found", http.StatusNotFound)
+		if !strings.HasPrefix(filepath.Clean(filePath), cfg.Media.VideoPath) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
-		// Устанавливаем правильный Content-Type
-		w.Header().Set("Content-Type", "video/mp4")
+		file, err := os.Open(filePath)
+		if err != nil {
+			logger.Error("File not found", "filename", filename, sl.Err(err))
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		defer file.Close()
 
-		// Отдаем файл
-		http.ServeFile(w, r, filePath)
+		stat, err := file.Stat()
+		if err != nil {
+			logger.Error("File stat error", "filename", filename, sl.Err(err))
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(w, r, filename, stat.ModTime(), file)
 	}
 }

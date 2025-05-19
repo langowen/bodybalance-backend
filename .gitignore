@@ -5,7 +5,7 @@
 #Video file
 
 *.mp4
-date/video/*
+data/video/*
 
 # User-specific stuff
 .idea/**/workspace.xml

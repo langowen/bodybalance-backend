@@ -1,7 +1,14 @@
 package storage
 
-// Video represents video item response structure
+import "context"
 
+type ApiStorage interface {
+	GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]Video, error)
+	GetCategoriesWithVideos(ctx context.Context, contentType string) ([]CategoryWithVideos, error)
+	CheckAccountType(ctx context.Context, username, contentType string) (bool, error)
+}
+
+// Video represents video item response structure
 type Video struct {
 	ID          float64 `json:"id"`
 	URL         string  `json:"url"`

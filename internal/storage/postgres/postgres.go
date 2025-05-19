@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/storage"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -270,7 +271,7 @@ func (s *Storage) GetCategoriesWithVideos(ctx context.Context, contentType strin
 				URL:         s.constructFullMediaURL(videoURL.String),
 				Name:        videoName.String,
 				Description: videoDesc.String,
-				Category:    catName, // Заполняем поле category
+				Category:    catName,
 			})
 		}
 	}
@@ -291,5 +292,9 @@ func (s *Storage) constructFullMediaURL(relativePath string) string {
 	if relativePath == "" {
 		return ""
 	}
-	return s.cfg.Media.BaseURL + "video/" + relativePath
+
+	baseURL := strings.TrimRight(s.cfg.Media.BaseURL, "/")
+	videoPath := strings.TrimLeft(relativePath, "/")
+
+	return fmt.Sprintf("%s/video/%s", baseURL, videoPath)
 }
