@@ -117,7 +117,7 @@ func (h *Handler) checkAccountType(w http.ResponseWriter, r *http.Request) {
 	// Создаем новый контекст с логгером
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	isValid, err := h.storage.CheckAccountType(ctx, contentType, username)
+	isValid, err := h.storage.CheckAccountType(ctx, username, contentType)
 	if err != nil {
 		logger.Error("Failed to check account", sl.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

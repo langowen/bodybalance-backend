@@ -1,0 +1,43 @@
+services:
+  bodybalance:
+    image: langowen/bodybalance
+    container_name: bodybalance
+    ports:
+      - "8083:80"
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        mode: "non-blocking"
+        loki-retries: "5"
+        loki-batch-wait: "10s"
+        loki-pipeline-stages: |
+          - regex:
+              expression: '^\x1b\[(\d+)m(?P<level>[A-Z]{4})\x1b\[0m'
+          - labels:
+              level:
+          - timestamp:
+              source: time
+              format: RFC3339Nano
+    environment:
+      - BD_USER=bodybalance
+      - BD_PORT=5455
+      - BD_HOST=192.168.2.124
+      - BD_DBNAME=bodybalance
+      - BD_PASSWORD=${BD_PASSWORD}
+      - HTTP_PORT=80
+      - LOG_LEVEL=debug
+      - PATCH_CONFIG=./config/dev.yaml
+      - BASE_URL=https://api.7375.org
+      - VIDEO_PATH=data/video
+    volumes:
+      - /srv/docker/bodybalance/video/:/app/data/video/
+      - /srv/docker/bodybalance/config/:/app/config/
+    restart: unless-stopped
+    networks:
+      body:
+
+
+networks:
+  body:
+    driver: bridge
