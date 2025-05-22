@@ -184,20 +184,19 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	return videos, nil
 }
 
-func (s *Storage) CheckAccountType(ctx context.Context, username, contentType string) (bool, error) {
-	const op = "storage.postgres.CheckAccountType"
+func (s *Storage) CheckAccount(ctx context.Context, username string) (bool, error) {
+	const op = "storage.postgres.CheckAccount"
 
 	query := `
 		SELECT EXISTS(
 			SELECT 1 
 			FROM accounts a
-			JOIN content_types ct ON a.content_type_id = ct.id
-			WHERE LOWER(a.username) = LOWER($1) AND LOWER(ct.name) = LOWER($2)
+			WHERE LOWER(a.username) = LOWER($1)
 		)
 	`
 
 	var exists bool
-	if err := s.db.QueryRowContext(ctx, query, username, contentType).Scan(&exists); err != nil {
+	if err := s.db.QueryRowContext(ctx, query, username).Scan(&exists); err != nil {
 		return false, fmt.Errorf("%s: query failed: %w", op, err)
 	}
 

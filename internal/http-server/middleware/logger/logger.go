@@ -20,7 +20,9 @@ func New(logger *logging.Logger) func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			entry := log.With(
 				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
+				slog.String("protocol", r.URL.Scheme),
+				slog.String("host", r.Host),
+				slog.String("URL", r.URL.String()),
 				slog.String("remote_addr", r.RemoteAddr),
 				slog.String("user_agent", r.UserAgent()),
 				slog.String("request_id", middleware.GetReqID(r.Context())),
@@ -35,7 +37,6 @@ func New(logger *logging.Logger) func(next http.Handler) http.Handler {
 					slog.String("duration", time.Since(t1).String()),
 				)
 			}()
-
 			next.ServeHTTP(ww, r)
 		}
 

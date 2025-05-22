@@ -16,10 +16,11 @@ func Init(cfg *config.Config, logger *logging.Logger, pgStorage *postgres.Storag
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
-	router.Use(mwLogger.New(logger))
+	router.Use(middleware.RealIP)
+	router.Use(mwLogger.New(logger)) //TODO подумать над заменой логера из пакета https://github.com/go-chi/httplog/blob/master/httplog.go
 	router.Use(middleware.Recoverer)
 
-	api.New(router, logger, pgStorage, cfg)
+	v1.New(router, logger, pgStorage, cfg)
 
 	router.Get("/video/{filename}", handler.ServeVideoFile(cfg, logger))
 

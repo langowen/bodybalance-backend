@@ -5,7 +5,7 @@ import "context"
 type ApiStorage interface {
 	GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]Video, error)
 	GetCategoriesWithVideos(ctx context.Context, contentType string) ([]CategoryWithVideos, error)
-	CheckAccountType(ctx context.Context, username, contentType string) (bool, error)
+	CheckAccount(ctx context.Context, username string) (bool, error)
 }
 
 // Video represents video item response structure
