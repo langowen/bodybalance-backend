@@ -36,17 +36,6 @@ jobs:
       - name: Run Go Vet
         run: go vet ./...
 
-      - name: Update go.sum if needed
-        if: always()
-        run: |
-          if [ -n "$(git status --porcelain go.sum)" ]; then
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            git add go.sum
-            git commit -m "Update go.sum"
-            git push
-          fi
-
   deploy:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
