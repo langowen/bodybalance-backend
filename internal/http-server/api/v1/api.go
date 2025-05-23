@@ -13,12 +13,6 @@ type Handler struct {
 	cfg     *config.Config
 }
 
-type CategoryResponse struct {
-	ID        int             `json:"id"`         // ID из БД
-	Category  string          `json:"category"`   // Название категории
-	VideoList []storage.Video `json:"videoItems"` // Список видео
-}
-
 func New(router *chi.Mux, logger *logging.Logger, storage storage.ApiStorage, cfg *config.Config) {
 	h := &Handler{
 		logger:  logger,
@@ -27,7 +21,8 @@ func New(router *chi.Mux, logger *logging.Logger, storage storage.ApiStorage, cf
 	}
 
 	router.Route("/v1", func(r chi.Router) {
-		r.Get("/video", h.getVideosByCategoryAndType)
+		r.Get("/video_categories", h.getVideosByCategoryAndType)
+		r.Get("/video", h.getVideo)
 		r.Get("/category", h.getCategoriesByType)
 		r.Get("/login", h.checkAccount)
 	})

@@ -1,4 +1,4 @@
-package handler
+package video
 
 import (
 	"github.com/go-chi/chi/v5"

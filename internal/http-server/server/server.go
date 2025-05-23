@@ -5,8 +5,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
+	"github.com/langowen/bodybalance-backend/internal/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/http-server/middleware/logger"
-	"github.com/langowen/bodybalance-backend/internal/http-server/server/handler"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
 	"github.com/theartofdevel/logging"
 	"net/http"
@@ -22,7 +22,7 @@ func Init(cfg *config.Config, logger *logging.Logger, pgStorage *postgres.Storag
 
 	v1.New(router, logger, pgStorage, cfg)
 
-	router.Get("/video/{filename}", handler.ServeVideoFile(cfg, logger))
+	router.Get("/video/{filename}", video.ServeVideoFile(cfg, logger))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.HTTPServer.Port,

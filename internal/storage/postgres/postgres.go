@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"strings"
 	"time"
@@ -147,8 +149,20 @@ func (s *Storage) Close() error {
 	return nil
 }
 
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]storage.Video, error) {
+func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]response.VideoResponse, error) {
 	const op = "storage.postgres.GetVideosByCategoryAndType"
+
+	// Проверка существования типа контента
+	err := s.chekType(ctx, contentType, op)
+	if err != nil {
+		return nil, err
+	}
+
+	// Проверка существования категории
+	err = s.chekCategory(ctx, categoryName, op)
+	if err != nil {
+		return nil, err
+	}
 
 	query := `
         SELECT v.id, v.url, v.name, v.description, c.name as category
@@ -167,9 +181,9 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	}
 	defer rows.Close()
 
-	var videos []storage.Video
+	var videos []response.VideoResponse
 	for rows.Next() {
-		var v storage.Video
+		var v response.VideoResponse
 		if err := rows.Scan(&v.ID, &v.URL, &v.Name, &v.Description, &v.Category); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
@@ -179,6 +193,12 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	// Проверка на отсутствие категорий для данного типа
+	if len(videos) == 0 {
+		return nil, fmt.Errorf("%s: %w: no videos found for content type '%s' and category '%s'",
+			op, storage.ErrVideoNotFound, contentType, categoryName)
 	}
 
 	return videos, nil
@@ -203,30 +223,25 @@ func (s *Storage) CheckAccount(ctx context.Context, username string) (bool, erro
 	return exists, nil
 }
 
-// GetCategoriesWithVideos возвращает все категории с видео для указанного типа
-func (s *Storage) GetCategoriesWithVideos(ctx context.Context, contentType string) ([]storage.CategoryWithVideos, error) {
-	const op = "storage.postgres.GetCategoriesWithVideos"
+// GetCategories возвращает все категории для указанного типа контента
+func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error) {
+	const op = "storage.postgres.GetCategories"
 
+	// Проверка существования типа контента
+	err := s.chekType(ctx, contentType, op)
+	if err != nil {
+		return nil, err
+	}
+
+	// Основной запрос для получения категорий
 	query := `
-		WITH cat AS (
-			SELECT c.id, c.name 
-			FROM categories c
-			JOIN category_content_types cct ON c.id = cct.category_id
-			JOIN content_types ct ON cct.content_type_id = ct.id
-			WHERE LOWER(ct.name) = LOWER($1)
-		)
-		SELECT 
-			cat.id as category_id,
-			cat.name as category_name,
-			v.id as video_id,
-			v.url,
-			v.name as video_name,
-			v.description
-		FROM cat
-		LEFT JOIN video_categories vc ON cat.id = vc.category_id
-		LEFT JOIN videos v ON vc.video_id = v.id
-		ORDER BY cat.name, v.created_at DESC
-	`
+        SELECT DISTINCT c.id, c.name 
+        FROM categories c
+        JOIN category_content_types cct ON c.id = cct.category_id
+        JOIN content_types ct ON cct.content_type_id = ct.id
+        WHERE LOWER(ct.name) = LOWER($1)
+        ORDER BY c.name
+    `
 
 	rows, err := s.db.QueryContext(ctx, query, contentType)
 	if err != nil {
@@ -234,57 +249,99 @@ func (s *Storage) GetCategoriesWithVideos(ctx context.Context, contentType strin
 	}
 	defer rows.Close()
 
-	var results []storage.CategoryWithVideos
-	var currentCategory *storage.CategoryWithVideos
+	var categories []response.CategoryResponse
 
 	for rows.Next() {
-		var (
-			catID     int
-			catName   string
-			videoID   sql.NullInt64
-			videoURL  sql.NullString
-			videoName sql.NullString
-			videoDesc sql.NullString
-		)
-
-		if err := rows.Scan(&catID, &catName, &videoID, &videoURL, &videoName, &videoDesc); err != nil {
+		var category response.CategoryResponse
+		if err := rows.Scan(&category.ID, &category.Name); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
-
-		// Если это новая категория
-		if currentCategory == nil || currentCategory.ID != catID {
-			if currentCategory != nil {
-				results = append(results, *currentCategory)
-			}
-			currentCategory = &storage.CategoryWithVideos{
-				ID:     catID,
-				Name:   catName,
-				Videos: []storage.Video{},
-			}
-		}
-
-		// Добавляем видео, если оно есть
-		if videoID.Valid {
-			currentCategory.Videos = append(currentCategory.Videos, storage.Video{
-				ID:          float64(videoID.Int64),
-				URL:         s.constructFullMediaURL(videoURL.String),
-				Name:        videoName.String,
-				Description: videoDesc.String,
-				Category:    catName,
-			})
-		}
-	}
-
-	// Добавляем последнюю категорию
-	if currentCategory != nil {
-		results = append(results, *currentCategory)
+		categories = append(categories, category)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s: rows error: %w", op, err)
 	}
 
-	return results, nil
+	// Проверка на отсутствие категорий для данного типа
+	if len(categories) == 0 {
+		return nil, fmt.Errorf("%s: %w: no categories found for content type '%s'",
+			op, storage.ErrNoCategoriesFound, contentType)
+	}
+
+	return categories, nil
+}
+
+func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoResponse, error) {
+	const op = "storage.postgres.GetVideo"
+
+	query := `
+        SELECT v.id, v.url, v.name, v.description, c.name as category
+        FROM videos v
+        JOIN video_categories vc ON v.id = vc.video_id
+        JOIN categories c ON vc.category_id = c.id
+        WHERE v.id = $1
+    `
+
+	var video response.VideoResponse
+
+	err := s.db.QueryRowContext(ctx, query, videoID).Scan(
+		&video.ID,
+		&video.URL,
+		&video.Name,
+		&video.Description,
+		&video.Category,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return response.VideoResponse{}, fmt.Errorf("%s: %w: video with id '%s' not found",
+				op, storage.ErrVideoNotFound, videoID)
+		}
+		return response.VideoResponse{}, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+
+	video.URL = s.constructFullMediaURL(video.URL)
+
+	return video, nil
+}
+
+func (s *Storage) chekType(ctx context.Context, contentType, op string) error {
+	var contentTypeExists bool
+	err := s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM content_types WHERE LOWER(name) = LOWER($1))`,
+		contentType,
+	).Scan(&contentTypeExists)
+
+	if err != nil {
+		return fmt.Errorf("%s: content type check failed: %w", op, err)
+	}
+
+	if !contentTypeExists {
+		return fmt.Errorf("%s: %w: content type '%s' not found",
+			op, storage.ErrContentTypeNotFound, contentType)
+	}
+
+	return nil
+}
+
+func (s *Storage) chekCategory(ctx context.Context, categoryName, op string) error {
+	var categoryNameExists bool
+	err := s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM categories WHERE LOWER(name) = LOWER($1))`,
+		categoryName,
+	).Scan(&categoryNameExists)
+
+	if err != nil {
+		return fmt.Errorf("%s: category name check failed: %w", op, err)
+	}
+
+	if !categoryNameExists {
+		return fmt.Errorf("%s: %w: category name '%s' not found",
+			op, storage.ErrNoCategoriesFound, categoryName)
+	}
+
+	return nil
 }
 
 func (s *Storage) constructFullMediaURL(relativePath string) string {

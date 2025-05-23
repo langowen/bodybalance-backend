@@ -1,25 +1,20 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"errors"
+	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+)
+
+var (
+	ErrContentTypeNotFound = errors.New("content type not found")
+	ErrNoCategoriesFound   = errors.New("no categories found")
+	ErrVideoNotFound       = errors.New("no video found")
+)
 
 type ApiStorage interface {
-	GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]Video, error)
-	GetCategoriesWithVideos(ctx context.Context, contentType string) ([]CategoryWithVideos, error)
+	GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]response.VideoResponse, error)
+	GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error)
 	CheckAccount(ctx context.Context, username string) (bool, error)
-}
-
-// Video represents video item response structure
-type Video struct {
-	ID          float64 `json:"id"`
-	URL         string  `json:"url"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Category    string  `json:"category"`
-}
-
-// CategoryWithVideos представляет категорию с ID из БД
-type CategoryWithVideos struct {
-	ID     int     `json:"id"`
-	Name   string  `json:"name"`
-	Videos []Video `json:"videos,omitempty"`
+	GetVideo(ctx context.Context, videoID string) (response.VideoResponse, error)
 }

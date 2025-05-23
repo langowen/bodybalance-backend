@@ -11,28 +11,35 @@ import (
 	"net/http"
 )
 
-// GET /v1/category?type={type}
-func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.api.getCategoriesByType"
+// GET /v1/video_categories?type={type}&category={category}
+func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.getVideosByCategoryAndType"
 
 	contentType := r.URL.Query().Get("type")
+	categoryName := r.URL.Query().Get("category")
 
 	// Создаем логгер с дополнительными полями
 	logger := h.logger.With(
 		"op", op,
 		"request_id", middleware.GetReqID(r.Context()),
 		"type", contentType,
+		"category", categoryName,
 	)
 
+	if categoryName == "" {
+		logger.Error("Category is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Category is empty")
+	}
+
 	if contentType == "" {
+		logger.Error("Content type is empty")
 		response.RespondWithError(w, http.StatusBadRequest, "Content type is empty")
-		return
 	}
 
 	// Создаем новый контекст с логгером
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	categories, err := h.storage.GetCategories(ctx, contentType)
+	videos, err := h.storage.GetVideosByCategoryAndType(ctx, contentType, categoryName)
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
 		logger.Warn("content type not found", sl.Err(err))
@@ -43,14 +50,21 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, storage.ErrNoCategoriesFound):
 		logger.Warn("no categories found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Category not found",
-			fmt.Sprintf("Category '%s' does not exist", contentType))
+			fmt.Sprintf("Category '%s' does not exist", categoryName))
+		return
+
+	case errors.Is(err, storage.ErrVideoNotFound):
+		logger.Warn("video not found", sl.Err(err))
+		response.RespondWithError(w, http.StatusNotFound, "Video not found",
+			fmt.Sprintf("no videos found for content type '%s' and category '%s'",
+				contentType, categoryName))
 		return
 
 	case err != nil:
-		logger.Error("Failed to get categories", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Failed to get categories")
+		logger.Error("Failed to get videos", sl.Err(err))
+		response.RespondWithError(w, http.StatusInternalServerError, "Failed to get videos")
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, categories)
+	response.RespondWithJSON(w, http.StatusOK, videos)
 }
