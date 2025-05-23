@@ -13,6 +13,8 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+
+	_ "github.com/langowen/bodybalance-backend/docs"
 )
 
 // Информация о сборке
@@ -28,6 +30,10 @@ func main() {
 
 	// Инициализируем лог
 	logger := newLogger(cfg)
+
+	if os.Getenv("GENERATE_SWAGGER") == "true" {
+		return
+	}
 
 	// Добавляем логер в контекст
 	ctx, cancel := context.WithCancel(logging.ContextWithLogger(context.Background(), logger))

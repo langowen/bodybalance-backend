@@ -12,6 +12,19 @@ import (
 	"strings"
 )
 
+// ServeVideoFile
+// @Summary Serve video file
+// @Description Streams video file by filename
+// @Tags Videos
+// @Accept  json
+// @Produce  json
+// @Param filename path string true "Video filename (e.g. 'Sheya_baza.mp4')"
+// @Success 200 {file} file
+// @Failure 403 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /video/{filename} [get]
+// GET /video/{filename}
 func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.video.ServeVideoFile"

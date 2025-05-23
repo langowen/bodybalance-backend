@@ -11,6 +11,17 @@ import (
 	"net/http"
 )
 
+// @Summary Get video by ID
+// @Description Returns video details by its ID
+// @Tags Videos
+// @Accept  json
+// @Produce  json
+// @Param video_id query int true "Video ID (e.g. '1')"
+// @Success 200 {object} response.VideoResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /v1/video [get]
 // GET /v1/video?video_id={id}
 func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideo"

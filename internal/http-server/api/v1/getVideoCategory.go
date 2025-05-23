@@ -11,7 +11,19 @@ import (
 	"net/http"
 )
 
-// GET /v1/video_categories?type={type}&category={category}
+// @Summary Get videos by category and type
+// @Description Returns videos filtered by type and category, order by name
+// @Tags Videos
+// @Accept  json
+// @Produce  json
+// @Param type query int true "Type id (e.g. '1')"
+// @Param category query int true "Category id(e.g. '1')"
+// @Success 200 {array} response.VideoResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /v1/video_categories [get]
+// GET /v1/video_categories?type={id}&category={id}
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideosByCategoryAndType"
 

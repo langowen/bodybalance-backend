@@ -16,6 +16,7 @@ type Config struct {
 	Database    DatabaseConfig `yaml:"database"` // Конфигурация базы данных.
 	HTTPServer  HTTPServer     `yaml:"http_server"`
 	Media       Media          `yaml:"media"`
+	Docs        Docs           `yaml:"docs"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
 }
@@ -40,6 +41,11 @@ type HTTPServer struct {
 type Media struct {
 	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083"` //адрес сервера https://api.7375.org
 	VideoPath string `yaml:"video_path" env:"VIDEO_PATH" env-default:"data/video"`
+}
+
+type Docs struct {
+	User     string `yaml:"user" env:"DOCS_USER" env-required:"true"`
+	Password string `yaml:"password" env:"DOCS_PASSWORD" env-required:"true"`
 }
 
 var (
@@ -93,6 +99,9 @@ func (c *Config) LogValue() logging.Value {
 
 		//Media
 		logging.StringAttr("base_url", c.Media.BaseURL),
+
+		//Docs
+		logging.StringAttr("docs_user", c.Docs.User),
 
 		// General
 		logging.StringAttr("log_level", c.LogLevel),

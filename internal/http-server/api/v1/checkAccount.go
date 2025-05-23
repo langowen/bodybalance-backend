@@ -11,6 +11,17 @@ import (
 	"net/http"
 )
 
+// @Summary Check account existence
+// @Description Checks if account with specified username exists and return type id, type name
+// @Tags Auth
+// @Accept  json
+// @Produce  json
+// @Param username query string true "Username to check (e.g. 'base')"
+// @Success 200 {object} response.AccountResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /v1/login [get]
 // GET /v1/login?username={username}
 func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.checkAccountType"
