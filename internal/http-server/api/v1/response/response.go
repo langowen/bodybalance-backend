@@ -18,8 +18,13 @@ type VideoResponse struct {
 
 // CategoryResponse представляет категорию с ID из БД
 type CategoryResponse struct {
-	ID   int    `json:"id"`   // ID из БД
-	Name string `json:"name"` // Название категории
+	ID   float64 `json:"id"`   // ID из БД
+	Name string  `json:"name"` // Название категории
+}
+
+type AccountResponse struct {
+	TypeID   float64 `json:"type_id"`
+	TypeName string  `json:"type_name"`
 }
 
 type ErrorResponse struct {

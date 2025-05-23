@@ -1,9 +1,12 @@
 package v1
 
 import (
+	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -30,12 +33,19 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	// Создаем новый контекст с логгером
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	isValid, err := h.storage.CheckAccount(ctx, username)
-	if err != nil {
+	account, err := h.storage.CheckAccount(ctx, username)
+	switch {
+	case errors.Is(err, storage.ErrAccountNotFound):
+		logger.Warn("Username not found", sl.Err(err))
+		response.RespondWithError(w, http.StatusNotFound, "Username not found",
+			fmt.Sprintf("Username '%s' does not exist", username))
+		return
+
+	case err != nil:
 		logger.Error("Failed to check account", sl.Err(err))
 		response.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, isValid)
+	response.RespondWithJSON(w, http.StatusOK, account)
 }
