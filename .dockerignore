@@ -17,8 +17,7 @@
 
 !config/*.yaml
 
-!README.md
-!LICENSE
+!/docs/*
 
 # !Makefile
 
