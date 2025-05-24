@@ -30,6 +30,9 @@ services:
       - PATCH_CONFIG=./config/dev.yaml
       - BASE_URL=https://api.7375.org
       - VIDEO_PATH=data/video
+      - TZ=Europe/Moscow
+      - DOCS_USER=${DOCS_USER}
+      - DOCS_PASSWORD=${DOCS_PASSWORD}
     volumes:
       - /srv/docker/bodybalance/video/:/app/data/video/
       - /srv/docker/bodybalance/config/:/app/config/

@@ -62,7 +62,7 @@ func (s *Server) setupRouter() *chi.Mux {
 		})
 
 		// RapiDoc UI
-		staticPath := filepath.Join(getProjectRoot(), "docs/static")
+		staticPath := filepath.Join(getProjectRoot(), "docs")
 		r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, filepath.Join(staticPath, "rapidoc.html"))
 		})

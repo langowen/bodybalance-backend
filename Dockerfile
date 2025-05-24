@@ -19,9 +19,13 @@ FROM alpine AS app
 
 WORKDIR /app
 
+RUN apk add --no-cache tzdata
+
 COPY --from=builder /app/main ./
 COPY --from=builder /app/config/* ./config/
 COPY --from=builder /app/docs/* ./docs/
 RUN mkdir -p /app/data/video
+
+ENV TZ=Europe/Moscow
 
 CMD ["/app/main"]
