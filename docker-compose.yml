@@ -29,7 +29,7 @@ services:
       - LOG_LEVEL=debug
       - PATCH_CONFIG=./config/dev.yaml
       - BASE_URL=https://api.7375.org
-      - VIDEO_PATH=data/video
+      - VIDEO_PATCH=data/video
       - IMAGES_PATCH=data/img
       - TZ=Europe/Moscow
       - DOCS_USER=${DOCS_USER}
@@ -37,6 +37,7 @@ services:
     volumes:
       - /srv/docker/bodybalance/video/:/app/data/video/
       - /srv/docker/bodybalance/config/:/app/config/
+      - /srv/docker/bodybalance/img/:/app/data/img/
     restart: unless-stopped
     networks:
       body:

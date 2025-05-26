@@ -18,9 +18,9 @@ import (
 // @Produce  json
 // @Param type query int true "Type id (e.g. '1', '2')"
 // @Success 200 {array} response.CategoryResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
 // @Router /v1/category [get]
 // GET /v1/category?type={id}
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if contentType == "" {
-		response.RespondWithError(w, http.StatusBadRequest, "Content type is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
 		return
 	}
 
@@ -47,19 +47,19 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
 		logger.Warn("content type not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Content type not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found",
 			fmt.Sprintf("Content type '%s' does not exist", contentType))
 		return
 
 	case errors.Is(err, storage.ErrNoCategoriesFound):
 		logger.Warn("no categories found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Category not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found",
 			fmt.Sprintf("Category '%s' does not exist", contentType))
 		return
 
 	case err != nil:
 		logger.Error("Failed to get categories", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Failed to get categories")
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 

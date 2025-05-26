@@ -18,9 +18,9 @@ import (
 // @Produce  json
 // @Param video_id query int true "Video ID (e.g. '1')"
 // @Success 200 {object} response.VideoResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
 // @Router /v1/video [get]
 // GET /v1/video?video_id={id}
 func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 
 	if videoID == "" {
 		logger.Error("Video id is empty")
-		response.RespondWithError(w, http.StatusBadRequest, "Video id is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
 	}
 
 	// Создаем новый контекст с логгером
@@ -47,13 +47,13 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, storage.ErrVideoNotFound):
 		logger.Warn("video not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Video not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
 			fmt.Sprintf("Video '%s' does not exist", videoID))
 		return
 
 	case err != nil:
 		logger.Error("Failed to get video", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Failed to get video")
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 

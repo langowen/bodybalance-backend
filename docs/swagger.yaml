@@ -19,13 +19,6 @@ definitions:
         description: Название категории
         type: string
     type: object
-  response.ErrorResponse:
-    properties:
-      details:
-        type: string
-      error:
-        type: string
-    type: object
   response.VideoResponse:
     properties:
       category:
@@ -75,15 +68,15 @@ paths:
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Serve img file
       tags:
       - images
@@ -110,15 +103,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Get categories by  type
       tags:
       - Categories
@@ -136,6 +129,7 @@ paths:
         type: string
       produces:
       - application/json
+      - text/plain
       responses:
         "200":
           description: OK
@@ -144,15 +138,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Check account existence
       tags:
       - Auth
@@ -177,15 +171,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Get video by ID
       tags:
       - Videos
@@ -217,15 +211,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Get videos by category and type
       tags:
       - Videos
@@ -250,15 +244,15 @@ paths:
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            type: string
       summary: Serve video file
       tags:
       - Videos

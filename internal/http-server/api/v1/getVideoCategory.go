@@ -19,9 +19,9 @@ import (
 // @Param type query int true "Type id (e.g. '1')"
 // @Param category query int true "Category id(e.g. '1')"
 // @Success 200 {array} response.VideoResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
 // @Router /v1/video_categories [get]
 // GET /v1/video_categories?type={id}&category={id}
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
@@ -40,12 +40,12 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 	if categoryName == "" {
 		logger.Error("Category is empty")
-		response.RespondWithError(w, http.StatusBadRequest, "Category is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Category is empty")
 	}
 
 	if contentType == "" {
 		logger.Error("Content type is empty")
-		response.RespondWithError(w, http.StatusBadRequest, "Content type is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
 	}
 
 	// Создаем новый контекст с логгером
@@ -55,26 +55,26 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
 		logger.Warn("content type not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Content type not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found",
 			fmt.Sprintf("Content type '%s' does not exist", contentType))
 		return
 
 	case errors.Is(err, storage.ErrNoCategoriesFound):
 		logger.Warn("no categories found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Category not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found",
 			fmt.Sprintf("Category '%s' does not exist", categoryName))
 		return
 
 	case errors.Is(err, storage.ErrVideoNotFound):
 		logger.Warn("video not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Video not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
 			fmt.Sprintf("no videos found for content type '%s' and category '%s'",
 				contentType, categoryName))
 		return
 
 	case err != nil:
 		logger.Error("Failed to get videos", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Failed to get videos")
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 

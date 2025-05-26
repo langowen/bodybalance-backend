@@ -16,11 +16,12 @@ import (
 // @Tags Auth
 // @Accept  json
 // @Produce  json
+// @Produce  text/plain
 // @Param username query string true "Username to check (e.g. 'base')"
 // @Success 200 {object} response.AccountResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
 // @Router /v1/login [get]
 // GET /v1/login?username={username}
 func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 	if username == "" {
 		logger.Error("Username is empty")
-		response.RespondWithError(w, http.StatusBadRequest, "Username is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Username is empty")
 		return
 	}
 
@@ -48,13 +49,13 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, storage.ErrAccountNotFound):
 		logger.Warn("Username not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Username not found",
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Username not found",
 			fmt.Sprintf("Username '%s' does not exist", username))
 		return
 
 	case err != nil:
 		logger.Error("Failed to check account", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return
 	}
 

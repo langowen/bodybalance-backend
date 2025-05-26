@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
@@ -20,9 +21,9 @@ import (
 // @Produce  json
 // @Param filename path string true "Video filename (e.g. 'shee_video.jpg')"
 // @Success 200 {file} file
-// @Failure 403 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 403 {string} string "Forbidden"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
 // @Router /img/{filename} [get]
 // GET /img/{filename}
 func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
@@ -38,14 +39,14 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		filePath := filepath.Join(cfg.Media.ImagesPatch, filename)
 
 		if !strings.HasPrefix(filepath.Clean(filePath), cfg.Media.ImagesPatch) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			response.RespondWithError(w, http.StatusForbidden, "Forbidden")
 			return
 		}
 
 		file, err := os.Open(filePath)
 		if err != nil {
 			logger.Error("File not found", "filename", filename, sl.Err(err))
-			http.Error(w, "Not Found", http.StatusNotFound)
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", err.Error())
 			return
 		}
 		defer file.Close()
@@ -53,7 +54,7 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		stat, err := file.Stat()
 		if err != nil {
 			logger.Error("File stat error", "filename", filename, sl.Err(err))
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
 
