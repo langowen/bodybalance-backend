@@ -35,9 +35,9 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		)
 
 		filename := chi.URLParam(r, "filename")
-		filePath := filepath.Join(cfg.Media.VideoPath, filename)
+		filePath := filepath.Join(cfg.Media.VideoPatch, filename)
 
-		if !strings.HasPrefix(filepath.Clean(filePath), cfg.Media.VideoPath) {
+		if !strings.HasPrefix(filepath.Clean(filePath), cfg.Media.VideoPatch) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}

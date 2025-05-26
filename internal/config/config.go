@@ -40,7 +40,7 @@ type HTTPServer struct {
 
 type Media struct {
 	BaseURL     string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083"` //Адрес сервера https://api.7375.org
-	VideoPath   string `yaml:"video_path" env:"VIDEO_PATH" env-default:"data/video"`
+	VideoPatch  string `yaml:"video_patch" env:"VIDEO_PATCH" env-default:"data/video"`
 	ImagesPatch string `yaml:"images_patch" env:"IMAGES_PATCH" env-default:"data/img"`
 }
 
@@ -100,6 +100,8 @@ func (c *Config) LogValue() logging.Value {
 
 		//Media
 		logging.StringAttr("base_url", c.Media.BaseURL),
+		logging.StringAttr("video_patch", c.Media.VideoPatch),
+		logging.StringAttr("images_patch", c.Media.ImagesPatch),
 
 		//Docs
 		logging.StringAttr("docs_user", c.Docs.User),

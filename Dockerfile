@@ -7,11 +7,10 @@ COPY . .
 RUN go mod download
 
 ARG VERSION="unknown"
-ARG BUILD_TIME="unknown"
 ARG GIT_COMMIT="unknown"
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-    -ldflags "-X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT" \
+    -ldflags "-X main.Version=$VERSION -X main.GitCommit=$GIT_COMMIT" \
     -o main ./cmd/bodybalance/main.go
 
 
@@ -25,6 +24,7 @@ COPY --from=builder /app/main ./
 COPY --from=builder /app/config/* ./config/
 COPY --from=builder /app/docs/* ./docs/
 RUN mkdir -p /app/data/video
+RUN mkdir -p /app/data/img
 
 ENV TZ=Europe/Moscow
 

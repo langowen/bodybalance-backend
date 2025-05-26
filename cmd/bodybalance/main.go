@@ -20,7 +20,6 @@ import (
 // Информация о сборке
 var (
 	Version   = "unknown"
-	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
 
@@ -59,7 +58,6 @@ func main() {
 	logger.With(
 		"Config params", cfg,
 		"go_version", runtime.Version(),
-		"build_time", BuildTime,
 		"git_commit", GitCommit,
 		"version", Version,
 	).Info("starting server")
