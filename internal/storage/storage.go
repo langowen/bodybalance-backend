@@ -1,9 +1,7 @@
 package storage
 
 import (
-	"context"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 )
 
 var (
@@ -12,10 +10,3 @@ var (
 	ErrVideoNotFound       = errors.New("no video found")
 	ErrAccountNotFound     = errors.New("account not found")
 )
-
-type ApiStorage interface {
-	GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]response.VideoResponse, error)
-	GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error)
-	CheckAccount(ctx context.Context, username string) (response.AccountResponse, error)
-	GetVideo(ctx context.Context, videoID string) (response.VideoResponse, error)
-}

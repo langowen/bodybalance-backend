@@ -5,7 +5,7 @@
 #VideoResponse file
 
 *.mp4
-data/video/*
+data/*
 
 # User-specific stuff
 .idea/**/workspace.xml

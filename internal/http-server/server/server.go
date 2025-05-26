@@ -3,37 +3,29 @@ package server
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
+	"github.com/langowen/bodybalance-backend/internal/http-server/handler/docs"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/img"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/http-server/middleware/logger"
-	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
-	"github.com/theartofdevel/logging"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 type Server struct {
-	cfg       *config.Config
-	logger    *logging.Logger
-	pgStorage *postgres.Storage
+	app *app.App
 }
 
-func Init(cfg *config.Config, logger *logging.Logger, pgStorage *postgres.Storage) *http.Server {
-	router := (&Server{
-		cfg:       cfg,
-		logger:    logger,
-		pgStorage: pgStorage,
-	}).setupRouter()
+func Init(app *app.App) *http.Server {
+	s := &Server{app: app}
+	router := s.setupRouter()
 
 	srv := &http.Server{
-		Addr:         ":" + cfg.HTTPServer.Port,
+		Addr:         ":" + app.Cfg.HTTPServer.Port,
 		Handler:      router,
-		ReadTimeout:  cfg.HTTPServer.Timeout,
-		WriteTimeout: cfg.HTTPServer.Timeout,
-		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
+		ReadTimeout:  app.Cfg.HTTPServer.Timeout,
+		WriteTimeout: app.Cfg.HTTPServer.Timeout,
+		IdleTimeout:  app.Cfg.HTTPServer.IdleTimeout,
 	}
 
 	return srv
@@ -44,40 +36,21 @@ func (s *Server) setupRouter() *chi.Mux {
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(mwLogger.New(s.logger)) //TODO подумать над заменой логера из пакета https://github.com/go-chi/httplog/blob/master/httplog.go
+	r.Use(mwLogger.New(s.app.Logger))
 	r.Use(middleware.Recoverer)
 
-	// Настройка Basic Auth
-	docsAuth := middleware.BasicAuth("Restricted Docs", map[string]string{
-		s.cfg.Docs.User: s.cfg.Docs.Password,
+	// Документация
+	docs.RegisterRoutes(r, docs.Config{
+		User:     s.app.Cfg.Docs.User,
+		Password: s.app.Cfg.Docs.Password,
 	})
 
-	// Группа защищенных роутов для документации
-	r.Route("/", func(r chi.Router) {
-		r.Use(docsAuth)
+	// API v1
+	r.Mount("/v1", v1.New(s.app.Logger, s.app.Storage).Router())
 
-		// Swagger JSON
-		r.Get("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			http.ServeFile(w, r, filepath.Join(getProjectRoot(), "docs/swagger.json"))
-		})
-
-		// RapiDoc UI
-		staticPath := filepath.Join(getProjectRoot(), "docs")
-		r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(staticPath, "rapidoc.html"))
-		})
-		r.Handle("/docs/*", http.StripPrefix("/docs", http.FileServer(http.Dir(staticPath))))
-	})
-
-	v1.New(r, s.logger, s.pgStorage, s.cfg)
-
-	r.Get("/video/{filename}", video.ServeVideoFile(s.cfg, s.logger))
-	r.Get("/img/{filename}", img.ServeImgFile(s.cfg, s.logger))
+	// Статические файлы
+	r.Get("/video/{filename}", video.ServeVideoFile(s.app.Cfg, s.app.Logger))
+	r.Get("/img/{filename}", img.ServeImgFile(s.app.Cfg, s.app.Logger))
 
 	return r
-}
-func getProjectRoot() string {
-	dir, _ := os.Getwd()
-	return dir
 }

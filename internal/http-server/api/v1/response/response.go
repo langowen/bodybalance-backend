@@ -9,24 +9,24 @@ import (
 
 // VideoResponse представляет собой структуру возврата видео
 type VideoResponse struct {
-	ID          float64 `json:"id"`          //ID из БД
-	URL         string  `json:"url"`         //URL адрес до файла
-	Name        string  `json:"name"`        //Название видео
-	Description string  `json:"description"` //Описание видео
-	Category    string  `json:"category"`    //Название категории
-	ImgURL      string  `json:"img_url"`     //Превью картинка для видео
+	ID          float64 `json:"id"`          // ID из БД
+	URL         string  `json:"url"`         // URL адрес до файла
+	Name        string  `json:"name"`        // Название видео
+	Description string  `json:"description"` // Описание видео
+	Category    string  `json:"category"`    // Название категории
+	ImgURL      string  `json:"img_url"`     // Превью картинка для видео
 }
 
 // CategoryResponse представляет категорию с ID из БД
 type CategoryResponse struct {
 	ID     float64 `json:"id"`      // ID из БД
 	Name   string  `json:"name"`    // Название категории
-	ImgURL string  `json:"img_url"` //Превью картинка для категории
+	ImgURL string  `json:"img_url"` // Превью картинка для категории
 }
 
 type AccountResponse struct {
-	TypeID   float64 `json:"type_id"`
-	TypeName string  `json:"type_name"`
+	TypeID   float64 `json:"type_id"`   // ID type из БД
+	TypeName string  `json:"type_name"` // Название type
 }
 
 type ErrorResponse struct {

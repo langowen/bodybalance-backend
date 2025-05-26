@@ -30,6 +30,7 @@ type DatabaseConfig struct {
 	Password string        `yaml:"password" env:"BD_PASSWORD" env-required:"true"`
 	DBName   string        `yaml:"dbname" env:"BD_DBNAME" env-required:"true"`
 	SSLMode  string        `yaml:"sslmode" env:"BD_SSL_MODE" env-default:"disable"`
+	Schema   string        `yaml:"schema" env:"BD_SCHEMA" env-default:"dev"` //dev, public
 }
 
 type HTTPServer struct {
@@ -92,6 +93,7 @@ func (c *Config) LogValue() logging.Value {
 		logging.StringAttr("db_name", c.Database.DBName),
 		logging.StringAttr("db_ssl_mode", c.Database.SSLMode),
 		logging.StringAttr("db_timeout", formatDuration(c.Database.Timeout)), // Форматируем
+		logging.StringAttr("db_schema", c.Database.Schema),
 
 		//HTTPServer
 		logging.StringAttr("http_host", c.HTTPServer.Port),

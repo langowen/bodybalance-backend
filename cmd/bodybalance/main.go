@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/server"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
@@ -44,7 +45,7 @@ func main() {
 	defer cancel()
 
 	// Инициализируем хранилище PostgresSQL
-	pgStorage, err := postgres.New(ctx, cfg, logger)
+	pgStorage, err := postgres.New(ctx, cfg)
 	if err != nil {
 		log.Fatalln("Failed to initialize PostgresSQL storage", sl.Err(err))
 	}
@@ -65,7 +66,9 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	srv := server.Init(cfg, logger, pgStorage)
+	apps := app.New(cfg, logger, pgStorage)
+
+	srv := server.Init(apps)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

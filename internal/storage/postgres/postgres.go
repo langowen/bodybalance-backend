@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/langowen/bodybalance-backend/internal/storage"
+	"github.com/theartofdevel/logging"
 	"strings"
 	"time"
 
@@ -14,16 +15,14 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/theartofdevel/logging"
 )
 
 type Storage struct {
-	db     *sql.DB
-	logger *logging.Logger
-	cfg    *config.Config
+	db  *sql.DB
+	cfg *config.Config
 }
 
-func New(ctx context.Context, cfg *config.Config, logger *logging.Logger) (*Storage, error) {
+func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	const op = "storage.postgres.New"
 
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -49,28 +48,31 @@ func New(ctx context.Context, cfg *config.Config, logger *logging.Logger) (*Stor
 	db.SetConnMaxLifetime(10 * time.Minute)
 	db.SetConnMaxIdleTime(5 * time.Minute)
 
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s", cfg.Database.Schema)); err != nil {
+		return nil, fmt.Errorf("%s: failed to set search_path: %w", op, err)
+	}
+
 	// Проверка соединения с таймаутом
 	pingCtx, cancel := context.WithTimeout(ctx, cfg.Database.Timeout)
 	defer cancel()
 
 	if err := db.PingContext(pingCtx); err != nil {
-		logger.Error("postgres ping failed", sl.Err(err))
+		logging.L(ctx).Error("postgres ping failed", sl.Err(err))
 		return nil, fmt.Errorf("%s: ping failed: %w", op, err)
 	}
 
 	storageBD := &Storage{
-		db:     db,
-		logger: logger,
-		cfg:    cfg,
+		db:  db,
+		cfg: cfg,
 	}
 
 	if err := storageBD.initSchema(ctx); err != nil {
-		logger.Error("failed to init database schema", sl.Err(err))
+		logging.L(ctx).Error("failed to init database schema", sl.Err(err))
 		_ = db.Close()
 		return nil, fmt.Errorf("%s: init schema failed: %w", op, err)
 	}
 
-	logger.Info("PostgreSQL storage initialized successfully")
+	logging.L(ctx).Info("PostgreSQL storage initialized successfully")
 	return storageBD, nil
 }
 
@@ -81,12 +83,14 @@ func (s *Storage) initSchema(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS content_types (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
+    		remove boolean,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS categories (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			img_url TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS category_content_types (
@@ -100,6 +104,7 @@ func (s *Storage) initSchema(ctx context.Context) error {
 			name TEXT NOT NULL,
 			description TEXT,
 			img_url TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS video_categories (
@@ -111,6 +116,9 @@ func (s *Storage) initSchema(ctx context.Context) error {
 			id SERIAL PRIMARY KEY,
 			username TEXT NOT NULL UNIQUE,
 			content_type_id INTEGER REFERENCES content_types(id) ON DELETE SET NULL,
+    		admin BOOLEAN,
+    		password TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_video_categories_video_id ON video_categories(video_id)`,
@@ -164,7 +172,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
         JOIN categories c ON vc.category_id = c.id
         JOIN category_content_types cct ON c.id = cct.category_id
         JOIN content_types ct ON cct.content_type_id = ct.id
-        WHERE ct.id = $1 AND c.id = $2
+        WHERE ct.id = $1 AND c.id = $2 AND v.deleted IS NOT TRUE
         ORDER BY v.created_at DESC
     `
 
@@ -206,7 +214,7 @@ func (s *Storage) CheckAccount(ctx context.Context, username string) (response.A
         SELECT a.content_type_id, ct.name
         FROM accounts a
         JOIN content_types ct ON a.content_type_id = ct.id 
-        WHERE a.username = $1
+        WHERE a.username = $1 AND a.deleted IS NOT TRUE
     `
 
 	var account response.AccountResponse
@@ -243,7 +251,7 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
         FROM categories c
         JOIN category_content_types cct ON c.id = cct.category_id
         JOIN content_types ct ON cct.content_type_id = ct.id
-        WHERE ct.id = $1
+        WHERE ct.id = $1 AND c.deleted IS NOT TRUE
         ORDER BY c.created_at DESC
     `
 
@@ -286,7 +294,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
         FROM videos v
         JOIN video_categories vc ON v.id = vc.video_id
         JOIN categories c ON vc.category_id = c.id
-        WHERE v.id = $1
+        WHERE v.id = $1 AND v.deleted IS NOT TRUE
     `
 
 	var video response.VideoResponse
@@ -318,7 +326,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
 func (s *Storage) chekType(ctx context.Context, contentType, op string) error {
 	var contentTypeExists bool
 	err := s.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM content_types WHERE id = $1)`,
+		`SELECT EXISTS(SELECT 1 FROM content_types WHERE id = $1 AND deleted IS NOT TRUE)`,
 		contentType,
 	).Scan(&contentTypeExists)
 
@@ -338,7 +346,7 @@ func (s *Storage) chekCategory(ctx context.Context, category, op string) error {
 	var categoryNameExists bool
 
 	err := s.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1)`,
+		`SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1 AND deleted IS NOT TRUE)`,
 		category,
 	).Scan(&categoryNameExists)
 
