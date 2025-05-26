@@ -1,12 +1,67 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "API для управления видео-контентом BodyBalance.",
+        "title": "BodyBalance API",
+        "contact": {},
+        "version": "1.0"
     },
+    "host": "https://api.7375.org",
+    "basePath": "/api/v1",
     "paths": {
+        "/img/{filename}": {
+            "get": {
+                "description": "Send img file by filename",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Serve img file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video filename (e.g. 'shee_video.jpg')",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/category": {
             "get": {
-                "description": "Returns all categories for specified type",
+                "description": "Returns all categories for specified type, order by name",
                 "consumes": [
                     "application/json"
                 ],
@@ -159,7 +214,7 @@
         },
         "/v1/video_categories": {
             "get": {
-                "description": "Returns videos filtered by type and category",
+                "description": "Returns videos filtered by type and category, order by name",
                 "consumes": [
                     "application/json"
                 ],
@@ -287,6 +342,10 @@
                     "description": "ID из БД",
                     "type": "number"
                 },
+                "img_url": {
+                    "description": "Превью картинка для категории",
+                    "type": "string"
+                },
                 "name": {
                     "description": "Название категории",
                     "type": "string"
@@ -318,6 +377,10 @@
                 "id": {
                     "description": "ID из БД",
                     "type": "number"
+                },
+                "img_url": {
+                    "description": "Превью картинка для видео",
+                    "type": "string"
                 },
                 "name": {
                     "description": "Название видео",

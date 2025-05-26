@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
+	"github.com/langowen/bodybalance-backend/internal/http-server/handler/img"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/http-server/middleware/logger"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
@@ -72,6 +73,7 @@ func (s *Server) setupRouter() *chi.Mux {
 	v1.New(r, s.logger, s.pgStorage, s.cfg)
 
 	r.Get("/video/{filename}", video.ServeVideoFile(s.cfg, s.logger))
+	r.Get("/img/{filename}", img.ServeImgFile(s.cfg, s.logger))
 
 	return r
 }

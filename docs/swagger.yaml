@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   response.AccountResponse:
     properties:
@@ -11,6 +12,9 @@ definitions:
       id:
         description: ID из БД
         type: number
+      img_url:
+        description: Превью картинка для категории
+        type: string
       name:
         description: Название категории
         type: string
@@ -33,6 +37,9 @@ definitions:
       id:
         description: ID из БД
         type: number
+      img_url:
+        description: Превью картинка для видео
+        type: string
       name:
         description: Название видео
         type: string
@@ -40,14 +47,51 @@ definitions:
         description: URL адрес до файла
         type: string
     type: object
+host: https://api.7375.org
 info:
   contact: {}
+  description: API для управления видео-контентом BodyBalance.
+  title: BodyBalance API
+  version: "1.0"
 paths:
+  /img/{filename}:
+    get:
+      consumes:
+      - application/json
+      description: Send img file by filename
+      parameters:
+      - description: Video filename (e.g. 'shee_video.jpg')
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Serve img file
+      tags:
+      - images
   /v1/category:
     get:
       consumes:
       - application/json
-      description: Returns all categories for specified type
+      description: Returns all categories for specified type, order by name
       parameters:
       - description: Type id (e.g. '1', '2')
         in: query
@@ -149,7 +193,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns videos filtered by type and category
+      description: Returns videos filtered by type and category, order by name
       parameters:
       - description: Type id (e.g. '1')
         in: query

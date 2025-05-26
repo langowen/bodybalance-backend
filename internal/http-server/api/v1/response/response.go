@@ -14,12 +14,14 @@ type VideoResponse struct {
 	Name        string  `json:"name"`        //Название видео
 	Description string  `json:"description"` //Описание видео
 	Category    string  `json:"category"`    //Название категории
+	ImgURL      string  `json:"img_url"`     //Превью картинка для видео
 }
 
 // CategoryResponse представляет категорию с ID из БД
 type CategoryResponse struct {
-	ID   float64 `json:"id"`   // ID из БД
-	Name string  `json:"name"` // Название категории
+	ID     float64 `json:"id"`      // ID из БД
+	Name   string  `json:"name"`    // Название категории
+	ImgURL string  `json:"img_url"` //Превью картинка для категории
 }
 
 type AccountResponse struct {
@@ -33,19 +35,16 @@ type ErrorResponse struct {
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string, details ...string) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(code)
 
-	response := ErrorResponse{
-		Error: message,
-	}
-
+	errorText := message
 	if len(details) > 0 {
-		response.Details = details[0]
+		errorText += "\nDetails: " + details[0]
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		slog.Error("Failed to encode response", sl.Err(err))
+	if _, err := w.Write([]byte(errorText)); err != nil {
+		slog.Error("Failed to write error response", sl.Err(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

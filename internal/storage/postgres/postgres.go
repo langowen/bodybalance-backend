@@ -86,6 +86,7 @@ func (s *Storage) initSchema(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS categories (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
+			img_url TEXT,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS category_content_types (
@@ -98,6 +99,7 @@ func (s *Storage) initSchema(ctx context.Context) error {
 			url TEXT NOT NULL,
 			name TEXT NOT NULL,
 			description TEXT,
+			img_url TEXT,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS video_categories (
@@ -156,14 +158,14 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	}
 
 	query := `
-        SELECT v.id, v.url, v.name, v.description, c.name as category
+        SELECT v.id, v.url, v.name, v.description, c.name as category, v.img_url
         FROM videos v
         JOIN video_categories vc ON v.id = vc.video_id
         JOIN categories c ON vc.category_id = c.id
         JOIN category_content_types cct ON c.id = cct.category_id
         JOIN content_types ct ON cct.content_type_id = ct.id
         WHERE ct.id = $1 AND c.id = $2
-        ORDER BY v.name
+        ORDER BY v.created_at DESC
     `
 
 	rows, err := s.db.QueryContext(ctx, query, contentType, category)
@@ -175,10 +177,11 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	var videos []response.VideoResponse
 	for rows.Next() {
 		var v response.VideoResponse
-		if err := rows.Scan(&v.ID, &v.URL, &v.Name, &v.Description, &v.Category); err != nil {
+		if err := rows.Scan(&v.ID, &v.URL, &v.Name, &v.Description, &v.Category, &v.ImgURL); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
 		v.URL = s.constructFullMediaURL(v.URL)
+		v.ImgURL = s.constructFullImgURL(v.ImgURL)
 		videos = append(videos, v)
 	}
 
@@ -236,12 +239,12 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
 
 	// Основной запрос для получения категорий
 	query := `
-        SELECT DISTINCT c.id, c.name 
+        SELECT c.id, c.name, c.img_url
         FROM categories c
         JOIN category_content_types cct ON c.id = cct.category_id
         JOIN content_types ct ON cct.content_type_id = ct.id
         WHERE ct.id = $1
-        ORDER BY c.name
+        ORDER BY c.created_at DESC
     `
 
 	rows, err := s.db.QueryContext(ctx, query, contentType)
@@ -254,9 +257,11 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
 
 	for rows.Next() {
 		var category response.CategoryResponse
-		if err := rows.Scan(&category.ID, &category.Name); err != nil {
+		if err := rows.Scan(&category.ID, &category.Name, &category.ImgURL); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
+		category.ImgURL = s.constructFullImgURL(category.ImgURL)
+
 		categories = append(categories, category)
 	}
 
@@ -277,7 +282,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
 	const op = "storage.postgres.GetVideo"
 
 	query := `
-        SELECT v.id, v.url, v.name, v.description, c.name as category
+        SELECT v.id, v.url, v.name, v.description, c.name as category, v.img_url
         FROM videos v
         JOIN video_categories vc ON v.id = vc.video_id
         JOIN categories c ON vc.category_id = c.id
@@ -292,6 +297,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
 		&video.Name,
 		&video.Description,
 		&video.Category,
+		&video.ImgURL,
 	)
 
 	if err != nil {
@@ -303,6 +309,8 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
 	}
 
 	video.URL = s.constructFullMediaURL(video.URL)
+
+	video.ImgURL = s.constructFullImgURL(video.ImgURL)
 
 	return video, nil
 }
@@ -355,6 +363,17 @@ func (s *Storage) constructFullMediaURL(relativePath string) string {
 	videoPath := strings.TrimLeft(relativePath, "/")
 
 	return fmt.Sprintf("%s/video/%s", baseURL, videoPath)
+}
+
+func (s *Storage) constructFullImgURL(relativePath string) string {
+	if relativePath == "" {
+		return ""
+	}
+
+	baseURL := strings.TrimRight(s.cfg.Media.BaseURL, "/")
+	imgPath := strings.TrimLeft(relativePath, "/")
+
+	return fmt.Sprintf("%s/img/%s", baseURL, imgPath)
 }
 
 func (s *Storage) Close() error {

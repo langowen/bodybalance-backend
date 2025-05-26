@@ -15,9 +15,59 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/img/{filename}": {
+            "get": {
+                "description": "Send img file by filename",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Serve img file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video filename (e.g. 'shee_video.jpg')",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/category": {
             "get": {
-                "description": "Returns all categories for specified type",
+                "description": "Returns all categories for specified type, order by name",
                 "consumes": [
                     "application/json"
                 ],
@@ -170,7 +220,7 @@ const docTemplate = `{
         },
         "/v1/video_categories": {
             "get": {
-                "description": "Returns videos filtered by type and category",
+                "description": "Returns videos filtered by type and category, order by name",
                 "consumes": [
                     "application/json"
                 ],
@@ -298,6 +348,10 @@ const docTemplate = `{
                     "description": "ID из БД",
                     "type": "number"
                 },
+                "img_url": {
+                    "description": "Превью картинка для категории",
+                    "type": "string"
+                },
                 "name": {
                     "description": "Название категории",
                     "type": "string"
@@ -330,6 +384,10 @@ const docTemplate = `{
                     "description": "ID из БД",
                     "type": "number"
                 },
+                "img_url": {
+                    "description": "Превью картинка для видео",
+                    "type": "string"
+                },
                 "name": {
                     "description": "Название видео",
                     "type": "string"
@@ -345,12 +403,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
+	Version:          "1.0",
+	Host:             "https://api.7375.org",
+	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "BodyBalance API",
+	Description:      "API для управления видео-контентом BodyBalance.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

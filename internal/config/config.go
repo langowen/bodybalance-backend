@@ -39,8 +39,9 @@ type HTTPServer struct {
 }
 
 type Media struct {
-	BaseURL   string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083"` //адрес сервера https://api.7375.org
-	VideoPath string `yaml:"video_path" env:"VIDEO_PATH" env-default:"data/video"`
+	BaseURL     string `yaml:"base_url" env:"BASE_URL" env-default:"http://localhost:8083"` //Адрес сервера https://api.7375.org
+	VideoPath   string `yaml:"video_path" env:"VIDEO_PATH" env-default:"data/video"`
+	ImagesPatch string `yaml:"images_patch" env:"IMAGES_PATCH" env-default:"data/img"`
 }
 
 type Docs struct {

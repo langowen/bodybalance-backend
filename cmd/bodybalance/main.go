@@ -24,6 +24,11 @@ var (
 	GitCommit = "unknown"
 )
 
+// @title BodyBalance API
+// @version 1.0
+// @description API для управления видео-контентом BodyBalance.
+// @host https://api.7375.org
+// @BasePath /api/v1
 func main() {
 	// Инициализируем конфиг
 	cfg := config.MustGetConfig()
