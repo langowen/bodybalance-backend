@@ -5,9 +5,11 @@ const playerModal = new bootstrap.Modal(document.getElementById('video-player-mo
 const uploadModal = new bootstrap.Modal(document.getElementById('upload-modal'));
 const fileSelectModal = new bootstrap.Modal(document.getElementById('file-select-modal'));
 const uploadImageModal = new bootstrap.Modal(document.getElementById('upload-image-modal'));
+const contentTypesModal = new bootstrap.Modal(document.getElementById('content-type-modal'));
 let currentFileInput = null;
 let selectedFile = null;
 let filesList = [];
+let currentPage = 'videos';
 let currentSort = { field: 'mod_time', order: 'desc' };
 
 // Theme Management
@@ -85,6 +87,213 @@ function showError(message, isFatal = false) {
     if (!isFatal) setTimeout(() => $error.removeClass('show'), 3000);
 }
 
+// Функция для переключения между страницами
+function switchPage(page) {
+    currentPage = page;
+    if (page === 'videos') {
+        $('#admin-panel').removeClass('d-none');
+        $('#content-types-panel').addClass('d-none');
+        loadVideos();
+    } else {
+        $('#admin-panel').addClass('d-none');
+        $('#content-types-panel').removeClass('d-none');
+        loadContentTypes();
+    }
+}
+
+// Функция для загрузки типов контента
+function loadContentTypes() {
+    makeRequest({
+        endpoint: '/type',
+        method: 'GET',
+        loading: true,
+        success: (types) => {
+           // console.log('Server response:', types);
+            renderContentTypes(types);
+        },
+        error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки типов контента')
+    });
+}
+
+function formatDate(dateString) {
+   // console.log('Raw date string:', dateString);
+    if (!dateString) return 'Не указана';
+
+    // Пробуем разобрать дату в формате DD.MM.YYYY
+    const parts = dateString.split('.');
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        // Создаем дату в формате YYYY-MM-DD (месяцы в JS 0-11)
+        const date = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                //hour: '2-digit',
+                //minute: '2-digit'
+            });
+        }
+    }
+
+    // Если формат не распознан, покажем как есть
+    return dateString;
+}
+
+// Функция для отрисовки типов контента
+function renderContentTypes(types) {
+    const $container = $('#content-types-list').empty();
+
+    if (!types?.length) {
+        $container.html('<tr><td colspan="4" class="text-center">Нет доступных типов контента</td></tr>');
+        return;
+    }
+
+    types.forEach(type => {
+        const createdAt = formatDate(type.created_at);
+
+        $container.append(`
+    <tr>
+        <td>${type.id}</td>
+        <td>${type.name}</td>
+        <td>${createdAt}</td>
+        <td>
+            <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary edit-content-type" data-id="${type.id}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+`);
+    });
+
+    $('.edit-content-type').click(function() {
+        openContentTypeModal($(this).data('id'));
+    });
+
+    // Добавляем сортировку
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderContentTypes(sortContentTypes(types));
+    });
+}
+
+// Функция для сортировки типов контента
+function sortContentTypes(types) {
+    return [...types].sort((a, b) => {
+        if (currentSort.field === 'id') {
+            return currentSort.order === 'asc' ? a.id - b.id : b.id - a.id;
+        } else if (currentSort.field === 'name') {
+            return currentSort.order === 'asc'
+                ? a.name.localeCompare(b.name)
+                : b.name.localeCompare(a.name);
+        } else if (currentSort.field === 'created_at') {
+            return currentSort.order === 'asc'
+                ? new Date(a.created_at) - new Date(b.created_at)
+                : new Date(b.created_at) - new Date(a.created_at);
+        }
+        return 0;
+    });
+}
+
+// Функция для открытия модального окна типа контента
+function openContentTypeModal(typeId = null) {
+    if (typeId) {
+        $('#content-type-modal-title').text('Редактировать тип контента');
+        $('#delete-content-type-btn').removeClass('d-none');
+
+        makeRequest({
+            endpoint: `/type/${typeId}`,
+            method: 'GET',
+            success: (type) => {
+                $('#content-type-id').val(type.id);
+                $('#content-type-name').val(type.name);
+                contentTypesModal.show();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки типа контента')
+        });
+    } else {
+        $('#content-type-modal-title').text('Добавить тип контента');
+        $('#delete-content-type-btn').addClass('d-none');
+        $('#content-type-form')[0].reset();
+        contentTypesModal.show();
+    }
+}
+
+
+// В функции $(document).ready() добавим обработчики:
+$(document).ready(function() {
+    // ... существующий код ...
+
+    // Обработчики для работы с типами контента
+    $('#add-content-type-btn').click(() => openContentTypeModal());
+
+    $('#content-type-form').submit(function(e) {
+        e.preventDefault();
+        const typeData = {
+            name: $('#content-type-name').val()
+        };
+
+        const typeId = $('#content-type-id').val();
+        // Явно проверяем, есть ли ID
+        const isEdit = typeId && typeId !== 'undefined' && typeId !== '';
+        const method = isEdit ? 'PUT' : 'POST';
+        const endpoint = isEdit ? `/type/${typeId}` : '/type';
+
+        makeRequest({
+            endpoint,
+            method,
+            data: typeData,
+            success: () => {
+                contentTypesModal.hide();
+                loadContentTypes();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения типа контента')
+        });
+    });
+
+    $('#delete-content-type-btn').click(function() {
+        if (confirm('Удалить этот тип контента?')) {
+            makeRequest({
+                endpoint: `/type/${$('#content-type-id').val()}`,
+                method: 'DELETE',
+                success: () => {
+                    contentTypesModal.hide();
+                    loadContentTypes();
+                },
+                error: (err) => showError(err.responseJSON?.error || 'Ошибка удаления типа контента')
+            });
+        }
+    });
+
+    // Добавим кнопки переключения между страницами
+    $('.admin-header h1').after(`
+        <div class="page-nav">
+            <a href="#" class="page-nav-btn ${currentPage === 'videos' ? 'active' : ''}" data-page="videos">Видео</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'content-types' ? 'active' : ''}" data-page="content-types">Типы контента</a>
+        </div>
+    `);
+
+    $('.page-nav-btn').click(function(e) {
+        e.preventDefault();
+        switchPage($(this).data('page'));
+    });
+
+    // Инициализация текущей страницы
+    switchPage(currentPage);
+});
+
 // Загрузка видео
 function loadVideos() {
     makeRequest({
@@ -99,7 +308,7 @@ function loadVideos() {
 // Отрисовка видео
 function renderVideos(videos) {
     const $container = $('#videos-container').empty();
-    console.log("Получены видео:", videos); // <- Добавьте эту строку
+   // console.log("Получены видео:", videos); // <- Добавьте эту строку
     if (!videos?.length) {
         $container.html('<div class="col-12"><div class="alert alert-info">Нет доступных видео</div></div>');
         return;

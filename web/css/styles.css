@@ -335,3 +335,63 @@ body {
 #error-message.show {
     animation: shake 0.3s ease;
 }
+
+/* Стили для таблицы типов контента */
+.sortable {
+    cursor: pointer;
+}
+
+.sortable:hover {
+    background-color: var(--table-hover-bg);
+}
+
+.sort-icon {
+    margin-left: 5px;
+}
+
+#content-types-list tr {
+    vertical-align: middle;
+}
+
+/* Обновленные стили для кнопок действий */
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    justify-content: center; /* Изменено с flex-end на center */
+    align-items: center; /* Добавлено для вертикального выравнивания */
+}
+
+/* Дополнительные стили для иконок в кнопках */
+.action-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.action-buttons .btn i {
+    font-size: 1rem;
+}
+
+/* Навигация между страницами */
+.page-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.page-nav-btn {
+    padding: 8px 15px;
+    border-radius: 5px;
+    background-color: var(--bs-primary);
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.page-nav-btn:hover {
+    background-color: var(--bs-primary-dark);
+    color: white;
+}

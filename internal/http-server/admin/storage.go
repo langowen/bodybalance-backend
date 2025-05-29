@@ -14,4 +14,10 @@ type AdmStorage interface {
 	UpdateVideo(ctx context.Context, id int64, video admResponse.VideoRequest) error
 	DeleteVideo(ctx context.Context, id int64) error
 	GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.AdmUser, error)
+
+	AddType(ctx context.Context, req admResponse.TypeRequest) (admResponse.TypeResponse, error)
+	GetType(ctx context.Context, id int64) (admResponse.TypeResponse, error)
+	GetTypes(ctx context.Context) ([]admResponse.TypeResponse, error)
+	UpdateType(ctx context.Context, id int64, req admResponse.TypeRequest) error
+	DeleteType(ctx context.Context, id int64) error
 }

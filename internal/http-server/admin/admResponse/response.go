@@ -32,6 +32,16 @@ type FileInfo struct {
 	ModTime time.Time `json:"mod_time"`
 }
 
+type TypeRequest struct {
+	Name string `json:"name"` // Название типа
+}
+
+type TypeResponse struct {
+	ID          float64 `json:"id"`   // ID из БД
+	Name        string  `json:"name"` // Название типа
+	DateCreated string  `json:"created_at"`
+}
+
 // CategoryResponse представляет категорию с ID из БД
 type CategoryResponse struct {
 	ID     float64 `json:"id"`      // ID из БД

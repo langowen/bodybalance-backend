@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="/admin/web/css/styles.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/ru.js"></script>
 </head>
 <body>
 <div class="container-fluid admin-container">
@@ -64,6 +66,66 @@
         </div>
 
         <div id="videos-container" class="videos-grid"></div>
+    </div>
+    <div id="content-types-panel" class="d-none">
+        <div class="admin-header">
+            <h1>Типы контента</h1>
+            <div class="admin-actions">
+                <div class="dropdown me-2">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="content-types-theme-dropdown" data-bs-toggle="dropdown">
+                        <i class="bi bi-moon-stars"></i> Тема
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item theme-option" href="#" data-theme="light"><i class="bi bi-sun"></i> Светлая</a></li>
+                        <li><a class="dropdown-item theme-option" href="#" data-theme="dark"><i class="bi bi-moon"></i> Темная</a></li>
+                        <li><a class="dropdown-item theme-option" href="#" data-theme="system"><i class="bi bi-laptop"></i> Системная</a></li>
+                    </ul>
+                </div>
+                <button id="add-content-type-btn" class="btn btn-success">+ Добавить тип</button>
+                <button id="logout-btn" class="btn btn-outline-danger">Выйти</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th class="sortable" data-sort="id">ID</th>
+                    <th class="sortable" data-sort="name">Имя</th>
+                    <th class="sortable" data-sort="created_at">Дата создания</th>
+                    <th>Действия</th>
+                </tr>
+                </thead>
+                <tbody id="content-types-list">
+                <!-- Типы контента будут загружены здесь -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования типа контента -->
+    <div id="content-type-modal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="content-type-modal-title" class="modal-title">Добавить тип контента</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="content-type-form">
+                        <input type="hidden" id="content-type-id">
+                        <div class="mb-3">
+                            <label for="content-type-name" class="form-label">Название</label>
+                            <input type="text" id="content-type-name" class="form-control" required>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">Сохранить</button>
+                            <button type="button" id="delete-content-type-btn" class="btn btn-danger d-none">Удалить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

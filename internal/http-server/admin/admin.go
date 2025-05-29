@@ -30,7 +30,7 @@ func (h *Handler) Router() chi.Router {
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware) // Защищенные роуты
 
-		// API для работы с видеофайлами
+		// API для работы с файлами
 		r.Route("/files", func(r chi.Router) {
 			r.Post("/video", h.uploadVideoHandler)
 			r.Get("/video", h.listVideoFilesHandler)
@@ -44,6 +44,14 @@ func (h *Handler) Router() chi.Router {
 			r.Get("/", h.getVideos)
 			r.Put("/{id}", h.updateVideo)
 			r.Delete("/{id}", h.deleteVideo)
+		})
+
+		r.Route("/type", func(r chi.Router) {
+			r.Post("/", h.addType)
+			r.Get("/{id}", h.getType)
+			r.Get("/", h.getTypes)
+			r.Put("/{id}", h.updateType)
+			r.Delete("/{id}", h.deleteType)
 		})
 	})
 
