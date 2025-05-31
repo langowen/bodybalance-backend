@@ -42,16 +42,26 @@ type TypeResponse struct {
 	DateCreated string  `json:"created_at"`
 }
 
-// CategoryResponse представляет категорию с ID из БД
 type CategoryResponse struct {
 	ID     float64 `json:"id"`      // ID из БД
 	Name   string  `json:"name"`    // Название категории
 	ImgURL string  `json:"img_url"` // Превью картинка для категории
 }
 
-type AccountResponse struct {
-	TypeID   float64 `json:"type_id"`   // ID type из БД
-	TypeName string  `json:"type_name"` // Название type
+type UserRequest struct {
+	Username      string `json:"username"`
+	ContentTypeID string `json:"content_type_id"`
+	Admin         bool   `json:"admin"`
+	Password      string `json:"password"`
+}
+
+type UserResponse struct {
+	ID            string `json:"id"`
+	Username      string `json:"username"`
+	ContentTypeID string `json:"content_type_id"`
+	ContentType   string `json:"content_type_name"`
+	Admin         bool   `json:"admin"`
+	DateCreated   string `json:"date_created"` // В формате 02.01.2006
 }
 
 type SignInRequest struct {

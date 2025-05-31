@@ -20,4 +20,10 @@ type AdmStorage interface {
 	GetTypes(ctx context.Context) ([]admResponse.TypeResponse, error)
 	UpdateType(ctx context.Context, id int64, req admResponse.TypeRequest) error
 	DeleteType(ctx context.Context, id int64) error
+
+	AddUser(ctx context.Context, req admResponse.UserRequest) (admResponse.UserResponse, error)
+	GetUser(ctx context.Context, id int64) (admResponse.UserResponse, error)
+	GetUsers(ctx context.Context) ([]admResponse.UserResponse, error)
+	UpdateUser(ctx context.Context, id int64, req admResponse.UserRequest) error
+	DeleteUser(ctx context.Context, id int64) error
 }

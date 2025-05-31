@@ -21,22 +21,26 @@ func RegisterRoutes(r chi.Router, cfg Config) {
 
 	projectRoot := getProjectRoot()
 
-	// Группа защищенных роутов для документации
-	r.Route("/", func(r chi.Router) {
+	r.Route("/swagger", func(r chi.Router) {
 		r.Use(docsAuth)
 
 		// Swagger JSON
-		r.Get("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/doc.json", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			http.ServeFile(w, r, filepath.Join(projectRoot, "docs/swagger.json"))
 		})
+	})
+
+	// Группа защищенных роутов для документации
+	r.Route("/docs", func(r chi.Router) {
+		r.Use(docsAuth)
 
 		// RapiDoc UI
 		staticPath := filepath.Join(projectRoot, "docs")
-		r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, filepath.Join(staticPath, "rapidoc.html"))
 		})
-		r.Handle("/docs/*", http.StripPrefix("/docs", http.FileServer(http.Dir(staticPath))))
+		r.Handle("/*", http.StripPrefix("/docs", http.FileServer(http.Dir(staticPath))))
 	})
 }
 

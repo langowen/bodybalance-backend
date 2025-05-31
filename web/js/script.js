@@ -6,11 +6,28 @@ const uploadModal = new bootstrap.Modal(document.getElementById('upload-modal'))
 const fileSelectModal = new bootstrap.Modal(document.getElementById('file-select-modal'));
 const uploadImageModal = new bootstrap.Modal(document.getElementById('upload-image-modal'));
 const contentTypesModal = new bootstrap.Modal(document.getElementById('content-type-modal'));
+const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
 let currentFileInput = null;
 let selectedFile = null;
 let filesList = [];
 let currentPage = 'videos';
 let currentSort = { field: 'mod_time', order: 'desc' };
+let contentTypesList = [];
+
+const parseDate = (dateStr) => {
+    if (!dateStr) return new Date(0); // Возвращаем минимальную дату для null/undefined
+
+    const parts = dateStr.split('.');
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        // Создаем дату в формате YYYY-MM-DD (корректно парсится в Date)
+        return new Date(`${year}-${month}-${day}`);
+    }
+
+    // Если формат не DD.MM.YYYY, пробуем стандартный парсинг
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? new Date(0) : date;
+}
 
 // Theme Management
 function applyTheme(theme) {
@@ -65,10 +82,6 @@ async function makeRequest(config) {
                 if (token) {
                     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                 }
-                if (config.loading) $('#loading-spinner').removeClass('d-none');
-            },
-            complete: () => {
-                if (config.loading) $('#loading-spinner').addClass('d-none');
             }
         });
         if (config.success) config.success(response);
@@ -90,15 +103,29 @@ function showError(message, isFatal = false) {
 // Функция для переключения между страницами
 function switchPage(page) {
     currentPage = page;
+    // Сохраняем выбранную страницу в localStorage
+    localStorage.setItem('currentAdminPage', page);
+
+    // Остальной код функции остаётся без изменений
     if (page === 'videos') {
         $('#admin-panel').removeClass('d-none');
         $('#content-types-panel').addClass('d-none');
+        $('#users-panel').addClass('d-none');
         loadVideos();
-    } else {
+    } else if (page === 'content-types') {
         $('#admin-panel').addClass('d-none');
         $('#content-types-panel').removeClass('d-none');
+        $('#users-panel').addClass('d-none');
         loadContentTypes();
+    } else if (page === 'users') {
+        $('#admin-panel').addClass('d-none');
+        $('#content-types-panel').addClass('d-none');
+        $('#users-panel').removeClass('d-none');
+        loadUsers();
     }
+
+    $('.page-nav-btn').removeClass('active');
+    $(`.page-nav-btn[data-page="${page}"]`).addClass('active');
 }
 
 // Функция для загрузки типов контента
@@ -106,9 +133,8 @@ function loadContentTypes() {
     makeRequest({
         endpoint: '/type',
         method: 'GET',
-        loading: true,
         success: (types) => {
-           // console.log('Server response:', types);
+            contentTypesList = types;
             renderContentTypes(types);
         },
         error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки типов контента')
@@ -116,27 +142,19 @@ function loadContentTypes() {
 }
 
 function formatDate(dateString) {
-   // console.log('Raw date string:', dateString);
     if (!dateString) return 'Не указана';
-
-    // Пробуем разобрать дату в формате DD.MM.YYYY
     const parts = dateString.split('.');
     if (parts.length === 3) {
         const [day, month, year] = parts;
-        // Создаем дату в формате YYYY-MM-DD (месяцы в JS 0-11)
         const date = new Date(`${year}-${month}-${day}`);
         if (!isNaN(date.getTime())) {
             return date.toLocaleDateString('ru-RU', {
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric',
-                //hour: '2-digit',
-                //minute: '2-digit'
+                year: 'numeric'
             });
         }
     }
-
-    // Если формат не распознан, покажем как есть
     return dateString;
 }
 
@@ -151,28 +169,26 @@ function renderContentTypes(types) {
 
     types.forEach(type => {
         const createdAt = formatDate(type.created_at);
-
         $container.append(`
-    <tr>
-        <td>${type.id}</td>
-        <td>${type.name}</td>
-        <td>${createdAt}</td>
-        <td>
-            <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary edit-content-type" data-id="${type.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
-            </div>
-        </td>
-    </tr>
-`);
+            <tr>
+                <td>${type.id}</td>
+                <td>${type.name}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary edit-content-type" data-id="${type.id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
     });
 
     $('.edit-content-type').click(function() {
         openContentTypeModal($(this).data('id'));
     });
 
-    // Добавляем сортировку
     $('.sortable').off('click').click(function() {
         const sortField = $(this).data('sort');
         $('.sortable').removeClass('sorted-asc sorted-desc');
@@ -199,9 +215,11 @@ function sortContentTypes(types) {
                 ? a.name.localeCompare(b.name)
                 : b.name.localeCompare(a.name);
         } else if (currentSort.field === 'created_at') {
+            const dateA = parseDate(a.created_at);
+            const dateB = parseDate(b.created_at);
             return currentSort.order === 'asc'
-                ? new Date(a.created_at) - new Date(b.created_at)
-                : new Date(b.created_at) - new Date(a.created_at);
+                ? dateA - dateB
+                : dateB - dateA;
         }
         return 0;
     });
@@ -227,79 +245,16 @@ function openContentTypeModal(typeId = null) {
         $('#content-type-modal-title').text('Добавить тип контента');
         $('#delete-content-type-btn').addClass('d-none');
         $('#content-type-form')[0].reset();
+        $('#content-type-id').val(''); // Явно сбрасываем ID
         contentTypesModal.show();
     }
 }
-
-
-// В функции $(document).ready() добавим обработчики:
-$(document).ready(function() {
-    // ... существующий код ...
-
-    // Обработчики для работы с типами контента
-    $('#add-content-type-btn').click(() => openContentTypeModal());
-
-    $('#content-type-form').submit(function(e) {
-        e.preventDefault();
-        const typeData = {
-            name: $('#content-type-name').val()
-        };
-
-        const typeId = $('#content-type-id').val();
-        // Явно проверяем, есть ли ID
-        const isEdit = typeId && typeId !== 'undefined' && typeId !== '';
-        const method = isEdit ? 'PUT' : 'POST';
-        const endpoint = isEdit ? `/type/${typeId}` : '/type';
-
-        makeRequest({
-            endpoint,
-            method,
-            data: typeData,
-            success: () => {
-                contentTypesModal.hide();
-                loadContentTypes();
-            },
-            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения типа контента')
-        });
-    });
-
-    $('#delete-content-type-btn').click(function() {
-        if (confirm('Удалить этот тип контента?')) {
-            makeRequest({
-                endpoint: `/type/${$('#content-type-id').val()}`,
-                method: 'DELETE',
-                success: () => {
-                    contentTypesModal.hide();
-                    loadContentTypes();
-                },
-                error: (err) => showError(err.responseJSON?.error || 'Ошибка удаления типа контента')
-            });
-        }
-    });
-
-    // Добавим кнопки переключения между страницами
-    $('.admin-header h1').after(`
-        <div class="page-nav">
-            <a href="#" class="page-nav-btn ${currentPage === 'videos' ? 'active' : ''}" data-page="videos">Видео</a>
-            <a href="#" class="page-nav-btn ${currentPage === 'content-types' ? 'active' : ''}" data-page="content-types">Типы контента</a>
-        </div>
-    `);
-
-    $('.page-nav-btn').click(function(e) {
-        e.preventDefault();
-        switchPage($(this).data('page'));
-    });
-
-    // Инициализация текущей страницы
-    switchPage(currentPage);
-});
 
 // Загрузка видео
 function loadVideos() {
     makeRequest({
         endpoint: '/video',
         method: 'GET',
-        loading: true,
         success: (videos) => renderVideos(videos),
         error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки видео')
     });
@@ -308,7 +263,6 @@ function loadVideos() {
 // Отрисовка видео
 function renderVideos(videos) {
     const $container = $('#videos-container').empty();
-   // console.log("Получены видео:", videos); // <- Добавьте эту строку
     if (!videos?.length) {
         $container.html('<div class="col-12"><div class="alert alert-info">Нет доступных видео</div></div>');
         return;
@@ -321,9 +275,7 @@ function renderVideos(videos) {
         $container.append(`
             <div class="video-card">
                 <div class="video-thumbnail">
-                    <img src="${imageUrl}" alt="${video.name}" 
-                         onerror="this.src='/img/placeholder.jpg'">
-                    
+                    <img src="${imageUrl}" alt="${video.name}" onerror="this.src='/img/placeholder.jpg'">
                     <div class="video-overlay">
                         <button class="play-button" data-video="${videoFilename}">
                             <svg class="play-icon" viewBox="0 0 24 24">
@@ -331,7 +283,6 @@ function renderVideos(videos) {
                             </svg>
                         </button>
                     </div>
-                    
                     <div class="edit-icon-wrapper">
                         <div class="edit-icon" data-id="${video.id}">
                             <svg width="20" height="20" viewBox="0 0 24 24">
@@ -340,7 +291,6 @@ function renderVideos(videos) {
                         </div>
                     </div>
                 </div>
-                
                 <div class="video-info">
                     <h3>${video.name}</h3>
                     <p>${video.description || 'Нет описания'}</p>
@@ -399,7 +349,149 @@ function openVideoModal(videoId = null) {
         $('#modal-title').text('Добавить видео');
         $('#delete-btn').addClass('d-none');
         $('#video-form')[0].reset();
+        $('#video-id').val(''); // Явно сбрасываем ID
         editModal.show();
+    }
+}
+
+// Функция для загрузки пользователей
+function loadUsers() {
+    makeRequest({
+        endpoint: '/users',
+        method: 'GET',
+        success: (users) => renderUsers(users),
+        error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки пользователей')
+    });
+}
+
+// Функция для отрисовки пользователей
+function renderUsers(users) {
+    const $container = $('#users-list').empty();
+
+    if (!users?.length) {
+        $container.html('<tr><td colspan="7" class="text-center">Нет доступных пользователей</td></tr>');
+        return;
+    }
+
+    users.forEach(user => {
+        const createdAt = formatDate(user.date_created);
+        const isAdmin = user.admin ? 'Да' : 'Нет';
+
+        $container.append(`
+            <tr>
+                <td>${user.id}</td>
+                <td>${user.username}</td>
+                <td>${user.content_type_id || '-'}</td>
+                <td>${user.content_type_name || '-'}</td>
+                <td>${isAdmin}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary edit-user" data-id="${user.id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+    }); // Закрывающая скобка для forEach
+
+    // Обработчики событий должны быть после forEach
+    $('.edit-user').click(function() {
+        openUserModal($(this).data('id'));
+    });
+
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderUsers(sortUsers(users));
+    });
+} // Закрывающая скобка для функции renderUsers
+
+// Функция для сортировки пользователей
+function sortUsers(users) {
+    return [...users].sort((a, b) => {
+        if (currentSort.field === 'id') {
+            return currentSort.order === 'asc' ? a.id - b.id : b.id - a.id;
+        } else if (currentSort.field === 'username') {
+            return currentSort.order === 'asc'
+                ? a.username.localeCompare(b.username)
+                : b.username.localeCompare(a.username);
+        } else if (currentSort.field === 'content_type_id') {
+            return currentSort.order === 'asc'
+                ? (a.content_type_id || 0) - (b.content_type_id || 0)
+                : (b.content_type_id || 0) - (a.content_type_id || 0);
+        } else if (currentSort.field === 'content_type_name') {
+            const nameA = String(a.content_type_name || '').trim().toLowerCase();
+            const nameB = String(b.content_type_name || '').trim().toLowerCase();
+            const result = nameA.localeCompare(nameB);
+            return currentSort.order === 'asc' ? result : -result;
+        } else if (currentSort.field === 'admin') {
+            return currentSort.order === 'asc'
+                ? (a.admin === b.admin ? 0 : a.admin ? 1 : -1)
+                : (a.admin === b.admin ? 0 : a.admin ? -1 : 1);
+        } else if (currentSort.field === 'date_created') {
+            const dateA = parseDate(a.date_created);
+            const dateB = parseDate(b.date_created);
+            return currentSort.order === 'asc'
+                ? dateA - dateB
+                : dateB - dateA;
+        }
+        return 0;
+    });
+}
+
+// Функция для открытия модального окна пользователя
+function openUserModal(userId = null) {
+    if (contentTypesList.length === 0) {
+        makeRequest({
+            endpoint: '/type',
+            method: 'GET',
+            success: (types) => {
+                contentTypesList = types;
+                showUserModal(userId);
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки типов контента')
+        });
+    } else {
+        showUserModal(userId);
+    }
+}
+
+function showUserModal(userId = null) {
+    if (userId) {
+        $('#user-modal-title').text('Редактировать пользователя');
+        $('#delete-user-btn').removeClass('d-none');
+
+        makeRequest({
+            endpoint: `/users/${userId}`,
+            method: 'GET',
+            success: (user) => {
+                $('#user-id').val(user.id);
+                $('#user-username').val(user.username);
+                $('#user-admin').prop('checked', user.admin);
+                $('#user-content-type-id').val(user.content_type_id || '');
+                $('#user-content-type-name').val(user.content_type_name || '');
+                $('#user-password').val('');
+                userModal.show();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки пользователя')
+        });
+    } else {
+        $('#user-modal-title').text('Добавить пользователя');
+        $('#delete-user-btn').addClass('d-none');
+        $('#user-form')[0].reset();
+        $('#user-id').val(''); // Явно сбрасываем ID
+        userModal.show();
     }
 }
 
@@ -557,16 +649,13 @@ function openFileSelectModal(inputField, fileType = 'video') {
     $('#file-search').val('');
     $('#select-file-btn').prop('disabled', true);
 
-    // Устанавливаем заголовок в зависимости от типа файлов
     const title = fileType === 'video' ? 'Выберите видеофайл' : 'Выберите изображение';
     $('#file-select-title').text(title);
 
-    // Загружаем список файлов соответствующего типа
     loadFilesList(fileType);
     fileSelectModal.show();
 }
 
-// Обновленная функция загрузки списка файлов
 function loadFilesList(fileType = 'video') {
     const endpoint = fileType === 'video' ? '/files/video' : '/files/img';
 
@@ -583,31 +672,6 @@ function loadFilesList(fileType = 'video') {
     });
 }
 
-// Обновляем обработчики для кнопок выбора файлов
-$('#select-video-btn').click(() => openFileSelectModal($('#video-url')[0], 'video'));
-$('#select-image-btn').click(() => openFileSelectModal($('#video-img')[0], 'img'));
-
-// Добавляем обработчики для загрузки изображений
-$('#select-images-btn').click(() => $('#image-input').click());
-$('#image-input').change(function() {
-    handleImages(this.files);
-    $(this).val('');
-});
-
-$('#upload-image-dropzone')
-    .on('dragover', function(e) {
-        e.preventDefault();
-        $(this).addClass('active');
-    })
-    .on('dragleave', function() {
-        $(this).removeClass('active');
-    })
-    .on('drop', function(e) {
-        e.preventDefault();
-        $(this).removeClass('active');
-        handleImages(e.originalEvent.dataTransfer.files);
-    });
-
 function renderFilesList(fileType = 'video') {
     const $fileList = $('#file-list').empty();
     const searchTerm = $('#file-search').val().toLowerCase();
@@ -616,7 +680,6 @@ function renderFilesList(fileType = 'video') {
         file.name.toLowerCase().includes(searchTerm)
     );
 
-    // Фильтрация по расширениям файлов на клиенте (дополнительная проверка)
     const allowedExtensions = fileType === 'video'
         ? ['.mp4', '.webm', '.ogg']
         : ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -628,15 +691,24 @@ function renderFilesList(fileType = 'video') {
 
     filteredFiles.sort((a, b) => {
         if (currentSort.field === 'size') {
-            return currentSort.order === 'asc' ? a.size - b.size : b.size - a.size;
-        } else if (currentSort.field === 'mod_time') {
             return currentSort.order === 'asc'
-                ? new Date(a.mod_time) - new Date(b.mod_time)
-                : new Date(b.mod_time) - new Date(a.mod_time);
-        } else {
+                ? (a.size || 0) - (b.size || 0)
+                : (b.size || 0) - (a.size || 0);
+        }
+        else if (currentSort.field === 'mod_time') {
+            const dateA = parseDate(a.mod_time);
+            const dateB = parseDate(b.mod_time);
             return currentSort.order === 'asc'
-                ? a.name.localeCompare(b.name)
-                : b.name.localeCompare(a.name);
+                ? dateA - dateB
+                : dateB - dateA;
+        }
+        else {
+            // Сортировка по имени с учетом регистра
+            const nameA = a.name || '';
+            const nameB = b.name || '';
+            return currentSort.order === 'asc'
+                ? nameA.localeCompare(nameB, undefined, { sensitivity: 'base' })
+                : nameB.localeCompare(nameA, undefined, { sensitivity: 'base' });
         }
     });
 
@@ -663,17 +735,41 @@ function renderFilesList(fileType = 'video') {
     });
 }
 
-// Инициализация
+// Проверка авторизации
+function checkAuth() {
+    makeRequest({
+        endpoint: '/video',
+        method: 'GET',
+        success: () => {
+            document.body.classList.add('logged-in');
+            $('#login-container').addClass('d-none');
+
+            // Восстанавливаем сохранённую страницу или используем 'videos' по умолчанию
+            const savedPage = localStorage.getItem('currentAdminPage') || 'videos';
+            switchPage(savedPage);
+        },
+        error: (err) => {
+            if (err.status === 401) {
+                document.body.classList.remove('logged-in');
+                $('#login-container').removeClass('d-none');
+                $('#admin-panel, #content-types-panel, #users-panel').addClass('d-none');
+                localStorage.removeItem('auth_token');
+            }
+        }
+    });
+}
+
+// Инициализация при загрузке страницы
 $(document).ready(function() {
     initTheme();
 
+    // Обработчики тем
     $('.theme-option').click(function(e) {
         e.preventDefault();
-        const theme = $(this).data('theme');
-        applyTheme(theme);
+        applyTheme($(this).data('theme'));
     });
 
-    // Проверка авторизации при загрузке
+    // Проверка авторизации
     checkAuth();
 
     // Обработчик входа
@@ -697,43 +793,23 @@ $(document).ready(function() {
                 dataType: 'json'
             });
 
-            // Условие изменено: проверяем success или message
             if (response.message === "Authentication successful" || response.token) {
-                // Если токен есть — сохраняем, если нет — запрашиваем видео
                 if (response.token) {
                     localStorage.setItem('auth_token', response.token);
                 }
+                document.body.classList.add('logged-in');
                 $('#login-container').addClass('d-none');
-                $('#admin-panel').removeClass('d-none');
-                loadVideos(); // Принудительно загружаем видео
+
+                // Используем сохраненную страницу или 'videos' по умолчанию
+                const savedPage = localStorage.getItem('currentAdminPage') || 'videos';
+                switchPage(savedPage);
             } else {
                 showError('Неверный логин или пароль');
             }
         } catch (error) {
-            console.error("Ошибка входа:", error);
             showError(error.responseJSON?.error || 'Ошибка авторизации');
         }
     });
-
-    // Проверка авторизации
-    function checkAuth() {
-        makeRequest({
-            endpoint: '/video',
-            method: 'GET',
-            success: () => {
-                $('#login-container').addClass('d-none');
-                $('#admin-panel').removeClass('d-none');
-                loadVideos();
-            },
-            error: (err) => {
-                if (err.status === 401) {
-                    $('#login-container').removeClass('d-none');
-                    $('#admin-panel').addClass('d-none');
-                    localStorage.removeItem('auth_token');
-                }
-            }
-        });
-    }
 
     // Выход
     $('#logout-btn').click(() => {
@@ -741,15 +817,32 @@ $(document).ready(function() {
             endpoint: '/logout',
             method: 'POST',
             success: () => {
+                localStorage.removeItem('currentAdminPage'); // Очищаем сохраненную страницу
+                document.body.classList.remove('logged-in');
                 localStorage.removeItem('auth_token');
-                $('#admin-panel').removeClass('show').addClass('d-none');
-                $('#login-container').removeClass('d-none').addClass('show');
+                $('#admin-panel, #content-types-panel, #users-panel').addClass('d-none');
+                $('#login-container').removeClass('d-none');
             },
             error: (err) => showError(err.responseJSON?.error || 'Ошибка при выходе')
         });
     });
 
-    // Управление видео
+    // Добавление навигации
+    $('.admin-header h1').after(`
+        <div class="page-nav">
+            <a href="#" class="page-nav-btn ${currentPage === 'videos' ? 'active' : ''}" data-page="videos">Видео</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'content-types' ? 'active' : ''}" data-page="content-types">Типы контента</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'users' ? 'active' : ''}" data-page="users">Пользователи</a>
+        </div>
+    `);
+
+    // Обработчик навигации
+    $(document).on('click', '.page-nav-btn', function(e) {
+        e.preventDefault();
+        switchPage($(this).data('page'));
+    });
+
+    // Обработчики для видео
     $('#add-video-btn').click(() => openVideoModal());
     $('#upload-image-btn').click(() => uploadImageModal.show());
     $('#upload-video-btn').click(() => uploadModal.show());
@@ -793,7 +886,147 @@ $(document).ready(function() {
         }
     });
 
-    // Загрузка файлов
+    // Обработчики для типов контента
+    $('#add-content-type-btn').click(() => openContentTypeModal());
+
+    $('#content-type-form').submit(function(e) {
+        e.preventDefault();
+        const typeData = {
+            name: $('#content-type-name').val()
+        };
+
+        const typeId = $('#content-type-id').val();
+        const method = typeId ? 'PUT' : 'POST';
+        const endpoint = typeId ? `/type/${typeId}` : '/type';
+
+        makeRequest({
+            endpoint,
+            method,
+            data: typeData,
+            success: () => {
+                contentTypesModal.hide();
+                loadContentTypes();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения типа контента')
+        });
+    });
+
+    $('#delete-content-type-btn').click(function() {
+        if (confirm('Удалить этот тип контента?')) {
+            makeRequest({
+                endpoint: `/type/${$('#content-type-id').val()}`,
+                method: 'DELETE',
+                success: () => {
+                    contentTypesModal.hide();
+                    loadContentTypes();
+                },
+                error: (err) => showError(err.responseJSON?.error || 'Ошибка удаления типа контента')
+            });
+        }
+    });
+
+    // Обработчики для пользователей
+    $('#add-user-btn').click(() => openUserModal());
+
+    $('#user-form').submit(function(e) {
+        e.preventDefault();
+        const userData = {
+            username: $('#user-username').val(),
+            content_type_id: $('#user-content-type-id').val() || null,
+            content_type_name: $('#user-content-type-name').val() || null,
+            admin: $('#user-admin').is(':checked'),
+            password: $('#user-password').val()
+        };
+
+        if (userData.password) {
+            userData.password = hashPassword(userData.password);
+        } else {
+            delete userData.password;
+        }
+
+        const userId = $('#user-id').val();
+        const method = userId ? 'PUT' : 'POST';
+        const endpoint = userId ? `/users/${userId}` : '/users';
+
+        makeRequest({
+            endpoint,
+            method,
+            data: userData,
+            success: () => {
+                userModal.hide();
+                loadUsers();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения пользователя')
+        });
+    });
+
+    $('#delete-user-btn').click(function() {
+        if (confirm('Удалить этого пользователя?')) {
+            makeRequest({
+                endpoint: `/users/${$('#user-id').val()}`,
+                method: 'DELETE',
+                success: () => {
+                    userModal.hide();
+                    loadUsers();
+                },
+                error: (err) => showError(err.responseJSON?.error || 'Ошибка удаления пользователя')
+            });
+        }
+    });
+
+    // Обработчик выбора типа контента
+    $('#select-content-type-btn').click(function() {
+        const $modal = $(`
+        <div class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Выберите тип контента</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Название</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="content-type-select-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+
+        const $list = $modal.find('#content-type-select-list');
+        contentTypesList.forEach(type => {
+            $list.append(`
+            <tr>
+                <td>${type.id}</td>
+                <td><button type="button" class="btn btn-link p-0 text-start" data-id="${type.id}">${type.name}</button></td>
+            </tr>
+        `);
+        });
+
+        $list.find('button').click(function() {
+            const typeId = $(this).data('id');
+            const typeName = $(this).text();
+            $('#user-content-type-id').val(typeId);
+            $('#user-content-type-name').val(typeName);
+            $modal.modal('hide');
+        });
+
+        $modal.modal('show');
+    });
+
+    // Обработчики для загрузки файлов
     $('#select-files-btn').click(() => $('#file-input').click());
     $('#file-input').change(function() {
         handleFiles(this.files);
@@ -814,7 +1047,21 @@ $(document).ready(function() {
             handleFiles(e.originalEvent.dataTransfer.files);
         });
 
-    // Выбор файлов
+    $('#upload-image-dropzone')
+        .on('dragover', function(e) {
+            e.preventDefault();
+            $(this).addClass('active');
+        })
+        .on('dragleave', function() {
+            $(this).removeClass('active');
+        })
+        .on('drop', function(e) {
+            e.preventDefault();
+            $(this).removeClass('active');
+            handleImages(e.originalEvent.dataTransfer.files);
+        });
+
+    // Обработчики для выбора файлов
     $('#select-video-btn').click(() => openFileSelectModal($('#video-url')[0], 'video'));
     $('#select-image-btn').click(() => openFileSelectModal($('#video-img')[0], 'img'));
 

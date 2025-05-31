@@ -388,10 +388,55 @@ body {
     background-color: var(--bs-primary);
     color: white;
     text-decoration: none;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+/* Стиль для кнопки текущей страницы */
+.page-nav-btn.active {
+    background-color: #198754; /* Зеленый цвет Bootstrap для успеха */
+    color: white;
+    border-color: #198754;
+}
+
+/* Стиль при наведении на неактивные кнопки */
+.page-nav-btn:not(.active):hover {
+    background-color: #dc3545; /* Красный цвет Bootstrap для опасности */
+    color: white;
+    border-color: #dc3545;
 }
 
 .page-nav-btn:hover {
     background-color: var(--bs-primary-dark);
     color: white;
+}
+
+/* Добавим в конец файла */
+#content-type-select-list .list-group-item {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#content-type-select-list .list-group-item:hover {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+/* Улучшим отображение чекбокса администратора */
+.form-check-input {
+    margin-top: 0.2em;
+}
+
+/* Улучшим отображение модального окна выбора типа контента */
+#content-type-select-modal .modal-dialog {
+    max-width: 400px;
+}
+
+#content-type-select-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+body:not(.logged-in) #logout-btn {
+    display: none;
 }

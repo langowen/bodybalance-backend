@@ -11,9 +11,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/ru.js"></script>
+    <link rel="icon" href="data:,">
 </head>
 <body>
 <div class="container-fluid admin-container">
+
     <!-- Login Container -->
     <div id="login-container" class="card mx-auto">
         <div class="card-body">
@@ -42,11 +44,14 @@
             </form>
         </div>
     </div>
-
+    <div class="text-end mb-3">
+        <button id="logout-btn" class="btn btn-outline-danger">Выйти</button>
+    </div>
     <!-- Admin Panel -->
     <div id="admin-panel" class="d-none">
+
         <div class="admin-header">
-            <h1>Панель администратора</h1>
+            <h1>Видео</h1>
             <div class="admin-actions">
                 <div class="dropdown me-2">
                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="admin-theme-dropdown" data-bs-toggle="dropdown">
@@ -61,7 +66,6 @@
                 <button id="add-video-btn" class="btn btn-success">+ Добавить видео</button>
                 <button id="upload-image-btn" class="btn btn-primary">Загрузить превью</button>
                 <button id="upload-video-btn" class="btn btn-primary">Загрузить видео</button>
-                <button id="logout-btn" class="btn btn-outline-danger">Выйти</button>
             </div>
         </div>
 
@@ -82,7 +86,6 @@
                     </ul>
                 </div>
                 <button id="add-content-type-btn" class="btn btn-success">+ Добавить тип</button>
-                <button id="logout-btn" class="btn btn-outline-danger">Выйти</button>
             </div>
         </div>
 
@@ -127,8 +130,89 @@
             </div>
         </div>
     </div>
+
+<!-- Добавим после content-types-panel -->
+<div id="users-panel" class="d-none">
+    <div class="admin-header">
+        <h1>Пользователи</h1>
+        <div class="admin-actions">
+            <div class="dropdown me-2">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="users-theme-dropdown" data-bs-toggle="dropdown">
+                    <i class="bi bi-moon-stars"></i> Тема
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item theme-option" href="#" data-theme="light"><i class="bi bi-sun"></i> Светлая</a></li>
+                    <li><a class="dropdown-item theme-option" href="#" data-theme="dark"><i class="bi bi-moon"></i> Темная</a></li>
+                    <li><a class="dropdown-item theme-option" href="#" data-theme="system"><i class="bi bi-laptop"></i> Системная</a></li>
+                </ul>
+            </div>
+            <button id="add-user-btn" class="btn btn-success">+ Добавить пользователя</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th class="sortable" data-sort="id">ID</th>
+                <th class="sortable" data-sort="username">Имя пользователя</th>
+                <th class="sortable" data-sort="content_type_id">ID типа</th>
+                <th class="sortable" data-sort="content_type_name">Имя типа</th>
+                <th class="sortable" data-sort="admin">Админ</th>
+                <th class="sortable" data-sort="date_created">Дата создания</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody id="users-list">
+            <!-- Пользователи будут загружены здесь -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
+<!-- Модальное окно для добавления/редактирования пользователя -->
+<div id="user-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="user-modal-title" class="modal-title">Добавить пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="user-form">
+                    <input type="hidden" id="user-id">
+                    <div class="mb-3">
+                        <label for="user-username" class="form-label">Имя пользователя</label>
+                        <input type="text" id="user-username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="user-admin">
+                            <label class="form-check-label" for="user-admin">Администратор</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-content-type-name" class="form-label">Тип контента</label>
+                        <div class="input-group">
+                            <input type="text" id="user-content-type-name" class="form-control" placeholder="Выберите тип контента" readonly>
+                            <input type="hidden" id="user-content-type-id">
+                            <button class="btn btn-outline-secondary" type="button" id="select-content-type-btn">Выбрать</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-password" class="form-label">Пароль</label>
+                        <input type="password" id="user-password" class="form-control" placeholder="Оставьте пустым, чтобы не изменять">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">Сохранить</button>
+                        <button type="button" id="delete-user-btn" class="btn btn-danger d-none">Удалить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
 <!-- Video Edit Modal -->
 <div id="video-modal" class="modal fade" tabindex="-1">
     <div class="modal-dialog">

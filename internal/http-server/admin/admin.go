@@ -37,7 +37,7 @@ func (h *Handler) Router() chi.Router {
 			r.Post("/img", h.uploadImageHandler)
 			r.Get("/img", h.listImageFilesHandler)
 		})
-
+		// API для работы с видео
 		r.Route("/video", func(r chi.Router) {
 			r.Post("/", h.addVideo)
 			r.Get("/{id}", h.getVideo)
@@ -46,12 +46,22 @@ func (h *Handler) Router() chi.Router {
 			r.Delete("/{id}", h.deleteVideo)
 		})
 
+		// API для работы с типами
 		r.Route("/type", func(r chi.Router) {
 			r.Post("/", h.addType)
 			r.Get("/{id}", h.getType)
 			r.Get("/", h.getTypes)
 			r.Put("/{id}", h.updateType)
 			r.Delete("/{id}", h.deleteType)
+		})
+
+		// API для работы с пользователями
+		r.Route("/users", func(r chi.Router) {
+			r.Post("/", h.addUser)
+			r.Get("/{id}", h.getUser)
+			r.Get("/", h.getUsers)
+			r.Put("/{id}", h.updateUser)
+			r.Delete("/{id}", h.deleteUser)
 		})
 	})
 
