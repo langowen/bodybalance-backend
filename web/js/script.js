@@ -157,7 +157,7 @@ function loadCategories() {
 
 // Функция для отрисовки категорий
 function renderCategories(categories) {
-    console.log('Received categories:', categories);
+    //console.log('Received categories:', categories);
     const $container = $('#categories-list').empty();
 
     if (!categories || !Array.isArray(categories) || categories.length === 0) {
@@ -201,7 +201,7 @@ function renderCategories(categories) {
 
     // Остальной код обработчиков событий...
     $('.edit-category').click(function() {
-        console.log('Edit button clicked, ID:', $(this).data('id'));
+        //console.log('Edit button clicked, ID:', $(this).data('id'));
         openCategoryModal($(this).data('id'));
     });
 
@@ -248,7 +248,7 @@ function sortCategories(categories) {
 
 // Функция для открытия модального окна категории
 function openCategoryModal(categoryId = null) {
-    console.log('Opening category modal for ID:', categoryId); // Добавьте эту строку
+   // console.log('Opening category modal for ID:', categoryId); // Добавьте эту строку
     if (categoryId) {
         // Проверка, что категория с таким ID существует
         const category = categoriesList.find(c => c.id === categoryId);
@@ -534,7 +534,7 @@ function renderVideos(videos) {
     const $tbody = $('#videos-table-body');
 
     videos.forEach(video => {
-        console.log(video)
+       // console.log(video)
         const imageUrl = video.img_url ? `/img/${video.img_url}` : '/img/placeholder.jpg';
         const categories = video.categories || [];
 
@@ -1460,6 +1460,12 @@ $(document).ready(function() {
     $('#select-files-btn').click(() => $('#file-input').click());
     $('#file-input').change(function() {
         handleFiles(this.files);
+        $(this).val('');
+    });
+
+    $('#select-images-btn').click(() => $('#image-input').click());
+    $('#image-input').change(function() {
+        handleImages(this.files);
         $(this).val('');
     });
 

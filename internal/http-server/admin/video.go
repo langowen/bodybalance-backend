@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
@@ -129,7 +128,7 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		}
 		videos[i].Categories = categories
 	}
-	fmt.Println(videos)
+
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
 }
 

@@ -25,13 +25,14 @@ type Storage struct {
 func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	const op = "storage.postgres.New"
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s search_path=%s",
 		cfg.Database.Host,
 		cfg.Database.Port,
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.DBName,
 		cfg.Database.SSLMode,
+		cfg.Database.Schema,
 	)
 
 	dbConfig, err := pgx.ParseConfig(dsn)
@@ -47,10 +48,6 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(10 * time.Minute)
 	db.SetConnMaxIdleTime(5 * time.Minute)
-
-	if _, err := db.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s", cfg.Database.Schema)); err != nil {
-		return nil, fmt.Errorf("%s: failed to set search_path: %w", op, err)
-	}
 
 	// Проверка соединения с таймаутом
 	pingCtx, cancel := context.WithTimeout(ctx, cfg.Database.Timeout)
