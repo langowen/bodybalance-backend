@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
+	"time"
 )
 
 // AddVideo добавляет новое видео в БД
-func (s *Storage) AddVideo(ctx context.Context, video admResponse.VideoRequest) (int, error) {
+func (s *Storage) AddVideo(ctx context.Context, video admResponse.VideoRequest) (int64, error) {
 	const op = "storage.postgres.AddVideo"
 
 	query := `
@@ -18,7 +19,7 @@ func (s *Storage) AddVideo(ctx context.Context, video admResponse.VideoRequest) 
 		RETURNING id
 	`
 
-	var id int
+	var id int64
 	err := s.db.QueryRowContext(ctx, query,
 		video.URL,
 		video.Name,
@@ -33,23 +34,56 @@ func (s *Storage) AddVideo(ctx context.Context, video admResponse.VideoRequest) 
 	return id, nil
 }
 
+// AddVideoCategories добавляет связи видео с категориями
+func (s *Storage) AddVideoCategories(ctx context.Context, videoID int64, categoryIDs []int64) error {
+	const op = "storage.postgres.AddVideoCategories"
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO video_categories (video_id, category_id)
+		VALUES ($1, $2)
+		ON CONFLICT (video_id, category_id) DO NOTHING
+	`)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer stmt.Close()
+
+	for _, catID := range categoryIDs {
+		_, err := stmt.ExecContext(ctx, videoID, catID)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 // GetVideo возвращает видео по ID (только не удаленные)
 func (s *Storage) GetVideo(ctx context.Context, id int64) (admResponse.VideoResponse, error) {
 	const op = "storage.postgres.GetVideo"
 
 	query := `
-		SELECT id, url, name, description, img_url
+		SELECT id, url, name, description, img_url, created_at
 		FROM videos
 		WHERE id = $1 AND deleted IS NOT TRUE
 	`
 
 	var video admResponse.VideoResponse
+	var createdAt time.Time
+
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&video.ID,
 		&video.URL,
 		&video.Name,
 		&video.Description,
 		&video.ImgURL,
+		&createdAt,
 	)
 
 	if err != nil {
@@ -59,7 +93,42 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (admResponse.VideoResp
 		return admResponse.VideoResponse{}, fmt.Errorf("%s: %w", op, err)
 	}
 
+	video.DateCreated = createdAt.Format("02.01.2006")
+
 	return video, nil
+}
+
+// GetVideoCategories возвращает категории видео
+func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admResponse.CategoryResponse, error) {
+	const op = "storage.postgres.GetVideoCategories"
+
+	query := `
+		SELECT c.id, c.name
+		FROM categories c
+		JOIN video_categories vc ON c.id = vc.category_id
+		WHERE vc.video_id = $1
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, videoID)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	var categories []admResponse.CategoryResponse
+	for rows.Next() {
+		var cat admResponse.CategoryResponse
+		if err := rows.Scan(&cat.ID, &cat.Name); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		categories = append(categories, cat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return categories, nil
 }
 
 // GetVideos возвращает все не удаленные видео
@@ -67,7 +136,7 @@ func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, e
 	const op = "storage.postgres.GetVideos"
 
 	query := `
-		SELECT id, url, name, description, img_url
+		SELECT id, url, name, description, img_url, created_at
 		FROM videos
 		WHERE deleted IS NOT TRUE
 		ORDER BY id
@@ -82,15 +151,19 @@ func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, e
 	var videos []admResponse.VideoResponse
 	for rows.Next() {
 		var video admResponse.VideoResponse
+		var createdAt time.Time
+
 		if err := rows.Scan(
 			&video.ID,
 			&video.URL,
 			&video.Name,
 			&video.Description,
 			&video.ImgURL,
+			&createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
+		video.DateCreated = createdAt.Format("02.01.2006")
 		videos = append(videos, video)
 	}
 
@@ -130,6 +203,23 @@ func (s *Storage) UpdateVideo(ctx context.Context, id int64, video admResponse.V
 
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// DeleteVideoCategories удаляет все связи видео с категориями
+func (s *Storage) DeleteVideoCategories(ctx context.Context, videoID int64) error {
+	const op = "storage.postgres.DeleteVideoCategories"
+
+	query := `
+		DELETE FROM video_categories
+		WHERE video_id = $1
+	`
+
+	_, err := s.db.ExecContext(ctx, query, videoID)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil

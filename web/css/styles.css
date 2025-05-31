@@ -69,35 +69,6 @@ body {
     align-items: center;
 }
 
-/* Videos Grid */
-.videos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-    width: 100%;
-}
-
-@media (min-width: 1400px) {
-    .videos-grid {
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .videos-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .admin-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .admin-actions {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-}
 
 /* Video Cards */
 .video-card {
@@ -407,7 +378,7 @@ body {
 }
 
 .page-nav-btn:hover {
-    background-color: var(--bs-primary-dark);
+    background-color: var(--bs-primary);
     color: white;
 }
 
@@ -439,4 +410,141 @@ body {
 
 body:not(.logged-in) #logout-btn {
     display: none;
+}
+
+/* Стили для категорий */
+.category-thumbnail {
+    transition: transform 0.2s;
+}
+
+.category-thumbnail:hover {
+    transform: scale(1.1);
+}
+
+#selected-types-list .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    padding: 0.35em 0.65em;
+}
+
+#selected-types-list .btn-close {
+    font-size: 0.6rem;
+    padding: 0.25em;
+}
+
+/* Модальное окно просмотра изображения */
+#image-view {
+    max-height: 70vh;
+    object-fit: contain;
+}
+
+/* Чекбоксы в модальном окне выбора типов */
+.type-checkbox {
+    margin-left: 0;
+    transform: scale(1.2);
+}
+
+.video-thumbnail {
+    transition: transform 0.2s;
+    border-radius: 4px;
+}
+
+.video-thumbnail:hover {
+    transform: scale(1.05);
+}
+
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.action-buttons .btn i {
+    font-size: 0.9rem;
+}
+
+/* Улучшаем отображение на мобильных устройствах */
+@media (max-width: 992px) {
+    .admin-actions {
+        flex-wrap: wrap;
+    }
+
+    .admin-actions .btn {
+        margin-bottom: 5px;
+    }
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    width: 100%;
+    table-layout: auto;
+}
+
+.table th, .table td {
+    white-space: nowrap;
+    padding: 8px 12px;
+}
+
+/* Для описания разрешаем перенос текста */
+.table td:nth-child(4) {
+    white-space: normal;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+/* Делаем превью компактнее */
+.video-thumbnail {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+/* Улучшаем отображение на мобильных */
+@media (max-width: 768px) {
+    .table th, .table td {
+        padding: 6px 8px;
+        font-size: 0.9rem;
+    }
+
+    .video-thumbnail {
+        width: 40px;
+        height: 30px;
+    }
+
+    .action-buttons .btn {
+        padding: 0.2rem;
+    }
+}
+
+/* Добавьте в конец файла */
+#videos-container {
+    width: 100%;
+}
+
+#videos-container .table {
+    margin-bottom: 0;
+}
+
+#videos-container .table th {
+    white-space: nowrap;
+    background-color: var(--bs-tertiary-bg);
+}
+
+#videos-container .table td {
+    vertical-align: middle;
+}
+
+#videos-container .table td:nth-child(4) { /* Описание */
+    white-space: normal;
+    max-width: 300px;
+}
+
+#videos-container .table-responsive {
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
 }

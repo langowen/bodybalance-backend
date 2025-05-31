@@ -7,6 +7,13 @@ const fileSelectModal = new bootstrap.Modal(document.getElementById('file-select
 const uploadImageModal = new bootstrap.Modal(document.getElementById('upload-image-modal'));
 const contentTypesModal = new bootstrap.Modal(document.getElementById('content-type-modal'));
 const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
+const categoryModal = new bootstrap.Modal(document.getElementById('category-modal'));
+const categoryTypesModal = new bootstrap.Modal(document.getElementById('category-types-modal'));
+const imageViewModal = new bootstrap.Modal(document.getElementById('image-view-modal'));
+const videoCategoriesModal = new bootstrap.Modal(document.getElementById('video-categories-modal'));
+let selectedVideoCategories = [];
+let selectedTypes = [];
+let categoriesList = []
 let currentFileInput = null;
 let selectedFile = null;
 let filesList = [];
@@ -103,29 +110,264 @@ function showError(message, isFatal = false) {
 // Функция для переключения между страницами
 function switchPage(page) {
     currentPage = page;
-    // Сохраняем выбранную страницу в localStorage
     localStorage.setItem('currentAdminPage', page);
 
-    // Остальной код функции остаётся без изменений
     if (page === 'videos') {
         $('#admin-panel').removeClass('d-none');
         $('#content-types-panel').addClass('d-none');
         $('#users-panel').addClass('d-none');
+        $('#categories-panel').addClass('d-none');
         loadVideos();
     } else if (page === 'content-types') {
         $('#admin-panel').addClass('d-none');
         $('#content-types-panel').removeClass('d-none');
         $('#users-panel').addClass('d-none');
+        $('#categories-panel').addClass('d-none');
         loadContentTypes();
     } else if (page === 'users') {
         $('#admin-panel').addClass('d-none');
         $('#content-types-panel').addClass('d-none');
         $('#users-panel').removeClass('d-none');
+        $('#categories-panel').addClass('d-none');
         loadUsers();
+    } else if (page === 'categories') {
+        $('#admin-panel').addClass('d-none');
+        $('#content-types-panel').addClass('d-none');
+        $('#users-panel').addClass('d-none');
+        $('#categories-panel').removeClass('d-none');
+        loadCategories();
     }
 
     $('.page-nav-btn').removeClass('active');
     $(`.page-nav-btn[data-page="${page}"]`).addClass('active');
+}
+
+// Функция для загрузки категорий
+function loadCategories() {
+    makeRequest({
+        endpoint: '/category',
+        method: 'GET',
+        success: (categories) => {
+            categoriesList = categories;
+            renderCategories(categories);
+        },
+        error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки категорий')
+    });
+}
+
+// Функция для отрисовки категорий
+function renderCategories(categories) {
+    console.log('Received categories:', categories);
+    const $container = $('#categories-list').empty();
+
+    if (!categories || !Array.isArray(categories) || categories.length === 0) {
+        $container.html('<tr><td colspan="7" class="text-center">Нет доступных категорий</td></tr>');
+        return;
+    }
+
+    categories.forEach(category => {
+        try {
+            const createdAt = formatDate(category.date_created);
+            // Безопасная обработка types (если null или undefined)
+            const typeIds = category.types ? category.types.map(t => t.id).join(', ') : '-';
+            const typeNames = category.types ? category.types.map(t => t.name).join(', ') : '-';
+            const imageUrl = category.img_url ? `/img/${category.img_url}` : '/img/placeholder.jpg';
+
+            $container.append(`
+                <tr>
+                    <td>${category.id}</td>
+                    <td>
+                        <img src="${imageUrl}" alt="Превью" class="category-thumbnail" 
+                             style="width: 50px; height: 50px; object-fit: cover; cursor: pointer;"
+                             data-src="${imageUrl}">
+                    </td>
+                    <td>${category.name}</td>
+                    <td>${typeIds}</td>
+                    <td>${typeNames}</td>
+                    <td>${createdAt}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-outline-primary edit-category" data-id="${category.id}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        } catch (error) {
+            console.error('Error rendering category:', category, error);
+        }
+    });
+
+    // Остальной код обработчиков событий...
+    $('.edit-category').click(function() {
+        console.log('Edit button clicked, ID:', $(this).data('id'));
+        openCategoryModal($(this).data('id'));
+    });
+
+    $('.category-thumbnail').click(function() {
+        $('#image-view').attr('src', $(this).data('src'));
+        imageViewModal.show();
+    });
+
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderCategories(sortCategories(categories));
+    });
+}
+
+// Функция для сортировки категорий
+function sortCategories(categories) {
+    return [...categories].sort((a, b) => {
+        if (currentSort.field === 'id') {
+            return currentSort.order === 'asc' ? a.id - b.id : b.id - a.id;
+        } else if (currentSort.field === 'name') {
+            return currentSort.order === 'asc'
+                ? a.name.localeCompare(b.name)
+                : b.name.localeCompare(a.name);
+        } else if (currentSort.field === 'date_created') {
+            const dateA = parseDate(a.date_created);
+            const dateB = parseDate(b.date_created);
+            return currentSort.order === 'asc'
+                ? dateA - dateB
+                : dateB - dateA;
+        }
+        return 0;
+    });
+}
+
+// Функция для открытия модального окна категории
+function openCategoryModal(categoryId = null) {
+    console.log('Opening category modal for ID:', categoryId); // Добавьте эту строку
+    if (categoryId) {
+        // Проверка, что категория с таким ID существует
+        const category = categoriesList.find(c => c.id === categoryId);
+        if (!category) {
+            console.error('Category not found:', categoryId);
+            showError('Категория не найдена');
+            return;
+        }
+        $('#category-modal-title').text('Редактировать категорию');
+        $('#delete-category-btn').removeClass('d-none');
+
+        makeRequest({
+            endpoint: `/category/${categoryId}`,
+            method: 'GET',
+            success: (category) => {
+                $('#category-id').val(category.id);
+                $('#category-name').val(category.name);
+                $('#category-img').val(category.img_url || '');
+
+                // Заполняем выбранные типы контента
+                selectedTypes = category.types.map(t => ({ id: t.id, name: t.name }));
+                updateSelectedTypesDisplay();
+
+                categoryModal.show();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки категории')
+        });
+    } else {
+        $('#category-modal-title').text('Добавить категорию');
+        $('#delete-category-btn').addClass('d-none');
+        $('#category-form')[0].reset();
+        $('#category-id').val('');
+        selectedTypes = [];
+        updateSelectedTypesDisplay();
+        categoryModal.show();
+    }
+}
+
+// Функция для обновления отображения выбранных типов контента
+function updateSelectedTypesDisplay() {
+    const $container = $('#selected-types-list').empty();
+
+    if (selectedTypes.length === 0) {
+        $('#category-types').val('');
+        return;
+    }
+
+    $('#category-types').val(selectedTypes.map(t => t.name).join(', '));
+
+    selectedTypes.forEach(type => {
+        $container.append(`
+            <span class="badge bg-primary me-1 mb-1">
+                ${type.name}
+                <button type="button" class="btn-close btn-close-white btn-sm ms-1" 
+                        data-id="${type.id}" aria-label="Удалить"></button>
+            </span>
+        `);
+    });
+
+    $('.btn-close[data-id]').click(function() {
+        const typeId = parseInt($(this).data('id'));
+        selectedTypes = selectedTypes.filter(t => t.id !== typeId);
+        updateSelectedTypesDisplay();
+    });
+}
+
+// Функция для открытия модального окна выбора типов контента
+function openCategoryTypesModal() {
+    if (contentTypesList.length === 0) {
+        makeRequest({
+            endpoint: '/type',
+            method: 'GET',
+            success: (types) => {
+                contentTypesList = types;
+                renderCategoryTypesList(types);
+                categoryTypesModal.show();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки типов контента')
+        });
+    } else {
+        renderCategoryTypesList(contentTypesList);
+        categoryTypesModal.show();
+    }
+}
+
+// Функция для отрисовки списка типов контента
+function renderCategoryTypesList(types) {
+    const $container = $('#category-types-list').empty();
+
+    types.forEach(type => {
+        const isSelected = selectedTypes.some(t => t.id === type.id);
+
+        $container.append(`
+            <tr>
+                <td>${type.id}</td>
+                <td>${type.name}</td>
+                <td>
+                    <input type="checkbox" class="form-check-input type-checkbox" 
+                           data-id="${type.id}" data-name="${type.name}"
+                           ${isSelected ? 'checked' : ''}>
+                </td>
+            </tr>
+        `);
+    });
+
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderCategoryTypesList(sortContentTypes(types));
+    });
 }
 
 // Функция для загрузки типов контента
@@ -263,50 +505,127 @@ function loadVideos() {
 // Отрисовка видео
 function renderVideos(videos) {
     const $container = $('#videos-container').empty();
+
     if (!videos?.length) {
-        $container.html('<div class="col-12"><div class="alert alert-info">Нет доступных видео</div></div>');
+        $container.html('<div class="alert alert-info">Нет доступных видео</div>');
         return;
     }
 
+    $container.html(`
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Превью</th>
+                        <th class="sortable" data-sort="id">ID</th>
+                        <th class="sortable" data-sort="name">Название</th>
+                        <th>Описание</th>
+                        <th>ID категорий</th>
+                        <th>Категории</th>
+                        <th class="sortable" data-sort="created_at">Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="videos-table-body"></tbody>
+            </table>
+        </div>
+    `);
+
+    const $tbody = $('#videos-table-body');
+
     videos.forEach(video => {
+        console.log(video)
         const imageUrl = video.img_url ? `/img/${video.img_url}` : '/img/placeholder.jpg';
+        const categories = video.categories || [];
+
+        // Формируем списки ID и названий категорий
+        const categoryIds = categories.length > 0
+            ? categories.map(c => c.id).join(', ')
+            : '-';
+
+        const categoryNames = categories.length > 0
+            ? categories.map(c => c.name).join(', ')
+            : '-';
+
+        const createdAt = formatDate(video.created_at);
         const videoFilename = video.url.split('/').pop();
 
-        $container.append(`
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <img src="${imageUrl}" alt="${video.name}" onerror="this.src='/img/placeholder.jpg'">
-                    <div class="video-overlay">
-                        <button class="play-button" data-video="${videoFilename}">
-                            <svg class="play-icon" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
+        $tbody.append(`
+            <tr>
+                <td>
+                    <img src="${imageUrl}" alt="Превью" class="video-thumbnail" 
+                         style="width: 60px; height: 40px; object-fit: cover; cursor: pointer;"
+                         data-src="${imageUrl}">
+                </td>
+                <td>${video.id}</td>
+                <td>${video.name || '-'}</td>
+                <td>${video.description || '-'}</td>
+                <td>${categoryIds}</td>
+                <td>${categoryNames}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary play-video-btn" 
+                                data-video="${videoFilename}" title="Воспроизвести">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary edit-video-btn" 
+                                data-id="${video.id}" title="Редактировать">
+                            <i class="bi bi-pencil"></i>
                         </button>
                     </div>
-                    <div class="edit-icon-wrapper">
-                        <div class="edit-icon" data-id="${video.id}">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="video-info">
-                    <h3>${video.name}</h3>
-                    <p>${video.description || 'Нет описания'}</p>
-                </div>
-            </div>
+                </td>
+            </tr>
         `);
     });
 
-    $('.play-button').off('click').on('click', function(e) {
-        e.stopPropagation();
+    // Обработчики событий остаются без изменений
+    $('.play-video-btn').click(function() {
         playVideo($(this).data('video'));
     });
 
-    $('.edit-icon').off('click').on('click', function(e) {
-        e.stopPropagation();
+    $('.edit-video-btn').click(function() {
         openVideoModal($(this).data('id'));
+    });
+
+    $('.video-thumbnail').click(function() {
+        $('#image-view').attr('src', $(this).data('src'));
+        imageViewModal.show();
+    });
+
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderVideos(sortVideos(videos));
+    });
+}
+
+// Функция сортировки видео
+function sortVideos(videos) {
+    return [...videos].sort((a, b) => {
+        if (currentSort.field === 'id') {
+            return currentSort.order === 'asc' ? a.id - b.id : b.id - a.id;
+        } else if (currentSort.field === 'name') {
+            return currentSort.order === 'asc'
+                ? a.name.localeCompare(b.name)
+                : b.name.localeCompare(a.name);
+        } else if (currentSort.field === 'created_at') {
+            const dateA = parseDate(a.created_at);
+            const dateB = parseDate(b.created_at);
+            return currentSort.order === 'asc'
+                ? dateA - dateB
+                : dateB - dateA;
+        }
+        return 0;
     });
 }
 
@@ -341,6 +660,11 @@ function openVideoModal(videoId = null) {
                 $('#video-url').val(video.url);
                 $('#video-img').val(video.img_url || '');
                 $('#video-desc').val(video.description || '');
+
+                // Заполняем выбранные категории
+                selectedVideoCategories = video.categories || [];
+                updateSelectedVideoCategoriesDisplay();
+
                 editModal.show();
             },
             error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки видео')
@@ -349,9 +673,98 @@ function openVideoModal(videoId = null) {
         $('#modal-title').text('Добавить видео');
         $('#delete-btn').addClass('d-none');
         $('#video-form')[0].reset();
-        $('#video-id').val(''); // Явно сбрасываем ID
+        $('#video-id').val('');
+        selectedVideoCategories = [];
+        updateSelectedVideoCategoriesDisplay();
         editModal.show();
     }
+}
+
+function openVideoCategoriesModal() {
+    if (categoriesList.length === 0) {
+        makeRequest({
+            endpoint: '/category',
+            method: 'GET',
+            success: (categories) => {
+                categoriesList = categories;
+                renderVideoCategoriesList(categories);
+                videoCategoriesModal.show();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка загрузки категорий')
+        });
+    } else {
+        renderVideoCategoriesList(categoriesList);
+        videoCategoriesModal.show();
+    }
+}
+
+function renderVideoCategoriesList(categories) {
+    const $container = $('#video-categories-list').empty();
+
+    categories.forEach(category => {
+        const isSelected = selectedVideoCategories.some(c => c.id === category.id);
+        const imageUrl = category.img_url ? `/img/${category.img_url}` : '/img/placeholder.jpg';
+        const createdAt = formatDate(category.date_created);
+
+        $container.append(`
+            <tr>
+                <td>${category.id}</td>
+                <td>
+                    <img src="${imageUrl}" alt="Превью" style="width: 30px; height: 30px; object-fit: cover;">
+                </td>
+                <td>${category.name}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <input type="checkbox" class="form-check-input category-checkbox" 
+                           data-id="${category.id}" data-name="${category.name}"
+                           ${isSelected ? 'checked' : ''}>
+                </td>
+            </tr>
+        `);
+    });
+
+    $('.sortable').off('click').click(function() {
+        const sortField = $(this).data('sort');
+        $('.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (currentSort.field === sortField) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.order = 'asc';
+        }
+
+        $(this).addClass(`sorted-${currentSort.order}`);
+        renderVideoCategoriesList(sortCategories(categories));
+    });
+}
+
+// Функция для обновления отображения выбранных категорий
+function updateSelectedVideoCategoriesDisplay() {
+    const $container = $('#selected-video-categories-list').empty();
+
+    if (selectedVideoCategories.length === 0) {
+        $('#video-categories').val('');
+        return;
+    }
+
+    $('#video-categories').val(selectedVideoCategories.map(c => c.name).join(', '));
+
+    selectedVideoCategories.forEach(category => {
+        $container.append(`
+            <span class="badge bg-primary me-1 mb-1">
+                ${category.name}
+                <button type="button" class="btn-close btn-close-white btn-sm ms-1" 
+                        data-id="${category.id}" aria-label="Удалить"></button>
+            </span>
+        `);
+    });
+
+    $('.btn-close[data-id]').click(function() {
+        const categoryId = parseInt($(this).data('id'));
+        selectedVideoCategories = selectedVideoCategories.filter(c => c.id !== categoryId);
+        updateSelectedVideoCategoriesDisplay();
+    });
 }
 
 // Функция для загрузки пользователей
@@ -759,9 +1172,21 @@ function checkAuth() {
     });
 }
 
+function initNavigation() {
+    $('.admin-header h1').after(`
+        <div class="page-nav">
+            <a href="#" class="page-nav-btn ${currentPage === 'videos' ? 'active' : ''}" data-page="videos">Видео</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'content-types' ? 'active' : ''}" data-page="content-types">Типы контента</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'users' ? 'active' : ''}" data-page="users">Пользователи</a>
+            <a href="#" class="page-nav-btn ${currentPage === 'categories' ? 'active' : ''}" data-page="categories">Категории</a>
+        </div>
+    `);
+}
+
 // Инициализация при загрузке страницы
 $(document).ready(function() {
     initTheme();
+    initNavigation();
 
     // Обработчики тем
     $('.theme-option').click(function(e) {
@@ -827,15 +1252,6 @@ $(document).ready(function() {
         });
     });
 
-    // Добавление навигации
-    $('.admin-header h1').after(`
-        <div class="page-nav">
-            <a href="#" class="page-nav-btn ${currentPage === 'videos' ? 'active' : ''}" data-page="videos">Видео</a>
-            <a href="#" class="page-nav-btn ${currentPage === 'content-types' ? 'active' : ''}" data-page="content-types">Типы контента</a>
-            <a href="#" class="page-nav-btn ${currentPage === 'users' ? 'active' : ''}" data-page="users">Пользователи</a>
-        </div>
-    `);
-
     // Обработчик навигации
     $(document).on('click', '.page-nav-btn', function(e) {
         e.preventDefault();
@@ -846,6 +1262,19 @@ $(document).ready(function() {
     $('#add-video-btn').click(() => openVideoModal());
     $('#upload-image-btn').click(() => uploadImageModal.show());
     $('#upload-video-btn').click(() => uploadModal.show());
+    $('#select-video-categories-btn').click(openVideoCategoriesModal);
+
+    $('#save-selected-video-categories-btn').click(function() {
+        selectedVideoCategories = [];
+        $('.category-checkbox:checked').each(function() {
+            selectedVideoCategories.push({
+                id: parseInt($(this).data('id')),
+                name: $(this).data('name')
+            });
+        });
+        updateSelectedVideoCategoriesDisplay();
+        videoCategoriesModal.hide();
+    });
 
     $('#video-form').submit(function(e) {
         e.preventDefault();
@@ -853,7 +1282,8 @@ $(document).ready(function() {
             name: $('#video-name').val(),
             url: $('#video-url').val(),
             img_url: $('#video-img').val(),
-            description: $('#video-desc').val()
+            description: $('#video-desc').val(),
+            category_ids: selectedVideoCategories.map(c => c.id)
         };
 
         const videoId = $('#video-id').val();
@@ -1060,6 +1490,61 @@ $(document).ready(function() {
             $(this).removeClass('active');
             handleImages(e.originalEvent.dataTransfer.files);
         });
+
+    // Обработчики для категорий
+    $('#add-category-btn').click(() => openCategoryModal());
+    $('#select-category-image-btn').click(() => openFileSelectModal($('#category-img')[0], 'img'));
+    $('#select-category-types-btn').click(openCategoryTypesModal);
+
+    $('#save-selected-types-btn').click(function() {
+        selectedTypes = [];
+        $('.type-checkbox:checked').each(function() {
+            selectedTypes.push({
+                id: parseInt($(this).data('id')),
+                name: $(this).data('name')
+            });
+        });
+        updateSelectedTypesDisplay();
+        categoryTypesModal.hide();
+    });
+
+    $('#category-form').submit(function(e) {
+        e.preventDefault();
+        const categoryData = {
+            name: $('#category-name').val(),
+            img_url: $('#category-img').val(),
+            type_ids: selectedTypes.map(t => t.id)
+        };
+
+        const categoryId = $('#category-id').val();
+        const method = categoryId ? 'PUT' : 'POST';
+        const endpoint = categoryId ? `/category/${categoryId}` : '/category';
+
+        makeRequest({
+            endpoint,
+            method,
+            data: categoryData,
+            success: () => {
+                categoryModal.hide();
+                loadCategories();
+            },
+            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения категории')
+        });
+    });
+
+    $('#delete-category-btn').click(function() {
+        if (confirm('Удалить эту категорию?')) {
+            makeRequest({
+                endpoint: `/category/${$('#category-id').val()}`,
+                method: 'DELETE',
+                success: () => {
+                    categoryModal.hide();
+                    loadCategories();
+                },
+                error: (err) => showError(err.responseJSON?.error || 'Ошибка удаления категории')
+            });
+        }
+    });
 
     // Обработчики для выбора файлов
     $('#select-video-btn').click(() => openFileSelectModal($('#video-url')[0], 'video'));

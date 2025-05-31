@@ -63,6 +63,15 @@ func (h *Handler) Router() chi.Router {
 			r.Put("/{id}", h.updateUser)
 			r.Delete("/{id}", h.deleteUser)
 		})
+
+		// API для работы с категориями
+		r.Route("/category", func(r chi.Router) {
+			r.Post("/", h.addCategory)
+			r.Get("/{id}", h.getCategory)
+			r.Get("/", h.getCategories)
+			r.Put("/{id}", h.updateCategory)
+			r.Delete("/{id}", h.deleteCategory)
+		})
 	})
 
 	fs := http.StripPrefix("/admin/web", http.FileServer(http.Dir("./web")))

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
@@ -42,6 +43,16 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Добавляем связи с категориями
+	if len(req.CategoryIDs) > 0 {
+		err = h.storage.AddVideoCategories(ctx, videoID, req.CategoryIDs)
+		if err != nil {
+			logger.Error("failed to add video categories", sl.Err(err))
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add video categories")
+			return
+		}
+	}
+
 	admResponse.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":      videoID,
 		"message": "Video added successfully",
@@ -78,6 +89,16 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Получаем категории видео
+	categories, err := h.storage.GetVideoCategories(ctx, id)
+	if err != nil {
+		logger.Error("failed to get video categories", sl.Err(err), "video_id", id)
+		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
+		return
+	}
+
+	video.Categories = categories
+
 	admResponse.RespondWithJSON(w, http.StatusOK, video)
 }
 
@@ -98,6 +119,17 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Для каждого видео получаем категории
+	for i := range videos {
+		categories, err := h.storage.GetVideoCategories(ctx, int64(videos[i].ID))
+		if err != nil {
+			logger.Error("failed to get video categories", sl.Err(err), "video_id", videos[i].ID)
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
+			return
+		}
+		videos[i].Categories = categories
+	}
+	fmt.Println(videos)
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
 }
 
@@ -136,6 +168,25 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		logger.Error("failed to update video", sl.Err(err), "video_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update video")
 		return
+	}
+
+	// Обновляем категории видео
+	if len(req.CategoryIDs) > 0 {
+		// Сначала удаляем все существующие связи
+		err = h.storage.DeleteVideoCategories(ctx, id)
+		if err != nil {
+			logger.Error("failed to delete video categories", sl.Err(err), "video_id", id)
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update video categories")
+			return
+		}
+
+		// Затем добавляем новые
+		err = h.storage.AddVideoCategories(ctx, id, req.CategoryIDs)
+		if err != nil {
+			logger.Error("failed to add video categories", sl.Err(err), "video_id", id)
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update video categories")
+			return
+		}
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{

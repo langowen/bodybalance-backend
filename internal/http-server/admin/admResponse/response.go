@@ -10,20 +10,22 @@ import (
 
 // VideoResponse представляет собой структуру возврата видео
 type VideoResponse struct {
-	ID          float64 `json:"id"`          // ID из БД
-	URL         string  `json:"url"`         // URL адрес до файла
-	Name        string  `json:"name"`        // Название видео
-	Description string  `json:"description"` // Описание видео
-	Category    string  `json:"category"`    // Название категории
-	ImgURL      string  `json:"img_url"`     // Превью картинка для видео
+	ID          float64            `json:"id"`          // ID из БД
+	URL         string             `json:"url"`         // URL адрес до файла
+	Name        string             `json:"name"`        // Название видео
+	Description string             `json:"description"` // Описание видео
+	ImgURL      string             `json:"img_url"`     // Превью картинка для видео
+	Categories  []CategoryResponse `json:"categories"`
+	DateCreated string             `json:"created_at"`
 }
 
 // VideoRequest представляет структуру запроса для видео
 type VideoRequest struct {
-	URL         string `json:"url"`         // URL адрес до файла
-	Name        string `json:"name"`        // Название видео
-	Description string `json:"description"` // Описание видео
-	ImgURL      string `json:"img_url"`     // Превью картинка для видео
+	URL         string  `json:"url"`          // URL адрес до файла
+	Name        string  `json:"name"`         // Название видео
+	Description string  `json:"description"`  // Описание видео
+	ImgURL      string  `json:"img_url"`      // Превью картинка для видео
+	CategoryIDs []int64 `json:"category_ids"` // ID категорий видео
 }
 
 type FileInfo struct {
@@ -39,13 +41,21 @@ type TypeRequest struct {
 type TypeResponse struct {
 	ID          float64 `json:"id"`   // ID из БД
 	Name        string  `json:"name"` // Название типа
-	DateCreated string  `json:"created_at"`
+	DateCreated string  `json:"created_at,omitempty"`
+}
+
+type CategoryRequest struct {
+	Name    string  `json:"name"`
+	ImgURL  string  `json:"img_url"`
+	TypeIDs []int64 `json:"type_ids"`
 }
 
 type CategoryResponse struct {
-	ID     float64 `json:"id"`      // ID из БД
-	Name   string  `json:"name"`    // Название категории
-	ImgURL string  `json:"img_url"` // Превью картинка для категории
+	ID          float64        `json:"id"`
+	Name        string         `json:"name"`
+	ImgURL      string         `json:"img_url,omitempty"`
+	Types       []TypeResponse `json:"types,omitempty"`
+	DateCreated string         `json:"date_created,omitempty"`
 }
 
 type UserRequest struct {
