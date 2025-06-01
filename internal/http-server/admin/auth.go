@@ -90,8 +90,8 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/admin", // Должен совпадать с путем установки
 		MaxAge:   -1,       // Удалить cookie
 		HttpOnly: true,
-		Secure:   h.cfg.Env == "prod",
-		SameSite: http.SameSiteStrictMode,
+		Secure:   false,                //h.cfg.Env == "prod"
+		SameSite: http.SameSiteLaxMode, ///http.SameSiteStrictMode
 	})
 
 	admResponse.RespondWithJSON(w, http.StatusOK, admResponse.SignInResponse{
@@ -100,8 +100,8 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
-	secure := h.cfg.Env == "prod" // Secure только в production
-	sameSite := http.SameSiteStrictMode
+	//secure := h.cfg.Env == "prod" // h.cfg.Env == "prod"
+	sameSite := http.SameSiteLaxMode //http.SameSiteStrictMode
 	if h.cfg.Env == "dev" {
 		sameSite = http.SameSiteLaxMode
 	}
@@ -112,7 +112,7 @@ func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
 		Path:     "/admin",
 		MaxAge:   int(h.cfg.HTTPServer.TokenTTL),
 		HttpOnly: true,
-		Secure:   secure,
+		Secure:   false,
 		SameSite: sameSite,
 	})
 }
