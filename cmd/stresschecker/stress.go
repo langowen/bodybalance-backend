@@ -21,8 +21,8 @@ func main() {
 	var wg sync.WaitGroup
 
 	requestList := []Request{
-		{"https://api.7375.org/img/shee_video.jpg"},
-		{"https://api.7375.org/video/Sheya_baza.mp4"},
+		{"http://localhost:8083/video/test5.mp4"},
+		{"http://localhost:8083/video/Koleno_baza.mp4"},
 	}
 	//requestList := []Request{
 	//	{"https://api.7375.org/v1/video_categories?type=1&category=1"},

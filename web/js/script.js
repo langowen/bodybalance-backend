@@ -95,6 +95,18 @@ async function makeRequest(config) {
         return response;
     } catch (error) {
         console.error('Ошибка запроса:', error);
+        let errorMessage = 'Ошибка запроса';
+
+        if (error.status === 409) {
+            errorMessage = 'Пользователь с таким именем уже существует';
+        } else if (error.responseJSON?.error) {
+            errorMessage = error.responseJSON.error;
+        } else if (error.statusText) {
+            errorMessage = error.statusText;
+        }
+
+        showError(errorMessage);
+
         if (config.error) config.error(error);
         throw error;
     }
@@ -104,7 +116,13 @@ async function makeRequest(config) {
 function showError(message, isFatal = false) {
     const $error = $('#error-message');
     $error.text(message).removeClass('d-none').addClass('show');
-    if (!isFatal) setTimeout(() => $error.removeClass('show'), 3000);
+
+    // Прокручиваем к ошибке, если она не видна
+    $error[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (!isFatal) {
+        setTimeout(() => $error.removeClass('show'), 5000);
+    }
 }
 
 // Функция для переключения между страницами
@@ -865,6 +883,7 @@ function sortUsers(users) {
 
 // Функция для открытия модального окна пользователя
 function openUserModal(userId = null) {
+    $('#user-error-message').remove();
     if (contentTypesList.length === 0) {
         makeRequest({
             endpoint: '/type',
@@ -881,6 +900,7 @@ function openUserModal(userId = null) {
 }
 
 function showUserModal(userId = null) {
+    $('#user-error-message').remove();
     if (userId) {
         $('#user-modal-title').text('Редактировать пользователя');
         $('#delete-user-btn').removeClass('d-none');
@@ -902,8 +922,13 @@ function showUserModal(userId = null) {
     } else {
         $('#user-modal-title').text('Добавить пользователя');
         $('#delete-user-btn').addClass('d-none');
-        $('#user-form')[0].reset();
+        $('#user-form')[0].reset(); // Сбрасываем форму
         $('#user-id').val(''); // Явно сбрасываем ID
+        $('#user-username').val(''); // Явно сбрасываем имя пользователя
+        $('#user-content-type-id').val(''); // Сбрасываем тип контента
+        $('#user-content-type-name').val(''); // Сбрасываем имя типа
+        $('#user-admin').prop('checked', false); // Сбрасываем чекбокс админа
+        $('#user-password').val(''); // Сбрасываем пароль
         userModal.show();
     }
 }
@@ -912,42 +937,111 @@ function showUserModal(userId = null) {
 function handleImages(files) {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-    const errors = [];
-    const filesToUpload = [];
+
+    $('#upload-image-errors').addClass('d-none').empty();
+    $('#upload-image-status').empty();
+    $('#upload-image-progress').removeClass('d-none').empty();
+
+    let filesToUpload = [];
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 
         if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
-            errors.push(`Файл "${file.name}" имеет неподдерживаемый формат`);
+            showUploadImageError(`Файл "${file.name}" имеет неподдерживаемый формат`);
             continue;
         }
 
         if (file.size > 10 * 1024 * 1024) {
-            errors.push(`Файл "${file.name}" слишком большой (макс. 10MB)`);
+            showUploadImageError(`Файл "${file.name}" слишком большой (макс. 10MB)`);
             continue;
         }
 
         filesToUpload.push(file);
     }
 
-    if (errors.length > 0) {
-        $('#upload-image-errors').html(errors.join('<br>')).removeClass('d-none');
-    }
-
     if (filesToUpload.length > 0) {
-        uploadImages(filesToUpload);
+        const progressContainer = $('<div class="upload-files-container"></div>');
+        $('#upload-image-progress').append(progressContainer);
+        $('#upload-image-status').append('<div class="upload-header">Загрузка изображений:</div>');
+        uploadImagesSequentially(filesToUpload, 0);
     }
 }
 
-function uploadImages(files) {
-    $('#upload-image-progress').removeClass('d-none');
-    $('#upload-image-progress-bar').css('width', '0%');
-    $('#upload-image-status').html(`Загрузка ${files.length} файла(ов)...`);
+function uploadImagesSequentially(files, index) {
+    if (index >= files.length) {
+        $('#upload-image-status').append('<div class="alert alert-success mt-3">Все изображения успешно загружены!</div>');
+        return;
+    }
 
+    const file = files[index];
+    const fileId = 'img-' + Date.now() + '-' + index;
+
+    const progressHtml = `
+        <div class="file-upload-item" id="${fileId}">
+            <div class="file-info">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+            </div>
+            <div class="progress mt-1">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="file-status small">Подготовка к загрузке...</div>
+        </div>
+    `;
+
+    $('#upload-image-progress .upload-files-container').append(progressHtml);
+
+    uploadSingleImage(file, fileId, () => {
+        uploadImagesSequentially(files, index + 1);
+    });
+}
+
+
+// Обновленная функция загрузки изображений
+function uploadImages(files) {
+    $('#upload-image-progress').removeClass('d-none').empty();
+    $('#upload-image-status').empty();
+
+    const uploadContainer = $('#upload-image-progress');
+    const statusContainer = $('#upload-image-status');
+
+    statusContainer.append('<div class="mb-2">Начата загрузка изображений:</div>');
+
+    files.forEach((file, index) => {
+        const fileId = `file-${Date.now()}-${index}`;
+        const fileName = file.name;
+        const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+        // Создаем элемент для отображения прогресса
+        const progressHtml = `
+            <div class="file-upload-item mb-2" id="${fileId}">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="file-name">${fileName}</span>
+                    <span class="file-size">${fileSize}</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="file-status small text-muted mt-1">Ожидание загрузки...</div>
+            </div>
+        `;
+        uploadContainer.append(progressHtml);
+
+        // Загружаем файл
+        uploadSingleImage(file, fileId, statusContainer);
+    });
+}
+
+
+
+// Функция для загрузки одного изображения
+function uploadSingleImage(file, fileId, callback) {
     const formData = new FormData();
-    files.forEach(file => formData.append('image', file));
+    formData.append('image', file);
+
+    $(`#${fileId} .file-status`).text('Загрузка...');
 
     $.ajax({
         url: `${API_BASE_URL}/files/img`,
@@ -966,61 +1060,152 @@ function uploadImages(files) {
             xhr.upload.addEventListener('progress', function(e) {
                 if (e.lengthComputable) {
                     const percent = Math.round((e.loaded / e.total) * 100);
-                    $('#upload-image-progress-bar').css('width', percent + '%');
+                    $(`#${fileId} .progress-bar`).css('width', percent + '%');
+                    $(`#${fileId} .file-status`).text(`Загружено ${percent}%`);
                 }
             }, false);
             return xhr;
         },
         success: function() {
-            $('#upload-image-status').html('<div class="alert alert-success">Изображения успешно загружены!</div>');
+            $(`#${fileId} .file-status`).html('<span class="text-success">Успешно загружено</span>');
+            $('#upload-image-status').append(`<div class="file-success">✓ ${file.name}</div>`);
+            callback();
         },
         error: function(xhr) {
-            $('#upload-image-status').html('<div class="alert alert-danger">Ошибка загрузки изображений</div>');
-            $('#upload-image-errors').html(xhr.responseJSON?.error || 'Неизвестная ошибка').removeClass('d-none');
+            $(`#${fileId} .file-status`).html('<span class="text-danger">Ошибка загрузки</span>');
+            $('#upload-image-status').append(`<div class="file-error">✗ ${file.name}: ${xhr.responseJSON?.error || 'Ошибка сервера'}</div>`);
+            callback();
         }
     });
 }
 
-// Загрузка файлов
+// Загрузка видео
 function handleFiles(files) {
     const validTypes = ['video/mp4', 'video/webm', 'video/ogg'];
     const validExtensions = ['.mp4', '.webm', '.ogg'];
-    const errors = [];
-    const filesToUpload = [];
 
+    // Очищаем предыдущие сообщения
+    $('#upload-errors').addClass('d-none').empty();
+    $('#upload-status').empty();
+    $('#upload-progress').removeClass('d-none').empty();
+
+    let filesToUpload = [];
+
+    // Проверяем каждый файл
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 
         if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
-            errors.push(`Файл "${file.name}" имеет неподдерживаемый формат`);
+            showUploadError(`Файл "${file.name}" имеет неподдерживаемый формат`);
             continue;
         }
 
         if (file.size > 500 * 1024 * 1024) {
-            errors.push(`Файл "${file.name}" слишком большой (макс. 500MB)`);
+            showUploadError(`Файл "${file.name}" слишком большой (макс. 500MB)`);
             continue;
         }
 
         filesToUpload.push(file);
     }
 
-    if (errors.length > 0) {
-        $('#upload-errors').html(errors.join('<br>')).removeClass('d-none');
-    }
-
     if (filesToUpload.length > 0) {
-        uploadFiles(filesToUpload);
+        // Создаем контейнер для прогресса
+        const progressContainer = $('<div class="upload-files-container"></div>');
+        $('#upload-progress').append(progressContainer);
+
+        // Добавляем заголовок
+        $('#upload-status').append('<div class="upload-header">Загрузка файлов:</div>');
+
+        // Загружаем файлы последовательно
+        uploadFilesSequentially(filesToUpload, 0);
     }
 }
 
-function uploadFiles(files) {
-    $('#upload-progress').removeClass('d-none');
-    $('#upload-progress-bar').css('width', '0%');
-    $('#upload-status').html(`Загрузка ${files.length} файла(ов)...`);
+// Функция для последовательной загрузки файлов
+function uploadFilesSequentially(files, index) {
+    if (index >= files.length) {
+        $('#upload-status').append('<div class="alert alert-success mt-3">Все файлы успешно загружены!</div>');
+        loadFilesList();
+        return;
+    }
 
+    const file = files[index];
+    const fileId = 'file-' + Date.now() + '-' + index;
+
+    // Создаем элемент для отображения прогресса
+    const progressHtml = `
+        <div class="file-upload-item" id="${fileId}">
+            <div class="file-info">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+            </div>
+            <div class="progress mt-1">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="file-status small">Подготовка к загрузке...</div>
+        </div>
+    `;
+
+    $('#upload-progress .upload-files-container').append(progressHtml);
+
+    // Загружаем файл
+    uploadSingleFile(file, fileId, () => {
+        // После успешной загрузки переходим к следующему файлу
+        uploadFilesSequentially(files, index + 1);
+    });
+}
+
+
+// Вспомогательные функции для отображения ошибок
+function showUploadError(message) {
+    $('#upload-errors').removeClass('d-none').append(`<div>${message}</div>`);
+}
+
+function showUploadImageError(message) {
+    $('#upload-image-errors').removeClass('d-none').append(`<div>${message}</div>`);
+}
+
+function uploadFiles(files) {
+    $('#upload-progress').removeClass('d-none').empty();
+    $('#upload-status').empty();
+
+    const uploadContainer = $('#upload-progress');
+    const statusContainer = $('#upload-status');
+
+    statusContainer.append('<div class="mb-2">Начата загрузка видео:</div>');
+
+    files.forEach((file, index) => {
+        const fileId = `file-${Date.now()}-${index}`;
+        const fileName = file.name;
+        const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+        // Создаем элемент для отображения прогресса
+        const progressHtml = `
+            <div class="file-upload-item mb-2" id="${fileId}">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="file-name">${fileName}</span>
+                    <span class="file-size">${fileSize}</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="file-status small text-muted mt-1">Ожидание загрузки...</div>
+            </div>
+        `;
+        uploadContainer.append(progressHtml);
+
+        // Загружаем файл
+        uploadSingleFile(file, fileId, statusContainer);
+    });
+}
+
+// Функция для загрузки одного видеофайла
+function uploadSingleFile(file, fileId, callback) {
     const formData = new FormData();
-    files.forEach(file => formData.append('video', file));
+    formData.append('video', file);
+
+    $(`#${fileId} .file-status`).text('Загрузка...');
 
     $.ajax({
         url: `${API_BASE_URL}/files/video`,
@@ -1039,18 +1224,21 @@ function uploadFiles(files) {
             xhr.upload.addEventListener('progress', function(e) {
                 if (e.lengthComputable) {
                     const percent = Math.round((e.loaded / e.total) * 100);
-                    $('#upload-progress-bar').css('width', percent + '%');
+                    $(`#${fileId} .progress-bar`).css('width', percent + '%');
+                    $(`#${fileId} .file-status`).text(`Загружено ${percent}%`);
                 }
             }, false);
             return xhr;
         },
         success: function() {
-            $('#upload-status').html('<div class="alert alert-success">Файлы успешно загружены!</div>');
-            loadFilesList();
+            $(`#${fileId} .file-status`).html('<span class="text-success">Успешно загружено</span>');
+            $('#upload-status').append(`<div class="file-success">✓ ${file.name}</div>`);
+            callback();
         },
         error: function(xhr) {
-            $('#upload-status').html('<div class="alert alert-danger">Ошибка загрузки файлов</div>');
-            $('#upload-errors').html(xhr.responseJSON?.error || 'Неизвестная ошибка').removeClass('d-none');
+            $(`#${fileId} .file-status`).html('<span class="text-danger">Ошибка загрузки</span>');
+            $('#upload-status').append(`<div class="file-error">✗ ${file.name}: ${xhr.responseJSON?.error || 'Ошибка сервера'}</div>`);
+            callback();
         }
     });
 }
@@ -1360,8 +1548,15 @@ $(document).ready(function() {
 
     $('#user-form').submit(function(e) {
         e.preventDefault();
+        const username = $('#user-username').val().trim();
+
+        if (!username) {
+            showError('Введите имя пользователя');
+            return;
+        }
+
         const userData = {
-            username: $('#user-username').val(),
+            username: username,
             content_type_id: $('#user-content-type-id').val() || null,
             content_type_name: $('#user-content-type-name').val() || null,
             admin: $('#user-admin').is(':checked'),
@@ -1378,6 +1573,9 @@ $(document).ready(function() {
         const method = userId ? 'PUT' : 'POST';
         const endpoint = userId ? `/users/${userId}` : '/users';
 
+        // Очищаем предыдущие ошибки
+        $('#error-message').addClass('d-none').empty();
+
         makeRequest({
             endpoint,
             method,
@@ -1386,7 +1584,24 @@ $(document).ready(function() {
                 userModal.hide();
                 loadUsers();
             },
-            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения пользователя')
+            error: (err) => {
+                // Создаем элемент для ошибки в модальном окне, если его нет
+                if (!$('#user-error-message').length) {
+                    $('#user-form').append(`
+                    <div id="user-error-message" class="alert alert-danger mt-3"></div>
+                `);
+                }
+
+                let errorMessage = 'Ошибка сохранения пользователя';
+                if (err.status === 409) {
+                    errorMessage = 'Пользователь с таким именем уже существует. Обратитесь к администратору.';
+                    $('#user-username').focus();
+                } else if (err.responseJSON?.error) {
+                    errorMessage = err.responseJSON.error;
+                }
+
+                $('#user-error-message').text(errorMessage).removeClass('d-none');
+            }
         });
     });
 

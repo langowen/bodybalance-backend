@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
+	"strings"
 	"time"
 )
 
@@ -14,12 +15,12 @@ func (s *Storage) AddUser(ctx context.Context, req admResponse.UserRequest) (adm
 	const op = "storage.postgres.AddUser"
 
 	query := `
-		INSERT INTO accounts (username, content_type_id, admin, password, deleted)
-		VALUES ($1, $2, $3, $4, FALSE)
-		RETURNING id, username, content_type_id, 
-		          (SELECT name FROM content_types WHERE id = $2),
-		          admin, created_at
-	`
+        INSERT INTO accounts (username, content_type_id, admin, password, deleted)
+        VALUES ($1, $2, $3, $4, FALSE)
+        RETURNING id, username, content_type_id, 
+                  (SELECT name FROM content_types WHERE id = $2),
+                  admin, created_at
+    `
 
 	var user admResponse.UserResponse
 	var createdAt time.Time
@@ -39,6 +40,10 @@ func (s *Storage) AddUser(ctx context.Context, req admResponse.UserRequest) (adm
 	)
 
 	if err != nil {
+		// Проверяем, является ли ошибка ошибкой дубликата
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return admResponse.UserResponse{}, fmt.Errorf("%s: user already exists", op)
+		}
 		return admResponse.UserResponse{}, fmt.Errorf("%s: %w", op, err)
 	}
 

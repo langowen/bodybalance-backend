@@ -36,7 +36,7 @@ type DatabaseConfig struct {
 
 type HTTPServer struct {
 	Port        string        `yaml:"port" env:"HTTP_PORT" env-default:"8083"`
-	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"20s"`
+	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"10m"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 	SigningKey  string        `yaml:"signing_key" env:"HTTP_SIGNING_KEY" env-default:"MY_SIGNING_KEY"`
 	TokenTTL    time.Duration `yaml:"token_ttl" env:"HTTP_TOKEN_TTL" env-default:"1440h"`

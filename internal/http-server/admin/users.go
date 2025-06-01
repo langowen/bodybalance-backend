@@ -10,9 +10,9 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
-// addUser добавляет нового пользователя
 func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addUser"
 
@@ -38,6 +38,13 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	user, err := h.storage.AddUser(ctx, req)
 	if err != nil {
 		logger.Error("failed to add user", sl.Err(err))
+
+		// Проверяем, является ли ошибка ошибкой дубликата
+		if strings.Contains(err.Error(), "user already exists") {
+			admResponse.RespondWithError(w, http.StatusConflict, "duplicate key")
+			return
+		}
+
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add user")
 		return
 	}
