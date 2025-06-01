@@ -166,10 +166,6 @@ func (s *Storage) InitData(ctx context.Context) error {
 		return fmt.Errorf("%s: check admin exists failed: %w", op, err)
 	}
 
-	if count > 0 {
-		return nil
-	}
-
 	// Проверяем, есть ли уже тип 'admin'
 	var countT int
 	err = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM content_types WHERE name = 'admin'").Scan(&countT)
@@ -177,7 +173,7 @@ func (s *Storage) InitData(ctx context.Context) error {
 		return fmt.Errorf("%s: check admin type exists failed: %w", op, err)
 	}
 
-	if countT > 0 {
+	if countT > 0 && count > 0 {
 		return nil
 	}
 
