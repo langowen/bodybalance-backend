@@ -69,8 +69,8 @@ services:
       POSTGRES_DB: bodybalance
       POSTGRES_USER: bodybalance
       POSTGRES_PASSWORD: ${BD_PASSWORD}
-   # ports:
-   #   - '5432:5432'
+    ports:
+      - '5455:5432'
     volumes:
       - '/srv/docker/bodybalance/pg:/var/lib/postgresql/data'
     networks:
