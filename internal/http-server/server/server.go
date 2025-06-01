@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/tls"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/app"
@@ -28,26 +27,6 @@ func Init(app *app.App) *http.Server {
 		ReadTimeout:  app.Cfg.HTTPServer.Timeout,
 		WriteTimeout: app.Cfg.HTTPServer.Timeout,
 		IdleTimeout:  app.Cfg.HTTPServer.IdleTimeout,
-	}
-
-	// Настраиваем TLS только для production
-	if app.Cfg.Env == "prod" {
-		serverConfig.TLSConfig = &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			// Дополнительные настройки безопасности для production
-			CurvePreferences: []tls.CurveID{
-				tls.X25519,
-				tls.CurveP256,
-			},
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			},
-		}
 	}
 
 	return serverConfig

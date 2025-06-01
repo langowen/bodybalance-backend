@@ -11,7 +11,7 @@ import (
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. Проверяем HTTPS в production
-		if h.cfg.Env == "prod" && r.TLS == nil {
+		if h.cfg.Env == "prod" && r.Header.Get("X-Forwarded-Proto") != "https" {
 			h.logger.Warn("HTTPS required", "url", r.URL)
 			admResponse.RespondWithError(w, http.StatusForbidden, "HTTPS required")
 			return
