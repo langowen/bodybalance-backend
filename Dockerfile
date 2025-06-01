@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN go mod download
+RUN go mod download && go mod tidy
 
 ARG VERSION="unknown"
 ARG GIT_COMMIT="unknown"
