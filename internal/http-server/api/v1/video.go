@@ -11,6 +11,55 @@ import (
 	"net/http"
 )
 
+// @Summary Get video by ID
+// @Description Returns video details by its ID
+// @Tags Videos
+// @Accept  json
+// @Produce  json
+// @Param video_id query int true "Video ID (e.g. '1')"
+// @Success 200 {object} response.VideoResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /v1/video [get]
+// GET /v1/video?video_id={id}
+func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.getVideo"
+
+	videoID := r.URL.Query().Get("video_id")
+
+	// Создаем логгер с дополнительными полями
+	logger := h.logger.With(
+		"op", op,
+		"request_id", middleware.GetReqID(r.Context()),
+		"video_id", videoID,
+	)
+
+	if videoID == "" {
+		logger.Error("Video id is empty")
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
+	}
+
+	// Создаем новый контекст с логгером
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	videos, err := h.storage.GetVideo(ctx, videoID)
+	switch {
+	case errors.Is(err, storage.ErrVideoNotFound):
+		logger.Warn("video not found", sl.Err(err))
+		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
+			fmt.Sprintf("Video '%s' does not exist", videoID))
+		return
+
+	case err != nil:
+		logger.Error("Failed to get video", sl.Err(err))
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, videos)
+}
+
 // @Summary Get videos by category and type
 // @Description Returns videos filtered by type and category, order by name
 // @Tags Videos

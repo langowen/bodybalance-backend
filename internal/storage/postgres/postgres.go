@@ -3,36 +3,36 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
-	"github.com/langowen/bodybalance-backend/internal/storage"
-	"strings"
+	"github.com/langowen/bodybalance-backend/internal/storage/postgres/admin"
+	"github.com/langowen/bodybalance-backend/internal/storage/postgres/api"
+	"github.com/theartofdevel/logging"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/theartofdevel/logging"
 )
 
 type Storage struct {
-	db     *sql.DB
-	logger *logging.Logger
-	cfg    *config.Config
+	db    *sql.DB
+	cfg   *config.Config
+	Admin *admin.Storage
+	Api   *api.Storage
 }
 
-func New(ctx context.Context, cfg *config.Config, logger *logging.Logger) (*Storage, error) {
+func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	const op = "storage.postgres.New"
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s search_path=%s",
 		cfg.Database.Host,
 		cfg.Database.Port,
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.DBName,
 		cfg.Database.SSLMode,
+		cfg.Database.Schema,
 	)
 
 	dbConfig, err := pgx.ParseConfig(dsn)
@@ -54,23 +54,24 @@ func New(ctx context.Context, cfg *config.Config, logger *logging.Logger) (*Stor
 	defer cancel()
 
 	if err := db.PingContext(pingCtx); err != nil {
-		logger.Error("postgres ping failed", sl.Err(err))
+		logging.L(ctx).Error("postgres ping failed", sl.Err(err))
 		return nil, fmt.Errorf("%s: ping failed: %w", op, err)
 	}
 
 	storageBD := &Storage{
-		db:     db,
-		logger: logger,
-		cfg:    cfg,
+		db:    db,
+		cfg:   cfg,
+		Admin: admin.New(db),
+		Api:   api.New(db, cfg),
 	}
 
 	if err := storageBD.initSchema(ctx); err != nil {
-		logger.Error("failed to init database schema", sl.Err(err))
+		logging.L(ctx).Error("failed to init database schema", sl.Err(err))
 		_ = db.Close()
 		return nil, fmt.Errorf("%s: init schema failed: %w", op, err)
 	}
 
-	logger.Info("PostgreSQL storage initialized successfully")
+	logging.L(ctx).Info("PostgreSQL storage initialized successfully")
 	return storageBD, nil
 }
 
@@ -81,12 +82,14 @@ func (s *Storage) initSchema(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS content_types (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
+    		remove boolean,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS categories (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			img_url TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS category_content_types (
@@ -100,6 +103,7 @@ func (s *Storage) initSchema(ctx context.Context) error {
 			name TEXT NOT NULL,
 			description TEXT,
 			img_url TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS video_categories (
@@ -111,6 +115,9 @@ func (s *Storage) initSchema(ctx context.Context) error {
 			id SERIAL PRIMARY KEY,
 			username TEXT NOT NULL UNIQUE,
 			content_type_id INTEGER REFERENCES content_types(id) ON DELETE SET NULL,
+    		admin BOOLEAN,
+    		password TEXT,
+    		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_video_categories_video_id ON video_categories(video_id)`,
@@ -140,240 +147,6 @@ func (s *Storage) initSchema(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]response.VideoResponse, error) {
-	const op = "storage.postgres.GetVideosByCategoryAndType"
-
-	// Проверка существования типа контента
-	err := s.chekType(ctx, contentType, op)
-	if err != nil {
-		return nil, err
-	}
-
-	// Проверка существования категории
-	err = s.chekCategory(ctx, category, op)
-	if err != nil {
-		return nil, err
-	}
-
-	query := `
-        SELECT v.id, v.url, v.name, v.description, c.name as category, v.img_url
-        FROM videos v
-        JOIN video_categories vc ON v.id = vc.video_id
-        JOIN categories c ON vc.category_id = c.id
-        JOIN category_content_types cct ON c.id = cct.category_id
-        JOIN content_types ct ON cct.content_type_id = ct.id
-        WHERE ct.id = $1 AND c.id = $2
-        ORDER BY v.created_at DESC
-    `
-
-	rows, err := s.db.QueryContext(ctx, query, contentType, category)
-	if err != nil {
-		return nil, fmt.Errorf("%s: query failed: %w", op, err)
-	}
-	defer rows.Close()
-
-	var videos []response.VideoResponse
-	for rows.Next() {
-		var v response.VideoResponse
-		if err := rows.Scan(&v.ID, &v.URL, &v.Name, &v.Description, &v.Category, &v.ImgURL); err != nil {
-			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
-		}
-		v.URL = s.constructFullMediaURL(v.URL)
-		v.ImgURL = s.constructFullImgURL(v.ImgURL)
-		videos = append(videos, v)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: rows error: %w", op, err)
-	}
-
-	// Проверка на отсутствие категорий для данного типа
-	if len(videos) == 0 {
-		return nil, fmt.Errorf("%s: %w: no videos found for content type '%s' and category '%s'",
-			op, storage.ErrVideoNotFound, contentType, category)
-	}
-
-	return videos, nil
-}
-
-// CheckAccount возвращает Type ID для указанного username
-func (s *Storage) CheckAccount(ctx context.Context, username string) (response.AccountResponse, error) {
-	const op = "storage.postgres.CheckAccount"
-
-	query := `
-        SELECT a.content_type_id, ct.name
-        FROM accounts a
-        JOIN content_types ct ON a.content_type_id = ct.id 
-        WHERE a.username = $1
-    `
-
-	var account response.AccountResponse
-
-	err := s.db.QueryRowContext(ctx, query, username).Scan(
-		&account.TypeID,
-		&account.TypeName,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return response.AccountResponse{}, fmt.Errorf("%s: %w: video with id '%s' not found",
-				op, storage.ErrAccountNotFound, username)
-		}
-		return response.AccountResponse{}, fmt.Errorf("%s: query failed: %w", op, err)
-	}
-
-	return account, nil
-}
-
-// GetCategories возвращает все категории для указанного типа контента
-func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error) {
-	const op = "storage.postgres.GetCategories"
-
-	// Проверка существования типа контента
-	err := s.chekType(ctx, contentType, op)
-	if err != nil {
-		return nil, err
-	}
-
-	// Основной запрос для получения категорий
-	query := `
-        SELECT c.id, c.name, c.img_url
-        FROM categories c
-        JOIN category_content_types cct ON c.id = cct.category_id
-        JOIN content_types ct ON cct.content_type_id = ct.id
-        WHERE ct.id = $1
-        ORDER BY c.created_at DESC
-    `
-
-	rows, err := s.db.QueryContext(ctx, query, contentType)
-	if err != nil {
-		return nil, fmt.Errorf("%s: query failed: %w", op, err)
-	}
-	defer rows.Close()
-
-	var categories []response.CategoryResponse
-
-	for rows.Next() {
-		var category response.CategoryResponse
-		if err := rows.Scan(&category.ID, &category.Name, &category.ImgURL); err != nil {
-			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
-		}
-		category.ImgURL = s.constructFullImgURL(category.ImgURL)
-
-		categories = append(categories, category)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: rows error: %w", op, err)
-	}
-
-	// Проверка на отсутствие категорий для данного типа
-	if len(categories) == 0 {
-		return nil, fmt.Errorf("%s: %w: no categories found for content type '%s'",
-			op, storage.ErrNoCategoriesFound, contentType)
-	}
-
-	return categories, nil
-}
-
-func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoResponse, error) {
-	const op = "storage.postgres.GetVideo"
-
-	query := `
-        SELECT v.id, v.url, v.name, v.description, c.name as category, v.img_url
-        FROM videos v
-        JOIN video_categories vc ON v.id = vc.video_id
-        JOIN categories c ON vc.category_id = c.id
-        WHERE v.id = $1
-    `
-
-	var video response.VideoResponse
-
-	err := s.db.QueryRowContext(ctx, query, videoID).Scan(
-		&video.ID,
-		&video.URL,
-		&video.Name,
-		&video.Description,
-		&video.Category,
-		&video.ImgURL,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return response.VideoResponse{}, fmt.Errorf("%s: %w: video with id '%s' not found",
-				op, storage.ErrVideoNotFound, videoID)
-		}
-		return response.VideoResponse{}, fmt.Errorf("%s: query failed: %w", op, err)
-	}
-
-	video.URL = s.constructFullMediaURL(video.URL)
-
-	video.ImgURL = s.constructFullImgURL(video.ImgURL)
-
-	return video, nil
-}
-
-func (s *Storage) chekType(ctx context.Context, contentType, op string) error {
-	var contentTypeExists bool
-	err := s.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM content_types WHERE id = $1)`,
-		contentType,
-	).Scan(&contentTypeExists)
-
-	if err != nil {
-		return fmt.Errorf("%s: content type check failed: %w", op, err)
-	}
-
-	if !contentTypeExists {
-		return fmt.Errorf("%s: %w: content type '%s' not found",
-			op, storage.ErrContentTypeNotFound, contentType)
-	}
-
-	return nil
-}
-
-func (s *Storage) chekCategory(ctx context.Context, category, op string) error {
-	var categoryNameExists bool
-
-	err := s.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1)`,
-		category,
-	).Scan(&categoryNameExists)
-
-	if err != nil {
-		return fmt.Errorf("%s: category name check failed: %w", op, err)
-	}
-
-	if !categoryNameExists {
-		return fmt.Errorf("%s: %w: category name '%s' not found",
-			op, storage.ErrNoCategoriesFound, category)
-	}
-
-	return nil
-}
-
-func (s *Storage) constructFullMediaURL(relativePath string) string {
-	if relativePath == "" {
-		return ""
-	}
-
-	baseURL := strings.TrimRight(s.cfg.Media.BaseURL, "/")
-	videoPath := strings.TrimLeft(relativePath, "/")
-
-	return fmt.Sprintf("%s/video/%s", baseURL, videoPath)
-}
-
-func (s *Storage) constructFullImgURL(relativePath string) string {
-	if relativePath == "" {
-		return ""
-	}
-
-	baseURL := strings.TrimRight(s.cfg.Media.BaseURL, "/")
-	imgPath := strings.TrimLeft(relativePath, "/")
-
-	return fmt.Sprintf("%s/img/%s", baseURL, imgPath)
 }
 
 func (s *Storage) Close() error {

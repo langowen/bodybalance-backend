@@ -1,6 +1,7 @@
 package img
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
@@ -38,12 +39,13 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		filename := chi.URLParam(r, "filename")
 		filePath := filepath.Join(cfg.Media.ImagesPatch, filename)
 
-		if !strings.HasPrefix(filepath.Clean(filePath), cfg.Media.ImagesPatch) {
+		cleanPath := filepath.Clean(filePath)
+		if !strings.HasPrefix(cleanPath, cfg.Media.ImagesPatch) {
 			response.RespondWithError(w, http.StatusForbidden, "Forbidden")
 			return
 		}
 
-		file, err := os.Open(filePath)
+		file, err := os.Open(cleanPath)
 		if err != nil {
 			logger.Error("File not found", "filename", filename, sl.Err(err))
 			response.RespondWithError(w, http.StatusNotFound, "Not Found", err.Error())
@@ -55,6 +57,14 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		if err != nil {
 			logger.Error("File stat error", "filename", filename, sl.Err(err))
 			response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
+			return
+		}
+
+		etag := fmt.Sprintf("\"%x-%x\"", stat.Size(), stat.ModTime().Unix())
+		w.Header().Set("ETag", etag)
+
+		if match := r.Header.Get("If-None-Match"); match == etag {
+			w.WriteHeader(http.StatusNotModified)
 			return
 		}
 

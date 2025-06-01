@@ -21,10 +21,21 @@ func main() {
 	var wg sync.WaitGroup
 
 	requestList := []Request{
-		{"https://api.7375.org/v1/video?type=basic&category=Шея"},
-		{"https://api.7375.org/v1/category?type=basic"},
-		{"https://api.7375.org/v1/login?username=base&type=Basic"},
+		{"http://localhost:8083/video/test5.mp4"},
+		{"http://localhost:8083/video/Koleno_baza.mp4"},
 	}
+	//requestList := []Request{
+	//	{"https://api.7375.org/v1/video_categories?type=1&category=1"},
+	//	{"https://api.7375.org/v1/video_categories?type=2&category=2"},
+	//	{"https://api.7375.org/v1/category?type=1"},
+	//	{"https://api.7375.org/v1/category?type=2"},
+	//	{"https://api.7375.org/v1/login?username=base"},
+	//	{"https://api.7375.org/v1/video?video_id=5"},
+	//	{"https://api.7375.org/v1/video?video_id=4"},
+	//	{"https://api.7375.org/v1/video?video_id=3"},
+	//	{"https://api.7375.org/v1/video?video_id=2"},
+	//	{"https://api.7375.org/v1/video?video_id=1"},
+	//}
 
 	fmt.Printf("Количество работников: %d\n", numWorkers)
 	fmt.Printf("Запросов на каждого работника: %d\n", requestsPerWorker)
