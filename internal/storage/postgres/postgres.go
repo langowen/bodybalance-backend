@@ -182,10 +182,10 @@ func (s *Storage) InitData(ctx context.Context) error {
 	}
 
 	// Создаем тип 'admin'
-	var type_id int64
+	var typeID int64
 	err = s.db.QueryRowContext(ctx,
 		"INSERT INTO content_types (name, deleted) VALUES ($1, $2) RETURNING id",
-		"admin", false).Scan(&type_id)
+		"admin", false).Scan(&typeID)
 	if err != nil {
 		return fmt.Errorf("%s: create admin type failed: %w", op, err)
 	}
@@ -195,7 +195,7 @@ func (s *Storage) InitData(ctx context.Context) error {
 	// Создаем админа
 	_, err = s.db.ExecContext(ctx,
 		"INSERT INTO accounts (username, content_type_id, password, admin, deleted) VALUES ($1, $2, $3, $4, $5)",
-		s.cfg.Docs.User, type_id, hashedPassword, true, false)
+		s.cfg.Docs.User, typeID, hashedPassword, true, false)
 	if err != nil {
 		return fmt.Errorf("%s: create admin failed: %w", op, err)
 	}
