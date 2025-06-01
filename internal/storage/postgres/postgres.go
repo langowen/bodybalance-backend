@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres/admin"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres/api"
@@ -69,6 +71,11 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 		logging.L(ctx).Error("failed to init database schema", sl.Err(err))
 		_ = db.Close()
 		return nil, fmt.Errorf("%s: init schema failed: %w", op, err)
+	}
+
+	err = storageBD.InitData(ctx)
+	if err != nil {
+		logging.L(ctx).Error("failed create data to database", sl.Err(err))
 	}
 
 	logging.L(ctx).Info("PostgreSQL storage initialized successfully")
@@ -147,6 +154,59 @@ func (s *Storage) initSchema(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) InitData(ctx context.Context) error {
+	const op = "storage.postgres.initData"
+
+	// Проверяем, есть ли уже админ
+	var count int
+	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM accounts WHERE username = $1", s.cfg.Docs.User).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("%s: check admin exists failed: %w", op, err)
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	// Проверяем, есть ли уже тип 'admin'
+	var countT int
+	err = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM content_types WHERE name = 'admin'").Scan(&countT)
+	if err != nil {
+		return fmt.Errorf("%s: check admin type exists failed: %w", op, err)
+	}
+
+	if countT > 0 {
+		return nil
+	}
+
+	// Создаем тип 'admin'
+	var type_id int64
+	err = s.db.QueryRowContext(ctx,
+		"INSERT INTO content_types (name, deleted) VALUES ($1, $2) RETURNING id",
+		"admin", false).Scan(&type_id)
+	if err != nil {
+		return fmt.Errorf("%s: create admin type failed: %w", op, err)
+	}
+
+	hashedPassword := hashPassword(s.cfg.Docs.Password)
+
+	// Создаем админа
+	_, err = s.db.ExecContext(ctx,
+		"INSERT INTO accounts (username, content_type_id, password, admin, deleted) VALUES ($1, $2, $3, $4, $5)",
+		s.cfg.Docs.User, type_id, hashedPassword, true, false)
+	if err != nil {
+		return fmt.Errorf("%s: create admin failed: %w", op, err)
+	}
+
+	return nil
+}
+
+// Пример функции хеширования пароля
+func hashPassword(password string) string {
+	hash := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(hash[:])
 }
 
 func (s *Storage) Close() error {
