@@ -19,7 +19,7 @@ type Config struct {
 	Docs        Docs           `yaml:"docs"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
-	Env         string         `env:"ENV" env-default:"dev"`
+	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod
 }
 
 // DatabaseConfig содержит конфигурацию для работы с базой данных.

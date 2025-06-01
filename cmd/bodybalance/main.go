@@ -33,10 +33,6 @@ func main() {
 	// Инициализируем конфиг
 	cfg := config.MustGetConfig()
 
-	if cfg.Env == "prod" {
-		log.Fatal("HTTPS must be enabled in production")
-	}
-
 	// Инициализируем лог
 	logger := newLogger(cfg)
 
