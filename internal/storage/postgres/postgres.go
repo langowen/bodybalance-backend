@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres/admin"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres/api"
@@ -89,7 +90,7 @@ func (s *Storage) initSchema(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS content_types (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
-    		remove boolean,
+    		deleted boolean,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS categories (
@@ -159,41 +160,48 @@ func (s *Storage) initSchema(ctx context.Context) error {
 func (s *Storage) InitData(ctx context.Context) error {
 	const op = "storage.postgres.initData"
 
-	// Проверяем, есть ли уже админ
-	var count int
-	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM accounts WHERE username = $1", s.cfg.Docs.User).Scan(&count)
-	if err != nil {
-		return fmt.Errorf("%s: check admin exists failed: %w", op, err)
-	}
-
 	// Проверяем, есть ли уже тип 'admin'
-	var countT int
-	err = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM content_types WHERE name = 'admin'").Scan(&countT)
-	if err != nil {
-		return fmt.Errorf("%s: check admin type exists failed: %w", op, err)
+	var typeID int
+
+	err := s.db.QueryRowContext(ctx,
+		"SELECT id FROM content_types WHERE name = 'admin'").Scan(&typeID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%s: failed to check admin type: %w", op, err)
 	}
 
-	if countT > 0 && count > 0 {
-		return nil
+	// Если запись не найдена, создаём новую
+	if errors.Is(err, sql.ErrNoRows) {
+		err = s.db.QueryRowContext(ctx,
+			"INSERT INTO content_types (name, deleted) VALUES ($1, $2) RETURNING id",
+			"admin", false).Scan(&typeID)
+		if err != nil {
+			return fmt.Errorf("%s: create admin type failed: %w", op, err)
+		}
 	}
 
-	// Создаем тип 'admin'
-	var typeID int64
+	// Проверяем, есть ли уже админ
+	var exists bool
 	err = s.db.QueryRowContext(ctx,
-		"INSERT INTO content_types (name, deleted) VALUES ($1, $2) RETURNING id",
-		"admin", false).Scan(&typeID)
+		"SELECT EXISTS(SELECT 1 FROM accounts WHERE username = $1)",
+		s.cfg.Docs.User,
+	).Scan(&exists)
+
 	if err != nil {
-		return fmt.Errorf("%s: create admin type failed: %w", op, err)
+		return fmt.Errorf("%s: failed to check admin existence: %w", op, err)
 	}
 
-	hashedPassword := hashPassword(s.cfg.Docs.Password)
+	// Если администратора нет — создаём
+	if !exists {
+		hashedPassword := hashPassword(s.cfg.Docs.Password)
 
-	// Создаем админа
-	_, err = s.db.ExecContext(ctx,
-		"INSERT INTO accounts (username, content_type_id, password, admin, deleted) VALUES ($1, $2, $3, $4, $5)",
-		s.cfg.Docs.User, typeID, hashedPassword, true, false)
-	if err != nil {
-		return fmt.Errorf("%s: create admin failed: %w", op, err)
+		_, err = s.db.ExecContext(ctx,
+			"INSERT INTO accounts (username, content_type_id, password, admin, deleted) VALUES ($1, $2, $3, $4, $5)",
+			s.cfg.Docs.User, typeID, hashedPassword, true, false,
+		)
+
+		if err != nil {
+			return fmt.Errorf("%s: create admin failed: %w", op, err)
+		}
 	}
 
 	return nil
