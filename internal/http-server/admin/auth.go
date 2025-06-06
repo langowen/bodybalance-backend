@@ -107,7 +107,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
 	if h.cfg.Env == "prod" {
 		secure = true
-		httpOnly = true
+		httpOnly = false //user reverse proxy
 		sameSite = http.SameSiteStrictMode
 
 	}
@@ -136,7 +136,7 @@ func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
 
 	if h.cfg.Env == "prod" {
 		secure = true
-		httpOnly = true
+		httpOnly = false //user reverse proxy
 		sameSite = http.SameSiteStrictMode
 
 	}
