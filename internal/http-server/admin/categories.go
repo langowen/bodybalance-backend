@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -168,6 +169,16 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
+	// Получаем текущие типы категории перед обновлением (для инвалидации кэша)
+	category, err := h.storage.GetCategory(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("category not found", "category_id", id)
+		}
+		logger.Debug("failed to get category", sl.Err(err), "category_id", id)
+	}
+
 	err = h.storage.UpdateCategory(ctx, id, req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -179,6 +190,40 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update category")
 		return
 	}
+
+	// Инвалидация кэша для всех затронутых типов контента
+	go func() {
+		ctx := context.Background() // используем новый контекст для фоновой операции
+
+		// Инвалидируем кэш для старых типов категории
+		for _, catType := range category.Types {
+			if err := h.redis.DeleteCategories(ctx, strconv.FormatFloat(catType.ID, 'f', 0, 64)); err != nil {
+				logger.Warn("failed to invalidate cache for old type",
+					sl.Err(err), "type_id", catType.ID)
+			}
+		}
+
+		// Инвалидируем кэш для новых типов категории
+		for _, typeID := range req.TypeIDs {
+			if err := h.redis.DeleteCategories(ctx, strconv.FormatInt(typeID, 10)); err != nil {
+				logger.Warn("failed to invalidate cache for new type",
+					sl.Err(err), "type_id", typeID)
+			}
+		}
+	}()
+
+	go func() {
+		// Инвалидируем кэш для всех связанных тип+категория комбинаций
+		for _, contentType := range category.Types {
+			if err := h.redis.DeleteVideosByCategoryAndType(
+				context.Background(),
+				strconv.FormatFloat(contentType.ID, 'f', 0, 64),
+				strconv.FormatFloat(category.ID, 'f', 0, 64),
+			); err != nil {
+				h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
+			}
+		}
+	}()
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -214,6 +259,16 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
+	// Получаем текущие типы категории перед обновлением (для инвалидации кэша)
+	category, err := h.storage.GetCategory(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("category not found", "category_id", id)
+		}
+		logger.Debug("failed to get category", sl.Err(err), "category_id", id)
+	}
+
 	err = h.storage.DeleteCategory(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -225,6 +280,30 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete category")
 		return
 	}
+
+	// Инвалидация кэша для всех связанных типов контента
+	go func() {
+		ctx := context.Background() // используем новый контекст для фоновой операции
+		for _, catType := range category.Types {
+			if err := h.redis.DeleteCategories(ctx, strconv.FormatFloat(catType.ID, 'f', 0, 64)); err != nil {
+				logger.Warn("failed to invalidate cache for type",
+					sl.Err(err), "type_id", catType.ID)
+			}
+		}
+	}()
+
+	go func() {
+		// Инвалидируем кэш для всех связанных тип+категория комбинаций
+		for _, contentType := range category.Types {
+			if err := h.redis.DeleteVideosByCategoryAndType(
+				context.Background(),
+				strconv.FormatFloat(contentType.ID, 'f', 0, 64),
+				strconv.FormatFloat(category.ID, 'f', 0, 64),
+			); err != nil {
+				h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
+			}
+		}
+	}()
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,

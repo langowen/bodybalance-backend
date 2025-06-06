@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
@@ -9,6 +10,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
+	"time"
 )
 
 // @Summary Check account existence
@@ -23,10 +25,10 @@ import (
 // @Router /login [get]
 func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.checkAccountType"
+	const cacheTTL = time.Hour * 24
 
 	username := r.URL.Query().Get("username")
 
-	// Создаем логгер с дополнительными полями
 	logger := h.logger.With(
 		"op", op,
 		"request_id", middleware.GetReqID(r.Context()),
@@ -39,9 +41,21 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем новый контекст с логгером
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
+	// Пытаемся получить данные из кэша
+	cachedAccount, err := h.redis.GetAccount(ctx, username)
+	if err != nil {
+		logger.Warn("redis get error", sl.Err(err))
+	}
+
+	if cachedAccount != nil {
+		logger.Debug("serving from cache", "account_type", cachedAccount.TypeName)
+		response.RespondWithJSON(w, http.StatusOK, cachedAccount)
+		return
+	}
+
+	// Данных нет в кэше - запрашиваем из основного хранилища
 	account, err := h.storage.CheckAccount(ctx, username)
 	switch {
 	case errors.Is(err, storage.ErrAccountNotFound):
@@ -55,6 +69,15 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 		response.RespondWithError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return
 	}
+
+	// Сохраняем данные в кэш
+	go func() {
+		ctx := context.Background()
+
+		if err := h.redis.SetAccount(ctx, username, &account, cacheTTL); err != nil {
+			logger.Warn("failed to set account cache", sl.Err(err))
+		}
+	}()
 
 	response.RespondWithJSON(w, http.StatusOK, account)
 }

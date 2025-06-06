@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -188,6 +189,34 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Инвалидируем кэщ
+	go func() {
+		if err := h.redis.DeleteVideo(context.Background(), idStr); err != nil {
+			h.logger.Warn("failed to invalidate video cache", sl.Err(err))
+		}
+	}()
+
+	go func() {
+		video, err := h.storage.GetVideo(context.Background(), id)
+		if err != nil {
+			h.logger.Warn("failed to get video for cache invalidation", sl.Err(err))
+			return
+		}
+
+		// Инвалидируем кэш для этой комбинации тип+категория
+		for _, category := range video.Categories {
+			for _, catType := range category.Types {
+				if err := h.redis.DeleteVideosByCategoryAndType(
+					context.Background(),
+					strconv.FormatFloat(catType.ID, 'f', 0, 64),
+					strconv.FormatFloat(category.ID, 'f', 0, 64),
+				); err != nil {
+					h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
+				}
+			}
+		}
+	}()
+
 	var req admResponse.VideoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
@@ -259,6 +288,34 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid video ID")
 		return
 	}
+
+	//Инвалидируем кэщ
+	go func() {
+		if err := h.redis.DeleteVideo(context.Background(), idStr); err != nil {
+			h.logger.Warn("failed to invalidate video cache", sl.Err(err))
+		}
+	}()
+
+	go func() {
+		video, err := h.storage.GetVideo(context.Background(), id)
+		if err != nil {
+			h.logger.Warn("failed to get video for cache invalidation", sl.Err(err))
+			return
+		}
+
+		// Инвалидируем кэш для этой комбинации тип+категория
+		for _, category := range video.Categories {
+			for _, catType := range category.Types {
+				if err := h.redis.DeleteVideosByCategoryAndType(
+					context.Background(),
+					strconv.FormatFloat(catType.ID, 'f', 0, 64),
+					strconv.FormatFloat(category.ID, 'f', 0, 64),
+				); err != nil {
+					h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
+				}
+			}
+		}
+	}()
 
 	ctx := r.Context()
 	err = h.storage.DeleteVideo(ctx, id)

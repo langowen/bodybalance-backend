@@ -40,13 +40,14 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 
 	// API v1
-	r.Mount("/v1", v1.New(s.app.Logger, s.app.Storage.Api).Router())
+	r.Mount("/v1", v1.New(s.app.Logger, s.app.Storage.Api, s.app.Redis).Router())
 
 	// Админ интерфейс управления БД
 	r.Mount("/admin", admin.New(
 		s.app.Logger,
 		s.app.Storage.Admin,
 		s.app.Cfg,
+		s.app.Redis,
 	).Router())
 
 	// Статические файлы

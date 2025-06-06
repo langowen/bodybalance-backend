@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/docs"
+	"github.com/langowen/bodybalance-backend/internal/storage/redis"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -12,13 +13,15 @@ type Handler struct {
 	logger  *logging.Logger
 	storage AdmStorage
 	cfg     *config.Config
+	redis   *redis.Storage
 }
 
-func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config) *Handler {
+func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config, redis *redis.Storage) *Handler {
 	return &Handler{
 		logger:  logger,
 		storage: storage,
 		cfg:     cfg,
+		redis:   redis,
 	}
 }
 

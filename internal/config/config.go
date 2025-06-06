@@ -17,6 +17,7 @@ type Config struct {
 	HTTPServer  HTTPServer     `yaml:"http_server"`
 	Media       Media          `yaml:"media"`
 	Docs        Docs           `yaml:"docs"`
+	Redis       Redis          `yaml:"redis"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
 	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod
@@ -51,6 +52,13 @@ type Media struct {
 type Docs struct {
 	User     string `yaml:"user" env:"DOCS_USER" env-required:"true"`
 	Password string `yaml:"password" env:"DOCS_PASSWORD" env-required:"true"`
+}
+
+type Redis struct {
+	Host     string        `yaml:"host" env:"REDIS_HOST" env-default:"redis:6379"`
+	Password string        `yaml:"password" env:"REDIS_PASSWORD" env-default:""`
+	DB       int           `yaml:"db" env:"REDIS_DB" env-default:"1"`
+	cacheTTL time.Duration `yaml:"ttl" env:"REDIS_TTL" env-default:"24h"`
 }
 
 var (
@@ -114,6 +122,11 @@ func (c *Config) LogValue() logging.Value {
 		//Docs
 		logging.StringAttr("docs_user", c.Docs.User),
 		logging.StringAttr("docs_password", "REDACTED"),
+
+		//Redis
+		logging.StringAttr("redis_host", c.Redis.Host),
+		logging.StringAttr("redis_password", "REDACTED"),
+		logging.IntAttr("redis_db", c.Redis.DB),
 
 		// General
 		logging.StringAttr("log_level", c.LogLevel),

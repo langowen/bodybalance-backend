@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
@@ -9,6 +10,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
+	"time"
 )
 
 // @Summary Get categories by type
@@ -23,10 +25,10 @@ import (
 // @Router /category [get]
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getCategoriesByType"
+	const cacheTTL = time.Hour * 24
 
 	contentType := r.URL.Query().Get("type")
 
-	// Создаем логгер с дополнительными полями
 	logger := h.logger.With(
 		"op", op,
 		"request_id", middleware.GetReqID(r.Context()),
@@ -38,9 +40,21 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем новый контекст с логгером
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
+	// Пытаемся получить данные из кэша
+	cachedCategories, err := h.redis.GetCategories(ctx, contentType)
+	if err != nil {
+		logger.Warn("redis get error", sl.Err(err))
+	}
+
+	if cachedCategories != nil {
+		logger.Debug("serving from cache")
+		response.RespondWithJSON(w, http.StatusOK, cachedCategories)
+		return
+	}
+
+	// Данных нет в кэше - запрашиваем из основного хранилища
 	categories, err := h.storage.GetCategories(ctx, contentType)
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
@@ -60,6 +74,14 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
+
+	// Сохраняем данные в кэш
+	go func() {
+		ctx := context.Background()
+		if err := h.redis.SetCategories(ctx, contentType, categories, cacheTTL); err != nil {
+			logger.Warn("failed to set cache", sl.Err(err))
+		}
+	}()
 
 	response.RespondWithJSON(w, http.StatusOK, categories)
 }

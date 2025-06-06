@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -179,6 +180,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
 	err = h.storage.UpdateUser(ctx, id, req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -190,6 +192,16 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
+
+	// Инвалидация кэша
+	go func() {
+		ctx := context.Background()
+
+		if err := h.redis.DeleteAccount(ctx, req.Username); err != nil {
+			logger.Warn("failed to invalidate cache for new username",
+				sl.Err(err), "new_username", req.Username)
+		}
+	}()
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -225,6 +237,15 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
+	// Получаем данные пользователя перед удалением (для инвалидации кэша)
+	user, err := h.storage.GetUser(ctx, id)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		logger.Error("failed to get user data", sl.Err(err), "user_id", id)
+		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		return
+	}
+
 	err = h.storage.DeleteUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -236,6 +257,15 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
+
+	// Инвалидация кэша
+	go func() {
+		ctx := context.Background() // используем новый контекст для фоновой операции
+		if err := h.redis.DeleteAccount(ctx, user.Username); err != nil {
+			logger.Warn("failed to invalidate cache for username",
+				sl.Err(err), "username", user.Username)
+		}
+	}()
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,

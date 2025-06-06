@@ -8,6 +8,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/http-server/server"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
+	"github.com/langowen/bodybalance-backend/internal/storage/redis"
 	"github.com/theartofdevel/logging"
 	"log"
 	"log/slog"
@@ -63,6 +64,11 @@ func main() {
 		}
 	}(pgStorage)
 
+	redisStorage, err := redis.New(cfg)
+	if err != nil {
+		log.Fatalln("Failed to initialize RedisSQL storage", sl.Err(err))
+	}
+
 	logger.With(
 		"Config params", cfg,
 		"go_version", runtime.Version(),
@@ -73,7 +79,7 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	apps := app.New(cfg, logger, pgStorage)
+	apps := app.New(cfg, logger, pgStorage, redisStorage)
 
 	srv := server.Init(apps)
 
