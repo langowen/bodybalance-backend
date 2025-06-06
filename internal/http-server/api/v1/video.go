@@ -13,16 +13,14 @@ import (
 
 // @Summary Get video by ID
 // @Description Returns video details by its ID
-// @Tags Videos
-// @Accept  json
-// @Produce  json
-// @Param video_id query int true "Video ID (e.g. '1')"
+// @Tags API v1
+// @Produce json
+// @Param video_id query int true "Video ID"
 // @Success 200 {object} response.VideoResponse
-// @Failure 400 {string} string "Bad Request"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /v1/video [get]
-// GET /v1/video?video_id={id}
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /video [get]
 func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideo"
 
@@ -61,18 +59,16 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Get videos by category and type
-// @Description Returns videos filtered by type and category, order by name
-// @Tags Videos
-// @Accept  json
-// @Produce  json
-// @Param type query int true "Type id (e.g. '1')"
-// @Param category query int true "Category id(e.g. '1')"
+// @Description Returns videos filtered by type and category, ordered by name
+// @Tags API v1
+// @Produce json
+// @Param type query int true "Type ID"
+// @Param category query int true "Category ID"
 // @Success 200 {array} response.VideoResponse
-// @Failure 400 {string} string "Bad Request"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /v1/video_categories [get]
-// GET /v1/video_categories?type={id}&category={id}
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /video_categories [get]
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideosByCategoryAndType"
 

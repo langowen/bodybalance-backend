@@ -12,7 +12,17 @@ import (
 	"strconv"
 )
 
-// addType добавляет новый тип
+// @Summary Создать новый тип
+// @Description Добавляет новый тип контента в систему
+// @Tags Admin Types
+// @Accept json
+// @Produce json
+// @Param input body admResponse.TypeRequest true "Данные типа"
+// @Success 201 {object} object{id=int64,message=string} "Тип успешно создан"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/type [post]
 func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addType"
 
@@ -48,7 +58,17 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getType возвращает тип по его ID
+// @Summary Получить тип по ID
+// @Description Возвращает информацию о типе контента по его идентификатору
+// @Tags Admin Types
+// @Produce json
+// @Param id path int true "ID типа"
+// @Success 200 {object} admResponse.TypeResponse
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/type/{id} [get]
 func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getType"
 
@@ -81,7 +101,14 @@ func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, contentType)
 }
 
-// getTypes возвращает все типы
+// @Summary Получить все типы
+// @Description Возвращает список всех типов контента в системе
+// @Tags Admin Types
+// @Produce json
+// @Success 200 {array} admResponse.TypeResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/type [get]
 func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getTypes"
 
@@ -101,7 +128,19 @@ func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, types)
 }
 
-// updateType обновляет данные типа
+// @Summary Обновить тип
+// @Description Обновляет информацию о существующем типе контента
+// @Tags Admin Types
+// @Accept json
+// @Produce json
+// @Param id path int true "ID типа"
+// @Param input body admResponse.TypeRequest true "Новые данные типа"
+// @Success 200 {object} object{id=int64,message=string} "Тип успешно обновлен"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/type/{id} [put]
 func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateType"
 
@@ -144,7 +183,17 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// deleteType помечает тип как удаленный
+// @Summary Удалить тип
+// @Description Удаляет тип контента из системы
+// @Tags Admin Types
+// @Produce json
+// @Param id path int true "ID типа"
+// @Success 200 {object} object{id=int64,message=string} "Тип успешно удален"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/type/{id} [delete]
 func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteType"
 

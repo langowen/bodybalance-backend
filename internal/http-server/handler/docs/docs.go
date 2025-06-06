@@ -2,7 +2,6 @@ package docs
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,14 +14,14 @@ type Config struct {
 
 func RegisterRoutes(r chi.Router, cfg Config) {
 	// Настройка Basic Auth
-	docsAuth := middleware.BasicAuth("Restricted Docs", map[string]string{
-		cfg.User: cfg.Password,
-	})
+	//docsAuth := middleware.BasicAuth("Restricted Docs", map[string]string{
+	//	cfg.User: cfg.Password,
+	//})
 
 	projectRoot := getProjectRoot()
 
 	r.Route("/swagger", func(r chi.Router) {
-		r.Use(docsAuth)
+		//r.Use(docsAuth)
 
 		// Swagger JSON
 		r.Get("/doc.json", func(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +32,7 @@ func RegisterRoutes(r chi.Router, cfg Config) {
 
 	// Группа защищенных роутов для документации
 	r.Route("/docs", func(r chi.Router) {
-		r.Use(docsAuth)
+		//r.Use(docsAuth)
 
 		// RapiDoc UI
 		staticPath := filepath.Join(projectRoot, "docs")

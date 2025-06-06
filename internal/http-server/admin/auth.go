@@ -18,6 +18,18 @@ type Claims struct {
 	IsAdmin  bool   `json:"is_admin"`
 }
 
+// @Summary Аутентификация администратора
+// @Description Вход в систему с логином и паролем администратора
+// @Tags Auth
+// @Accept  json
+// @Produce  json
+// @Param input body admResponse.SignInRequest true "Данные для входа"
+// @Success 200 {object} admResponse.SignInResponse
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 401 {object} admResponse.ErrorResponse
+// @Failure 403 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @Router /admin/signin [post]
 func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.signing"
 
@@ -82,16 +94,33 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Выход из системы
+// @Description Завершает сеанс администратора, удаляя токен аутентификации
+// @Tags Auth
+// @Produce  json
+// @Success 200 {object} admResponse.SignInResponse
+// @Router /admin/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	secure := false
+	httpOnly := false
+	sameSite := http.SameSiteLaxMode
+
+	if h.cfg.Env == "prod" {
+		secure = true
+		httpOnly = true
+		sameSite = http.SameSiteStrictMode
+
+	}
+
 	// Удаляем cookie с токеном
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
 		Path:     "/admin", // Должен совпадать с путем установки
 		MaxAge:   -1,       // Удалить cookie
-		HttpOnly: true,
-		Secure:   false,                //h.cfg.Env == "prod"
-		SameSite: http.SameSiteLaxMode, ///http.SameSiteStrictMode
+		HttpOnly: httpOnly,
+		Secure:   secure,
+		SameSite: sameSite,
 	})
 
 	admResponse.RespondWithJSON(w, http.StatusOK, admResponse.SignInResponse{
@@ -100,10 +129,16 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
-	//secure := h.cfg.Env == "prod" // h.cfg.Env == "prod"
-	sameSite := http.SameSiteLaxMode //http.SameSiteStrictMode
-	if h.cfg.Env == "dev" {
-		sameSite = http.SameSiteLaxMode
+
+	secure := false
+	httpOnly := false
+	sameSite := http.SameSiteLaxMode
+
+	if h.cfg.Env == "prod" {
+		secure = true
+		httpOnly = true
+		sameSite = http.SameSiteStrictMode
+
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -111,8 +146,8 @@ func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
 		Value:    token,
 		Path:     "/admin",
 		MaxAge:   int(h.cfg.HTTPServer.TokenTTL),
-		HttpOnly: true,
-		Secure:   false,
+		HttpOnly: httpOnly,
+		Secure:   secure,
 		SameSite: sameSite,
 	})
 }

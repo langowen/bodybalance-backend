@@ -12,18 +12,15 @@ import (
 )
 
 // @Summary Check account existence
-// @Description Checks if account with specified username exists and return type id, type name
-// @Tags Auth
-// @Accept  json
-// @Produce  json
-// @Produce  text/plain
-// @Param username query string true "Username to check (e.g. 'base')"
+// @Description Checks if account with specified username exists and returns type info
+// @Tags API v1
+// @Produce json
+// @Param username query string true "Username to check"
 // @Success 200 {object} response.AccountResponse
-// @Failure 400 {string} string "Bad Request"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /v1/login [get]
-// GET /v1/login?username={username}
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /login [get]
 func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.checkAccountType"
 

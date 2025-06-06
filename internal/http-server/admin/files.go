@@ -21,7 +21,17 @@ const (
 	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp"
 )
 
-// uploadVideoHandler загружает видеофайл на сервер
+// @Summary Загрузить видеофайл
+// @Description Загружает видеофайл на сервер (макс. 500MB)
+// @Tags Admin Files
+// @Accept multipart/form-data
+// @Produce json
+// @Param video formData file true "Видеофайл для загрузки"
+// @Success 200 {object} object{message=string} "Файл успешно загружен"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @Security AdminAuth
+// @Router /admin/files/video [post]
 func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.uploadVideoHandler"
 
@@ -80,7 +90,14 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// listVideoFilesHandler возвращает список видеофайлов
+// @Summary Получить список видеофайлов
+// @Description Возвращает список всех видеофайлов на сервере
+// @Tags Admin Files
+// @Produce json
+// @Success 200 {array} admResponse.FileInfo
+// @Failure 500 {object} admResponse.ErrorResponse
+// @Security AdminAuth
+// @Router /admin/files/video [get]
 func (h *Handler) listVideoFilesHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.listVideoFilesHandler"
 
@@ -160,7 +177,17 @@ func (h *Handler) getVideoFilesList() ([]admResponse.FileInfo, error) {
 	return result, nil
 }
 
-// uploadImageHandler загружает изображение на сервер
+// @Summary Загрузить изображение
+// @Description Загружает изображение на сервер (макс. 20MB)
+// @Tags Admin Files
+// @Accept multipart/form-data
+// @Produce json
+// @Param image formData file true "Изображение для загрузки"
+// @Success 200 {object} object{message=string} "Изображение успешно загружено"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @Security AdminAuth
+// @Router /admin/files/img [post]
 func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.uploadImageHandler"
 
@@ -219,7 +246,14 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// listImageFilesHandler возвращает список изображений
+// @Summary Получить список изображений
+// @Description Возвращает список всех изображений на сервере
+// @Tags Admin Files
+// @Produce json
+// @Success 200 {array} admResponse.FileInfo
+// @Failure 500 {object} admResponse.ErrorResponse
+// @Security AdminAuth
+// @Router /admin/files/img [get]
 func (h *Handler) listImageFilesHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.listImageFilesHandler"
 

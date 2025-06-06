@@ -11,18 +11,16 @@ import (
 	"net/http"
 )
 
-// @Summary Get categories by  type
-// @Description Returns all categories for specified type, order by name
-// @Tags Categories
-// @Accept  json
-// @Produce  json
-// @Param type query int true "Type id (e.g. '1', '2')"
+// @Summary Get categories by type
+// @Description Returns all categories for specified type, ordered by name
+// @Tags API v1
+// @Produce json
+// @Param type query int true "Type ID"
 // @Success 200 {array} response.CategoryResponse
-// @Failure 400 {string} string "Bad Request"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /v1/category [get]
-// GET /v1/category?type={id}
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /category [get]
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getCategoriesByType"
 

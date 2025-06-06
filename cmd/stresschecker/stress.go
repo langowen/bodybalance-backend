@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,8 +10,8 @@ import (
 )
 
 var (
-	numWorkers        = 5    // Количество параллельных горутин
-	requestsPerWorker = 1000 // Сколько запросов отсылает одна горутина
+	numWorkers        = 5     // Количество параллельных горутин
+	requestsPerWorker = 10000 // Сколько запросов отсылает одна горутина
 )
 
 type Request struct {
@@ -25,17 +26,21 @@ func main() {
 	//	{"https://api.7375.org/video/Koleno_baza.mp4"},
 	//}
 	requestList := []Request{
-		{"https://api.7375.org/v1/video_categories?type=1&category=1"},
-		{"https://api.7375.org/v1/video_categories?type=2&category=2"},
-		{"https://api.7375.org/v1/category?type=1"},
+		{"https://api.7375.org/v1/video_categories?type=2&category=1"},
+		{"https://api.7375.org/v1/video_categories?type=3&category=3"},
 		{"https://api.7375.org/v1/category?type=2"},
+		{"https://api.7375.org/v1/category?type=3"},
 		{"https://api.7375.org/v1/login?username=base"},
-		{"https://api.7375.org/v1/video?video_id=5"},
-		{"https://api.7375.org/v1/video?video_id=4"},
+		{"https://api.7375.org/v1/video?video_id=3"},
+		{"https://api.7375.org/v1/video?video_id=2"},
 		{"https://api.7375.org/v1/video?video_id=3"},
 		{"https://api.7375.org/v1/video?video_id=2"},
 		{"https://api.7375.org/v1/video?video_id=1"},
 	}
+
+	flag.IntVar(&requestsPerWorker, "requests", 10000, "Количество запросов на одного воркера")
+	flag.IntVar(&numWorkers, "workers", 5, "Количество параллельных воркеров")
+	flag.Parse()
 
 	fmt.Printf("Количество работников: %d\n", numWorkers)
 	fmt.Printf("Запросов на каждого работника: %d\n", requestsPerWorker)

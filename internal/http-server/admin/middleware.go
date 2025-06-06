@@ -8,6 +8,12 @@ import (
 	"net/http"
 )
 
+// AuthMiddleware проверяет аутентификацию и права администратора
+// @security AdminAuth
+// @description Требуется JWT токен администратора в cookie с именем "token"
+// @response 401 {object} admResponse.ErrorResponse "Требуется аутентификация (нет токена)"
+// @response 403 {object} admResponse.ErrorResponse "Доступ запрещен (недостаточно прав)"
+// @response 400 {object} admResponse.ErrorResponse "Неверный токен"
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. Проверяем HTTPS в production

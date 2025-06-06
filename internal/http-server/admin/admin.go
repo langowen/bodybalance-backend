@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/http-server/handler/docs"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -21,11 +22,26 @@ func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config) *Handle
 	}
 }
 
+// @title Admin API
+// @version 1.0
+// @description API для административной панели BodyBalance
+// @securityDefinitions.apikey AdminAuth
+// @in cookie
+// @name token
+// @description JWT токен аутентификации администратора (доступен после /admin/signin)
+
+// @BasePath /admin
 func (h *Handler) Router() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/signin", h.signing)
 	r.Post("/logout", h.logout)
+
+	// Документация
+	docs.RegisterRoutes(r, docs.Config{
+		User:     h.cfg.Docs.User,
+		Password: h.cfg.Docs.Password,
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware) // Защищенные роуты
@@ -80,8 +96,3 @@ func (h *Handler) Router() chi.Router {
 
 	return r
 }
-
-//r.Get("/image", h.getImage)
-//r.Get("/category", h.getCategory)
-//r.Get("/login", h.getAccount)
-//r.Get("/type", h.getType)

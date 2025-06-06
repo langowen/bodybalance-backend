@@ -6,7 +6,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
-	"github.com/langowen/bodybalance-backend/internal/http-server/handler/docs"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/img"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/http-server/middleware/logger"
@@ -39,12 +38,6 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Use(middleware.RealIP)
 	r.Use(mwLogger.New(s.app.Logger))
 	r.Use(middleware.Recoverer)
-
-	// Документация
-	docs.RegisterRoutes(r, docs.Config{
-		User:     s.app.Cfg.Docs.User,
-		Password: s.app.Cfg.Docs.Password,
-	})
 
 	// API v1
 	r.Mount("/v1", v1.New(s.app.Logger, s.app.Storage.Api).Router())

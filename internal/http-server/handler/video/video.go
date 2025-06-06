@@ -18,7 +18,7 @@ import (
 // ServeVideoFile
 // @Summary Serve video file
 // @Description Streams video file by filename
-// @Tags Videos
+// @Tags Files
 // @Accept  json
 // @Produce  json
 // @Param filename path string true "Video filename (e.g. 'Sheya_baza.mp4')"

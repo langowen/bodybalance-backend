@@ -13,6 +13,18 @@ import (
 	"strings"
 )
 
+// @Summary Создать нового пользователя
+// @Description Добавляет нового пользователя в систему
+// @Tags Admin Users
+// @Accept json
+// @Produce json
+// @Param input body admResponse.UserRequest true "Данные пользователя"
+// @Success 201 {object} object{id=string,username=string,content_type_id=string,content_type=string,admin=bool,date_created=string,message=string} "Пользователь успешно создан"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 409 {object} admResponse.ErrorResponse "Пользователь уже существует"
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/users [post]
 func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addUser"
 
@@ -60,7 +72,17 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getUser возвращает пользователя по ID
+// @Summary Получить пользователя по ID
+// @Description Возвращает информацию о пользователе по его идентификатору
+// @Tags Admin Users
+// @Produce json
+// @Param id path int true "ID пользователя"
+// @Success 200 {object} admResponse.UserResponse
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/users/{id} [get]
 func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getUser"
 
@@ -93,7 +115,14 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, user)
 }
 
-// getUsers возвращает всех пользователей
+// @Summary Получить всех пользователей
+// @Description Возвращает список всех пользователей в системе
+// @Tags Admin Users
+// @Produce json
+// @Success 200 {array} admResponse.UserResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/users [get]
 func (h *Handler) getUsers(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getUsers"
 
@@ -113,7 +142,19 @@ func (h *Handler) getUsers(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, users)
 }
 
-// updateUser обновляет данные пользователя
+// @Summary Обновить пользователя
+// @Description Обновляет информацию о существующем пользователе
+// @Tags Admin Users
+// @Accept json
+// @Produce json
+// @Param id path int true "ID пользователя"
+// @Param input body admResponse.UserRequest true "Новые данные пользователя"
+// @Success 200 {object} object{id=int64,message=string} "Пользователь успешно обновлен"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/users/{id} [put]
 func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateUser"
 
@@ -156,7 +197,17 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// deleteUser помечает пользователя как удаленного
+// @Summary Удалить пользователя
+// @Description Удаляет пользователя из системы
+// @Tags Admin Users
+// @Produce json
+// @Param id path int true "ID пользователя"
+// @Success 200 {object} object{id=int64,message=string} "Пользователь успешно удален"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/users/{id} [delete]
 func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteUser"
 

@@ -1,3 +1,4 @@
+//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --output ../../docs --parseDependency --parseInternal
 package main
 
 import (
@@ -29,6 +30,12 @@ var (
 // @description API для управления видео-контентом BodyBalance.
 // @host https://api.7375.org
 // @BasePath /api/v1
+
+// @contact.name Sergei
+// @contact.email info@7375.org
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 func main() {
 	// Инициализируем конфиг
 	cfg := config.MustGetConfig()

@@ -13,7 +13,7 @@ services:
         loki-batch-wait: "10s"
         loki-pipeline-stages: |
           - regex:
-              expression: '^\x1b\[(\d+)m(?P<level>[A-Z]{4})\x1b\[0m'
+              expression: '(?P<level>[A-Z]{4})'
           - labels:
               level:
           - timestamp:
@@ -59,7 +59,7 @@ services:
         loki-batch-wait: "10s"
         loki-pipeline-stages: |
           - regex:
-              expression: '^\x1b\[(\d+)m(?P<level>[A-Z]{4})\x1b\[0m'
+              expression: '(?P<level>[A-Z]{4})'
           - labels:
               level:
           - timestamp:

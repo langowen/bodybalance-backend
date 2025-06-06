@@ -4,15 +4,250 @@
     <meta charset="utf-8">
     <title>BodyBalance API Docs</title>
     <script src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #f0f0f0;
+            --input-bg: #2d2d2d;
+            --input-border: #444;
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --error-color: #f44336;
+            --box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #loginForm {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #252525;
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+        }
+
+        #loginForm h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        #errorMessage {
+            color: var(--error-color);
+            margin-top: 15px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        #docContainer {
+            display: none;
+        }
+
+        .logout-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 12px;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+
+        .logout-btn:hover {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
-<rapi-doc
-        spec-url="/swagger/doc.json"
-        theme="dark"
-        render-style="view"
-        show-header="false"
-        allow-server-selection="false"
->
-</rapi-doc>
+<!-- Форма входа -->
+<div id="loginForm">
+    <h2>BodyBalance Admin Login</h2>
+    <div class="form-group">
+        <label for="login">Username:</label>
+        <input id="login" type="text" placeholder="Enter your username">
+    </div>
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input id="password" type="password" placeholder="Enter your password">
+    </div>
+    <button onclick="signIn()">Login</button>
+    <div id="errorMessage"></div>
+</div>
+
+<!-- Контейнер документации -->
+<div id="docContainer">
+    <button class="logout-btn" onclick="signOut()">Logout</button>
+    <rapi-doc
+            spec-url="/admin/swagger/doc.json"
+            theme="dark"
+            render-style="view"
+            show-header="false"
+            allow-server-selection="true"
+            api-key-name="Authorization"
+            api-key-location="header"
+            api-key-value="Bearer "
+    ></rapi-doc>
+</div>
+
+<script>
+    // Проверяем аутентификацию при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = getCookie('token') || localStorage.getItem('jwt_token');
+        if (token) {
+            showDocumentation();
+            document.querySelector('rapi-doc').setAttribute('api-key-value', 'Bearer ' + token);
+        }
+    });
+
+    // Функция для получения куки
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // Показать документацию
+    function showDocumentation() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('docContainer').style.display = 'block';
+    }
+
+    // Скрыть документацию
+    function hideDocumentation() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('docContainer').style.display = 'none';
+        document.getElementById('errorMessage').textContent = '';
+    }
+
+    // Хеширование пароля
+    function hashPassword(password) {
+        return sha256(password);
+    }
+
+    // Функция входа
+    async function signIn() {
+        const login = document.getElementById('login').value;
+        const password = document.getElementById('password').value;
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.textContent = '';
+
+        if (!login || !password) {
+            errorElement.textContent = 'Please enter both username and password';
+            return;
+        }
+
+        try {
+            const hashedPassword = hashPassword(password);
+
+            const response = await fetch('/admin/signin', {
+                method: 'POST',
+                credentials: 'include', // Важно для работы с куки
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    login: login,
+                    password: hashedPassword
+                })
+            });
+
+            if (response.ok) {
+                // Проверяем куки и localStorage
+                const token = getCookie('token');
+
+                if (token) {
+                    // Сохраняем токен в localStorage для удобства
+                    localStorage.setItem('jwt_token', token);
+                    showDocumentation();
+                    document.querySelector('rapi-doc').setAttribute('api-key-value', 'Bearer ' + token);
+                } else {
+                    // Если токен не в куках, проверяем тело ответа
+                    const data = await response.json();
+                    if (data.token) {
+                        localStorage.setItem('jwt_token', data.token);
+                        showDocumentation();
+                        document.querySelector('rapi-doc').setAttribute('api-key-value', 'Bearer ' + data.token);
+                    } else {
+                        errorElement.textContent = 'Authentication successful but no token received';
+                    }
+                }
+            } else {
+                const error = await response.json();
+                errorElement.textContent = error.error || 'Authentication failed';
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+            errorElement.textContent = 'Network error occurred';
+        }
+    }
+
+    // Функция выхода
+    async function signOut() {
+        try {
+            const response = await fetch('/admin/logout', {
+                method: 'POST',
+                credentials: 'include' // Важно для работы с куки
+            });
+
+            if (response.ok) {
+                localStorage.removeItem('jwt_token');
+                hideDocumentation();
+                document.getElementById('login').value = '';
+                document.getElementById('password').value = '';
+            }
+        } catch (err) {
+            console.error('Logout error:', err);
+        }
+    }
+</script>
 </body>
 </html>

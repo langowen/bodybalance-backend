@@ -17,7 +17,7 @@ import (
 // ServeImgFile
 // @Summary Serve img file
 // @Description Send img file by filename
-// @Tags images
+// @Tags Files
 // @Accept  json
 // @Produce  json
 // @Param filename path string true "Video filename (e.g. 'shee_video.jpg')"

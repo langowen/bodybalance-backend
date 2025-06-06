@@ -12,7 +12,17 @@ import (
 	"strconv"
 )
 
-// addCategory добавляет новую категорию
+// @Summary Создать новую категорию
+// @Description Добавляет новую категорию в систему
+// @Tags Admin Categories
+// @Accept json
+// @Produce json
+// @Param input body admResponse.CategoryRequest true "Данные категории"
+// @Success 201 {object} admResponse.CategoryResponse "Категория успешно создана"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/category [post]
 func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addCategory"
 
@@ -45,7 +55,17 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusCreated, category)
 }
 
-// getCategory возвращает категорию по ID
+// @Summary Получить категорию по ID
+// @Description Возвращает информацию о категории по её идентификатору
+// @Tags Admin Categories
+// @Produce json
+// @Param id path int true "ID категории"
+// @Success 200 {object} admResponse.CategoryResponse
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/category/{id} [get]
 func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getCategory"
 
@@ -78,7 +98,14 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, category)
 }
 
-// getCategories возвращает все категории
+// @Summary Получить все категории
+// @Description Возвращает список всех категорий в системе
+// @Tags Admin Categories
+// @Produce json
+// @Success 200 {array} admResponse.CategoryResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/category [get]
 func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getCategories"
 
@@ -98,7 +125,19 @@ func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, categories)
 }
 
-// updateCategory обновляет данные категории
+// @Summary Обновить категорию
+// @Description Обновляет информацию о существующей категории
+// @Tags Admin Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "ID категории"
+// @Param input body admResponse.CategoryRequest true "Новые данные категории"
+// @Success 200 {object} object{id=int64,message=string} "Категория успешно обновлена"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/category/{id} [put]
 func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateCategory"
 
@@ -147,7 +186,17 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// deleteCategory помечает категорию как удаленную
+// @Summary Удалить категорию
+// @Description Удаляет категорию из системы
+// @Tags Admin Categories
+// @Produce json
+// @Param id path int true "ID категории"
+// @Success 200 {object} object{id=int64,message=string} "Категория успешно удалена"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/category/{id} [delete]
 func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteCategory"
 

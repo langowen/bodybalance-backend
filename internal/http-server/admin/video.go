@@ -12,7 +12,17 @@ import (
 	"strconv"
 )
 
-// addVideo добавляет новое видео в БД
+// @Summary Добавить новое видео
+// @Description Создает новую запись видео в системе
+// @Tags Admin Videos
+// @Accept json
+// @Produce json
+// @Param input body admResponse.VideoRequest true "Данные видео"
+// @Success 201 {object} object{id=int64,message=string} "Видео успешно добавлено"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/video [post]
 func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addVideo"
 
@@ -58,7 +68,17 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getVideo возвращает видео по его ID
+// @Summary Получить видео по ID
+// @Description Возвращает информацию о конкретном видео
+// @Tags Admin Videos
+// @Produce json
+// @Param id path int true "ID видео"
+// @Success 200 {object} admResponse.VideoResponse
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/video/{id} [get]
 func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getVideo"
 
@@ -101,7 +121,14 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, video)
 }
 
-// getVideos возвращает все видео
+// @Summary Получить список всех видео
+// @Description Возвращает список всех видео в системе
+// @Tags Admin Videos
+// @Produce json
+// @Success 200 {array} admResponse.VideoResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/video [get]
 func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getVideos"
 
@@ -132,7 +159,19 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
 }
 
-// updateVideo обновляет данные видео
+// @Summary Обновить данные видео
+// @Description Обновляет информацию о существующем видео
+// @Tags Admin Videos
+// @Accept json
+// @Produce json
+// @Param id path int true "ID видео"
+// @Param input body admResponse.VideoRequest true "Новые данные видео"
+// @Success 200 {object} object{id=int64,message=string} "Видео успешно обновлено"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/video/{id} [put]
 func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateVideo"
 
@@ -194,7 +233,17 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// deleteVideo помечает видео как удаленное
+// @Summary Удалить видео
+// @Description Помечает видео как удаленное в системе
+// @Tags Admin Videos
+// @Produce json
+// @Param id path int true "ID видео"
+// @Success 200 {object} object{id=int64,message=string} "Видео успешно удалено"
+// @Failure 400 {object} admResponse.ErrorResponse
+// @Failure 404 {object} admResponse.ErrorResponse
+// @Failure 500 {object} admResponse.ErrorResponse
+// @security AdminAuth
+// @Router /admin/video/{id} [delete]
 func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteVideo"
 
