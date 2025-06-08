@@ -1,6 +1,6 @@
 # BodyBalance Backend API
 
-![Coverage](https://img.shields.io/badge/Coverage-72.5%25-green)
+![Coverage](https://img.shields.io/badge/Coverage-72.2%25-green)
 ![Go Version](https://img.shields.io/badge/Go-1.24.3-blue)
 ![Latest Release](https://img.shields.io/badge/Release-0.3.2-blue)
 
