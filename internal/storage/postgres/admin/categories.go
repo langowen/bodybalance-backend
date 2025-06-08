@@ -248,7 +248,8 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req admResponse.
 	}
 
 	if rowsAffected == 0 {
-		return sql.ErrNoRows
+		err = sql.ErrNoRows
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Удаляем старые связи с типами

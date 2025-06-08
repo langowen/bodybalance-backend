@@ -17,6 +17,9 @@ type MockApiStorage struct {
 
 func (m *MockApiStorage) GetVideosByCategoryAndType(ctx context.Context, contentType, categoryName string) ([]response.VideoResponse, error) {
 	args := m.Called(ctx, contentType, categoryName)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]response.VideoResponse), args.Error(1)
 }
 

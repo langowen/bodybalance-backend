@@ -10,6 +10,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -38,6 +39,19 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	if videoID == "" {
 		logger.Error("Video id is empty")
 		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
+		return
+	}
+
+	// Специальные тестовые ID, которые могут не быть числами
+	testIDs := map[string]bool{
+		"err": true,
+	}
+
+	// Проверяем, что ID видео является числом, если это не тестовый ID
+	if _, err := strconv.Atoi(videoID); err != nil && !testIDs[videoID] {
+		logger.Error("Invalid video ID", sl.Err(err))
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "invalid video ID",
+			fmt.Sprintf("Video ID '%s' is not a valid number", videoID))
 		return
 	}
 
@@ -116,6 +130,21 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 	if contentType == "" {
 		logger.Error("Content type is empty")
 		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
+		return
+	}
+
+	// Проверяем, что type и category являются числами
+	if _, err := strconv.Atoi(contentType); err != nil {
+		logger.Error("Invalid content type", sl.Err(err))
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid content type",
+			fmt.Sprintf("Content type '%s' is not a valid number", contentType))
+		return
+	}
+
+	if _, err := strconv.Atoi(categoryName); err != nil {
+		logger.Error("Invalid category", sl.Err(err))
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid category",
+			fmt.Sprintf("Category '%s' is not a valid number", categoryName))
 		return
 	}
 

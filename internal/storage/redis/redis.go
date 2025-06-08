@@ -13,16 +13,21 @@ import (
 	"time"
 )
 
+// Обертка над функцией создания клиента Redis для возможности мокирования в тестах
+var redisNewClient = func(options *redis.Options) redis.UniversalClient {
+	return redis.NewClient(options)
+}
+
 type Storage struct {
 	redis *redis.Client
 	cfg   *config.Config
 }
 
 func New(cfg *config.Config) (*Storage, error) {
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Host,     // Адрес Redis сервера
-		Password: cfg.Redis.Password, // Пароль, если есть
-		DB:       cfg.Redis.DB,       // Номер базы данных
+	redisClient := redisNewClient(&redis.Options{
+		Addr:     cfg.Redis.Host,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
 	})
 
 	// Проверка подключения
@@ -31,7 +36,7 @@ func New(cfg *config.Config) (*Storage, error) {
 	}
 
 	storage := &Storage{
-		redis: redisClient,
+		redis: redisClient.(*redis.Client),
 		cfg:   cfg,
 	}
 	return storage, nil
