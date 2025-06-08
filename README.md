@@ -5,7 +5,7 @@
 ![Latest Release](https://img.shields.io/github/v/tag/langowen/bodybalance-backend?label=release)
 
 Бэкенд-сервис для приложения по медицинской реабилитации. API обеспечивает доступ к видео-контенту, разделенному по категориям.
-
+Репозиторий Android приложения: [BodyBalance](https://github.com/DecardCain21/BodyBalance)
 ## Функции
 
 - Каталог видео, категорий, типов контента
