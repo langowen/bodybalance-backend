@@ -1,8 +1,8 @@
 # BodyBalance Backend API
 
-![Coverage](https://img.shields.io/badge/Coverage-0%25-red)
-![Go Version](https://img.shields.io/github/go-mod/go-version/langowen/bodybalance-backend)
-![Latest Release](https://img.shields.io/github/v/tag/langowen/bodybalance-backend?label=release)
+![Coverage](https://img.shields.io/badge/Coverage-35.1%25-green)
+![Go Version](https://img.shields.io/badge/Go-1.24.3-blue)
+![Latest Release](https://img.shields.io/badge/Release-0.3.1-blue)
 
 Бэкенд-сервис для приложения по медицинской реабилитации. API обеспечивает доступ к видео-контенту, разделенному по категориям.
 Репозиторий Android приложения: [BodyBalance](https://github.com/DecardCain21/BodyBalance)
