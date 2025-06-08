@@ -51,6 +51,13 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 	if cachedAccount != nil {
 		logger.Debug("serving from cache", "account_type", cachedAccount.TypeName)
+
+		// Устанавливаем токен аутентификации в cookie
+		if err := h.SetAuthCookie(w, username, cachedAccount.TypeID, cachedAccount.TypeName); err != nil {
+			logger.Error("failed to set auth cookie", sl.Err(err))
+			// Даже если не смогли установить cookie, все равно возвращаем данные
+		}
+
 		response.RespondWithJSON(w, http.StatusOK, cachedAccount)
 		return
 	}
@@ -78,6 +85,12 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("failed to set account cache", sl.Err(err))
 		}
 	}()
+
+	// Устанавливаем токен аутентификации в cookie
+	if err := h.SetAuthCookie(w, username, account.TypeID, account.TypeName); err != nil {
+		logger.Error("failed to set auth cookie", sl.Err(err))
+		// Даже если не смогли установить cookie, все равно возвращаем данные
+	}
 
 	response.RespondWithJSON(w, http.StatusOK, account)
 }
