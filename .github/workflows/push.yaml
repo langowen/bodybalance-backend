@@ -38,7 +38,22 @@ jobs:
 
       - name: Calculate code coverage
         run: |
-          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          echo "Content of coverage.out file:"
+          cat coverage.out
+          
+          echo "Coverage report details:"
+          go tool cover -func=coverage.out
+          
+          # Пробуем получить покрытие и устанавливаем значение по умолчанию, если не получается
+          coverage=$(go tool cover -func=coverage.out | grep -E 'total:|^total:' | awk '{print $NF}' | tr -d '%' || echo "0.0")
+          
+          # Проверяем, что coverage не пустой
+          if [ -z "$coverage" ]; then
+            echo "Failed to extract coverage percentage, using default"
+            coverage="0.0"
+          fi
+          
+          echo "Extracted coverage: $coverage%"
           echo "COVERAGE=$coverage" >> $GITHUB_ENV
 
       - name: Update README badges
