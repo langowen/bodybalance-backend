@@ -60,9 +60,12 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
           # Определяем цвет бейджа в зависимости от покрытия
-          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+          coverage=$(echo "$COVERAGE" | awk '{printf "%.1f", $0}')
+          echo "Rounded coverage: $coverage%"
+          
+          if (( $(echo "$coverage < 50" | bc -l) )); then
             color="red"
-          elif (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          elif (( $(echo "$coverage < 80" | bc -l) )); then
             color="yellow"
           else
             color="green"
@@ -75,9 +78,11 @@ jobs:
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           
           # Обновляем бейджи в README.md
-          sed -i "s|!\[Coverage\].*|![Coverage](https://img.shields.io/badge/Coverage-${COVERAGE}%25-${color})|g" README.md
+          sed -i "s|!\[Coverage\].*|![Coverage](https://img.shields.io/badge/Coverage-${coverage}%25-${color})|g" README.md
           sed -i "s|!\[Go Version\].*|![Go Version](https://img.shields.io/badge/Go-${go_version}-blue)|g" README.md
           sed -i "s|!\[Latest Release\].*|![Latest Release](https://img.shields.io/badge/Release-${latest_tag}-blue)|g" README.md
+          
+          cat README.md
 
       - name: Commit README changes
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
