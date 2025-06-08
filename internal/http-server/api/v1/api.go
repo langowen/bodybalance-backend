@@ -2,17 +2,16 @@ package v1
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/langowen/bodybalance-backend/internal/storage/redis"
 	"github.com/theartofdevel/logging"
 )
 
 type Handler struct {
 	logger  *logging.Logger
 	storage ApiStorage
-	redis   *redis.Storage
+	redis   RedisApi
 }
 
-func New(logger *logging.Logger, storage ApiStorage, redis *redis.Storage) *Handler {
+func New(logger *logging.Logger, storage ApiStorage, redis RedisApi) *Handler {
 	return &Handler{
 		logger:  logger,
 		storage: storage,

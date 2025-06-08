@@ -36,6 +36,43 @@ jobs:
       - name: Run Go Vet
         run: go vet ./...
 
+      - name: Calculate code coverage
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          echo "COVERAGE=$coverage" >> $GITHUB_ENV
+
+      - name: Update README badges
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          # Определяем цвет бейджа в зависимости от покрытия
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            color="red"
+          elif (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            color="yellow"
+          else
+            color="green"
+          fi
+          
+          # Получаем версию Go из go.mod
+          go_version=$(grep -P '^go\s+[0-9]+\.[0-9]+(\.[0-9]+)?' go.mod | awk '{print $2}')
+          
+          # Получаем последний тег
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          # Обновляем бейджи в README.md
+          sed -i "s|!\[Coverage\].*|![Coverage](https://img.shields.io/badge/Coverage-${COVERAGE}%25-${color})|g" README.md
+          sed -i "s|!\[Go Version\].*|![Go Version](https://img.shields.io/badge/Go-${go_version}-blue)|g" README.md
+          sed -i "s|!\[Latest Release\].*|![Latest Release](https://img.shields.io/badge/Release-${latest_tag}-blue)|g" README.md
+
+      - name: Commit README changes
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add README.md
+          git commit -m "Update coverage badge to ${COVERAGE}%" || echo "No changes to commit"
+          git push || echo "No changes to push"
+
   deploy:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest

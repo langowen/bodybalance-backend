@@ -13,7 +13,7 @@ import (
 type VideoResponse struct {
 	// ID видео
 	// example: 1
-	ID float64 `json:"id"`
+	ID int64 `json:"id"`
 
 	// URL видеофайла
 	// example: https://example.com/video.mp4

@@ -44,7 +44,7 @@ func RegisterRoutes(r chi.Router, cfg Config) {
 }
 
 // getProjectRoot возвращает корневую директорию проекта
-func getProjectRoot() string {
+var getProjectRoot = func() string {
 	dir, _ := os.Getwd()
 	return dir
 }

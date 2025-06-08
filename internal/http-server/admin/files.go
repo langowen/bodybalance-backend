@@ -79,7 +79,7 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохраняем файл
-	if err := h.saveVideoFile(header.Filename, file); err != nil {
+	if err := saveVideoFile(h, header.Filename, file); err != nil {
 		logger.Error("Failed to save file", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
@@ -117,7 +117,7 @@ func (h *Handler) listVideoFilesHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 // saveVideoFile сохраняет видеофайл
-func (h *Handler) saveVideoFile(filename string, file multipart.File) error {
+func saveVideoFile(h *Handler, filename string, file multipart.File) error {
 	// Проверяем имя файла
 	if !isValidFilename(filename) {
 		return errors.New("invalid filename")

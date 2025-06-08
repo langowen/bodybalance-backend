@@ -169,6 +169,9 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("invalid user ID", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
@@ -176,6 +179,9 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
@@ -186,20 +192,25 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("user not found", "user_id", id)
 			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
+			if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+				done <- struct{}{}
+			}
 			return
 		}
 		logger.Error("failed to update user", sl.Err(err), "user_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
-	// Инвалидация кэша
+	// Инвалидация кэша (асинхронно)
 	go func() {
 		ctx := context.Background()
-
-		if err := h.redis.DeleteAccount(ctx, req.Username); err != nil {
-			logger.Warn("failed to invalidate cache for new username",
-				sl.Err(err), "new_username", req.Username)
+		_ = h.redis.DeleteAccount(ctx, req.Username)
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
 		}
 	}()
 
@@ -233,6 +244,9 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("invalid user ID", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
@@ -243,6 +257,9 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		logger.Error("failed to get user data", sl.Err(err), "user_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
@@ -251,19 +268,24 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("user not found", "user_id", id)
 			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
+			if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+				done <- struct{}{}
+			}
 			return
 		}
 		logger.Error("failed to delete user", sl.Err(err), "user_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
+		}
 		return
 	}
 
-	// Инвалидация кэша
+	// Инвалидация кэша (асинхронно)
 	go func() {
-		ctx := context.Background() // используем новый контекст для фоновой операции
-		if err := h.redis.DeleteAccount(ctx, user.Username); err != nil {
-			logger.Warn("failed to invalidate cache for username",
-				sl.Err(err), "username", user.Username)
+		_ = h.redis.DeleteAccount(context.Background(), user.Username)
+		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
+			done <- struct{}{}
 		}
 	}()
 
