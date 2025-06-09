@@ -16,7 +16,7 @@ import (
 
 const (
 	maxUploadSize      = 500 << 20 // 500 MB
-	videoMIMETypes     = "video/mp4,video/webm,video/ogg"
+	videoMIMETypes     = "video/mp4,video/quicktime,video/webm,video/ogg"
 	maxImageUploadSize = 20 << 20 // 20 MB
 	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp"
 )
@@ -65,8 +65,12 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.Contains(videoMIMETypes, http.DetectContentType(buff)) {
-		logger.Error("Invalid file type", "content_type", http.DetectContentType(buff))
+	contentType := http.DetectContentType(buff)
+	fileExt := strings.ToLower(filepath.Ext(header.Filename))
+
+	// Проверяем, является ли файл видео на основе его содержимого
+	if !isVideoContent(buff) {
+		logger.Error("Invalid file type", "content_type", contentType, "extension", fileExt)
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid file type. Only video files are allowed")
 		return
 	}
@@ -88,6 +92,47 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("File %s uploaded successfully", header.Filename),
 	})
+}
+
+// isVideoContent проверяет, является ли содержимое буфера видеофайлом
+func isVideoContent(buff []byte) bool {
+	contentType := http.DetectContentType(buff)
+
+	// Проверяем MIME-тип через стандартную функцию
+	if strings.Contains(videoMIMETypes, contentType) {
+		return true
+	}
+
+	// Дополнительная проверка по сигнатуре файлов
+
+	// Проверка на MP4 (MPEG-4 Part 14)
+	// MP4 обычно начинается с "ftyp" на 4-м байте
+	if len(buff) > 8 && (string(buff[4:8]) == "ftyp") {
+		return true
+	}
+
+	// Проверка на MOV (QuickTime)
+	// MOV также обычно начинается с "ftyp" или "moov" или "free" или "mdat" после размера
+	if len(buff) > 12 && (string(buff[4:8]) == "ftyp" ||
+		string(buff[4:8]) == "moov" ||
+		string(buff[4:8]) == "free" ||
+		string(buff[4:8]) == "mdat") {
+		return true
+	}
+
+	// Проверка на WebM
+	// WebM начинается с сигнатуры EBML (1A 45 DF A3)
+	if len(buff) > 4 && buff[0] == 0x1A && buff[1] == 0x45 && buff[2] == 0xDF && buff[3] == 0xA3 {
+		return true
+	}
+
+	// Проверка на Ogg
+	// Ogg начинается с "OggS"
+	if len(buff) > 4 && string(buff[0:4]) == "OggS" {
+		return true
+	}
+
+	return false
 }
 
 // @Summary Получить список видеофайлов

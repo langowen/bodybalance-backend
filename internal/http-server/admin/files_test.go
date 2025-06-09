@@ -87,6 +87,109 @@ func TestUploadVideoHandler(t *testing.T) {
 	}
 }
 
+// TestUploadMOVVideoHandler тестирует загрузку видео в формате MOV
+func TestUploadMOVVideoHandler(t *testing.T) {
+	// 1. Создаем временный файл для MOV
+	tmpFile, err := os.CreateTemp("", "test_video_*.mov")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(tmpFile.Name()); err != nil {
+		t.Log(err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		t.Log(err)
+	}
+
+	// 2. Используем данные MOV с правильным заголовком
+	tmpFile, err = os.CreateTemp("", "test_video_*.mov")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testVideoData := makeValidMOVHeader()
+	if _, err = tmpFile.Write(testVideoData); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tmpFile.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Создаем multipart запрос
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("video", "test_video.mov")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = io.Copy(part, tmpFile); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Log(err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		t.Log(err)
+	}
+
+	// 4. Настраиваем моки
+	logger := logging.NewLogger()
+	mockStorage := &MockAdmStorage{}
+	mockRedis := &MockRedisClient{}
+	cfg := &config.Config{
+		Media: config.Media{
+			VideoPatch: t.TempDir(),
+		},
+	}
+
+	// 5. Создаем Handler
+	handler := New(logger, mockStorage, cfg, mockRedis)
+
+	// 6. Создаем запрос
+	req := httptest.NewRequest(http.MethodPost, "/admin/files/video", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	// 7. Вызываем обработчик
+	handler.uploadVideoHandler(w, req)
+
+	// 8. Проверяем, что MOV файл успешно загружен
+	if w.Code != http.StatusOK {
+		t.Errorf("ожидался статус 200 для MOV файла, получен %d", w.Code)
+	}
+}
+
+// TestIsVideoContent проверяет работу функции isVideoContent
+func TestIsVideoContent(t *testing.T) {
+	// Проверка MP4
+	mp4Header := makeValidMP4Header()
+	assert.True(t, isVideoContent(mp4Header), "MP4 должен определяться как видео")
+
+	// Проверка MOV
+	movHeader := makeValidMOVHeader()
+	assert.True(t, isVideoContent(movHeader), "MOV должен определяться как видео")
+
+	// Проверка WebM
+	webmHeader := []byte{
+		0x1A, 0x45, 0xDF, 0xA3, // EBML signature
+		0x01, 0x00, 0x00, 0x00, // some WebM data
+	}
+	paddedWebm := append(webmHeader, make([]byte, 504)...) // до 512 байт
+	assert.True(t, isVideoContent(paddedWebm), "WebM должен определяться как видео")
+
+	// Проверка Ogg
+	oggHeader := []byte{
+		0x4F, 0x67, 0x67, 0x53, // 'OggS'
+		0x00, 0x00, 0x00, 0x00, // some Ogg data
+	}
+	paddedOgg := append(oggHeader, make([]byte, 504)...) // до 512 байт
+	assert.True(t, isVideoContent(paddedOgg), "Ogg должен определяться как видео")
+
+	// Проверка не-видео файла
+	textData := []byte("This is a plain text file, not a video file")
+	paddedText := append(textData, make([]byte, 512-len(textData))...) // до 512 байт
+	assert.False(t, isVideoContent(paddedText), "Текстовый файл не должен определяться как видео")
+}
+
 func makeValidMP4Header() []byte {
 	// Минимальный валидный MP4 заголовок (512 байт)
 	header := []byte{
@@ -95,6 +198,24 @@ func makeValidMP4Header() []byte {
 		0x00, 0x00, 0x02, 0x00, 0x6D, 0x70, 0x34, 0x31, // mp41
 		0x6D, 0x70, 0x34, 0x32, 0x00, 0x00, 0x00, 0x08, // mp42
 		0x77, 0x69, 0x64, 0x65, // wide
+	}
+	// Дополняем до 512 байт
+	if len(header) < 512 {
+		padding := make([]byte, 512-len(header))
+		header = append(header, padding...)
+	}
+	return header
+}
+
+// makeValidMOVHeader создает валидный заголовок для MOV-файла
+func makeValidMOVHeader() []byte {
+	// Минимальный валидный MOV заголовок (512 байт) с сигнатурой ftyp
+	header := []byte{
+		0x00, 0x00, 0x00, 0x14, 0x66, 0x74, 0x79, 0x70, // ftyp
+		0x71, 0x74, 0x20, 0x20, 0x20, 0x04, 0x06, 0x00, // qt
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		// Далее идёт блок mdat или moov
+		0x00, 0x00, 0x00, 0x08, 0x6D, 0x6F, 0x6F, 0x76, // moov
 	}
 	// Дополняем до 512 байт
 	if len(header) < 512 {

@@ -1081,8 +1081,8 @@ function uploadSingleImage(file, fileId, callback) {
 
 // Загрузка видео
 function handleFiles(files) {
-    const validTypes = ['video/mp4', 'video/webm', 'video/ogg'];
-    const validExtensions = ['.mp4', '.webm', '.ogg'];
+    const validTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/ogg'];
+    const validExtensions = ['.mp4', '.mov', '.webm', '.ogg'];
 
     // Очищаем предыдущие сообщения
     $('#upload-errors').addClass('d-none').empty();
@@ -1094,18 +1094,22 @@ function handleFiles(files) {
     // Проверяем каждый файл
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-
-        if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
+        let extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        // Если расширение не найдено, пробуем определить по type
+        if (!extension || extension === file.name) {
+            if (file.type === 'video/quicktime') extension = '.mov';
+            if (file.type === 'video/mp4') extension = '.mp4';
+            if (file.type === 'video/webm') extension = '.webm';
+            if (file.type === 'video/ogg') extension = '.ogg';
+        }
+        if (!validExtensions.includes(extension) && !validTypes.includes(file.type)) {
             showUploadError(`Файл "${file.name}" имеет неподдерживаемый формат`);
             continue;
         }
-
         if (file.size > 500 * 1024 * 1024) {
             showUploadError(`Файл "${file.name}" слишком большой (макс. 500MB)`);
             continue;
         }
-
         filesToUpload.push(file);
     }
 
@@ -1282,7 +1286,7 @@ function renderFilesList(fileType = 'video') {
     );
 
     const allowedExtensions = fileType === 'video'
-        ? ['.mp4', '.webm', '.ogg']
+        ? ['.mp4', '.mov', '.webm', '.ogg']
         : ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
     filteredFiles = filteredFiles.filter(file => {
@@ -1802,3 +1806,4 @@ $(document).ready(function() {
         }
     });
 });
+
