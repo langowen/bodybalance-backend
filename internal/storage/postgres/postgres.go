@@ -128,10 +128,36 @@ func (s *Storage) initSchema(ctx context.Context) error {
     		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
+		// Индексы для ускорения запросов по связям между таблицами и ID
 		`CREATE INDEX IF NOT EXISTS idx_video_categories_video_id ON video_categories(video_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_video_categories_category_id ON video_categories(category_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_category_content_types_category_id ON category_content_types(category_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_category_content_types_content_type_id ON category_content_types(content_type_id)`,
+
+		// Индекс для ускорения поиска по username в таблице accounts
+		`CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username)`,
+
+		// Индексы для фильтров по deleted
+		`CREATE INDEX IF NOT EXISTS idx_videos_deleted ON videos(deleted)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_deleted ON categories(deleted)`,
+		`CREATE INDEX IF NOT EXISTS idx_content_types_deleted ON content_types(deleted)`,
+		`CREATE INDEX IF NOT EXISTS idx_accounts_deleted ON accounts(deleted)`,
+
+		// Индексы для сортировки по created_at
+		`CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_created_at ON categories(created_at)`,
+
+		// Композитный индекс для ускорения запросов с фильтрацией по deleted и сортировкой по created_at
+		`CREATE INDEX IF NOT EXISTS idx_videos_deleted_created_at ON videos(deleted, created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_deleted_created_at ON categories(deleted, created_at DESC)`,
+
+		// Индексы по полям name для часто используемых таблиц для ускорения поиска
+		`CREATE INDEX IF NOT EXISTS idx_videos_name ON videos(name)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name)`,
+		`CREATE INDEX IF NOT EXISTS idx_content_types_name ON content_types(name)`,
+
+		// Индекс для ускорения запросов, использующих JOIN между accounts и content_types
+		`CREATE INDEX IF NOT EXISTS idx_accounts_content_type_id ON accounts(content_type_id)`,
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
