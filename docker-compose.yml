@@ -1,6 +1,6 @@
 services:
   bodybalance:
-    image: langowen/bodybalance
+    image: langowen/bodybalance:${BODYBAL_TAG:-latest}
     container_name: bodybalance
     ports:
       - "8083:80"
@@ -49,7 +49,7 @@ services:
       body:
 
   postgres_body:
-    image: postgres:16
+    image: postgres:${POSTGRES_TAG:-16}
     container_name: postgres_body
     logging:
       driver: loki
@@ -78,7 +78,7 @@ services:
       body:
 
   redis:
-    image: redis:latest
+    image: redis:${REDIS_TAG:-latest}
     container_name: redis
     volumes:
       - "/srv/docker/bodybalance/redis:/data"
