@@ -30,7 +30,7 @@ services:
       - HTTP_SIGNING_KEY=${SIGNING_KEY}
       - LOG_LEVEL=debug
      # - PATCH_CONFIG=./config/dev.yaml
-      - BASE_URL=https://api.7375.org
+      - BASE_URL=${BASE_URL:-https://api.7375.org}
       - VIDEO_PATCH=data/video
       - IMAGES_PATCH=data/img
       - TZ=Europe/Moscow

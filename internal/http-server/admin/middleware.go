@@ -6,6 +6,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"net/http"
+	"strings"
 )
 
 // AuthMiddleware проверяет аутентификацию и права администратора
@@ -52,11 +53,45 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// 5. Проверка SameSite (дополнительно)
+		// 5. Обработка CORS
 		if h.cfg.Env == "prod" && r.Header.Get("Origin") != "" {
-			h.logger.Warn("Cross-site request attempted", "origin", r.Header.Get("Origin"))
-			admResponse.RespondWithError(w, http.StatusForbidden, "Cross-site requests not allowed")
-			return
+			// Для одного домена с разными поддоменами (например web, api и т.д.)
+			requestOrigin := r.Header.Get("Origin")
+
+			baseURLDomain := ""
+			if baseURL := h.cfg.Media.BaseURL; baseURL != "" {
+
+				if idx := strings.Index(baseURL, "://"); idx != -1 {
+					baseURLDomain = baseURL[idx+3:]
+				} else {
+					baseURLDomain = baseURL
+				}
+			}
+
+			// Пропускаем запросы с того же домена или из доверенного домена из конфига
+			if r.Host == requestOrigin || (baseURLDomain != "" && strings.Contains(requestOrigin, baseURLDomain)) {
+				// Устанавливаем CORS заголовки для того же домена
+				w.Header().Set("Access-Control-Allow-Origin", requestOrigin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Vary", "Origin")
+			} else {
+				h.logger.Info("Cross-origin request from external client", "origin", requestOrigin)
+			}
+
+			// Для preflight запросов (OPTIONS)
+			if r.Method == http.MethodOptions {
+				// Разрешаем нужные HTTP методы
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+				// Разрешаем нужные заголовки
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+
+				// Время кэширования preflight ответа
+				w.Header().Set("Access-Control-Max-Age", "86400") // 24 часа
+
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)
