@@ -17,11 +17,11 @@ import (
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. Проверяем HTTPS в production
-		//if h.cfg.Env == "prod" && r.Header.Get("X-Forwarded-Proto") != "https" {
-		//	h.logger.Warn("HTTPS required", "url", r.URL)
-		//	admResponse.RespondWithError(w, http.StatusForbidden, "HTTPS required")
-		//	return
-		//}
+		if h.cfg.Env == "prod" && r.Header.Get("X-Forwarded-Proto") != "https" {
+			h.logger.Warn("HTTPS required", "url", r.URL)
+			admResponse.RespondWithError(w, http.StatusForbidden, "HTTPS required")
+			return
+		}
 
 		// 2. Проверяем cookie
 		cookie, err := r.Cookie("token")
@@ -53,12 +53,23 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// 5. Проверка SameSite (дополнительно)
-		//if h.cfg.Env == "prod" && r.Header.Get("Origin") != "" {
-		//	h.logger.Warn("Cross-site request attempted", "origin", r.Header.Get("Origin"))
-		//	admResponse.RespondWithError(w, http.StatusForbidden, "Cross-site requests not allowed")
-		//	return
-		//}
+		if h.cfg.Env == "prod" && r.Header.Get("Origin") != "" {
+			h.logger.Warn("Cross-site request attempted", "origin", r.Header.Get("Origin"))
+			admResponse.RespondWithError(w, http.StatusForbidden, "Cross-site requests not allowed")
+			return
+		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// SecurityHeadersMiddleware добавляет стандартные security headers ко всем ответам
+func (h *Handler) SecurityHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
 }

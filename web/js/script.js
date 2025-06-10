@@ -360,16 +360,26 @@ function renderCategoryTypesList(types) {
         const isSelected = selectedTypes.some(t => t.id === type.id);
 
         $container.append(`
-            <tr>
+            <tr class="type-row" style="cursor: pointer;" data-id="${type.id}" data-name="${type.name}">
                 <td>${type.id}</td>
                 <td>${type.name}</td>
                 <td>
                     <input type="checkbox" class="form-check-input type-checkbox" 
-                           data-id="${type.id}" data-name="${type.name}"
                            ${isSelected ? 'checked' : ''}>
                 </td>
             </tr>
         `);
+    });
+
+    // Добавляем обработчик клика на всю строку
+    $('.type-row').off('click').on('click', function() {
+        const $checkbox = $(this).find('.type-checkbox');
+        $checkbox.prop('checked', !$checkbox.prop('checked'));
+    });
+
+    // Предотвращаем двойное срабатывание при клике на сам чекбокс
+    $('.type-checkbox').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
 
     $('.sortable').off('click').click(function() {
@@ -725,7 +735,7 @@ function renderVideoCategoriesList(categories) {
         const createdAt = formatDate(category.date_created);
 
         $container.append(`
-            <tr>
+            <tr class="category-row" style="cursor: pointer;" data-id="${category.id}" data-name="${category.name}">
                 <td>${category.id}</td>
                 <td>
                     <img src="${imageUrl}" alt="Превью" style="width: 30px; height: 30px; object-fit: cover;">
@@ -734,11 +744,21 @@ function renderVideoCategoriesList(categories) {
                 <td>${createdAt}</td>
                 <td>
                     <input type="checkbox" class="form-check-input category-checkbox" 
-                           data-id="${category.id}" data-name="${category.name}"
                            ${isSelected ? 'checked' : ''}>
                 </td>
             </tr>
         `);
+    });
+
+    // Добавляем обработчик клика на всю строку
+    $('.category-row').off('click').on('click', function() {
+        const $checkbox = $(this).find('.category-checkbox');
+        $checkbox.prop('checked', !$checkbox.prop('checked'));
+    });
+
+    // Предотвращаем двойное срабатывание при клике на сам чекбокс
+    $('.category-checkbox').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
 
     $('.sortable').off('click').click(function() {
@@ -1137,14 +1157,14 @@ function uploadFilesSequentially(files, index) {
     const file = files[index];
     const fileId = 'file-' + Date.now() + '-' + index;
 
-    // Создаем элемент для отображения прогресса
+    // Создаем элемент для отображения прогресса с улучшенной структурой
     const progressHtml = `
-        <div class="file-upload-item" id="${fileId}">
-            <div class="file-info">
+        <div class="file-upload-item mb-3" id="${fileId}">
+            <div class="d-flex justify-content-between mb-1">
                 <span class="file-name">${file.name}</span>
                 <span class="file-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
             </div>
-            <div class="progress mt-1">
+            <div class="progress mb-1">
                 <div class="progress-bar" role="progressbar" style="width: 0%"></div>
             </div>
             <div class="file-status small">Подготовка к загрузке...</div>
@@ -1324,7 +1344,7 @@ function renderFilesList(fileType = 'video') {
 
         $fileList.append(`
             <tr class="${isSelected ? 'selected' : ''}" data-name="${file.name}">
-                <td>${file.name}</td>
+                <td class="file-name-cell">${file.name}</td>
                 <td class="file-size">${sizeMB} MB</td>
                 <td>${modDate}</td>
             </tr>
@@ -1459,9 +1479,11 @@ $(document).ready(function() {
     $('#save-selected-video-categories-btn').click(function() {
         selectedVideoCategories = [];
         $('.category-checkbox:checked').each(function() {
+            // Получаем родительскую строку с data-атрибутами
+            const $row = $(this).closest('.category-row');
             selectedVideoCategories.push({
-                id: parseInt($(this).data('id')),
-                name: $(this).data('name')
+                id: parseInt($row.data('id')),
+                name: $row.data('name')
             });
         });
         updateSelectedVideoCategoriesDisplay();
@@ -1724,9 +1746,11 @@ $(document).ready(function() {
     $('#save-selected-types-btn').click(function() {
         selectedTypes = [];
         $('.type-checkbox:checked').each(function() {
+            // Получаем родительскую строку с data-атрибутами
+            const $row = $(this).closest('.type-row');
             selectedTypes.push({
-                id: parseInt($(this).data('id')),
-                name: $(this).data('name')
+                id: parseInt($row.data('id')),
+                name: $row.data('name')
             });
         });
         updateSelectedTypesDisplay();

@@ -36,6 +36,10 @@ func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config, redis R
 func (h *Handler) Router() chi.Router {
 	r := chi.NewRouter()
 
+	if h.cfg.Env == "prod" {
+		r.Use(h.SecurityHeadersMiddleware) // Security headers для всех admin-эндпоинтов
+	}
+
 	r.Post("/signin", h.signing)
 	r.Post("/logout", h.logout)
 
