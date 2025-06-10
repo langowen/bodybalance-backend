@@ -69,7 +69,19 @@ func (h *Handler) SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'")
+
+		// CSP с разрешенными внешними ресурсами
+		csp := "default-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+			"img-src 'self' data:; " +
+			"font-src 'self' https://cdn.jsdelivr.net; " +
+			"connect-src 'self'; " +
+			"object-src 'none'; " +
+			"base-uri 'self'; " +
+			"frame-ancestors 'none'"
+
+		w.Header().Set("Content-Security-Policy", csp)
 		next.ServeHTTP(w, r)
 	})
 }
