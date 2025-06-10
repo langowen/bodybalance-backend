@@ -109,6 +109,7 @@ func newLogger(cfg *config.Config) *logging.Logger {
 		logging.WithLevel(cfg.LogLevel),
 		logging.WithIsJSON(true),
 		logging.WithSetDefault(true),
+		logging.WithLogFilePath("logs/body_balance.log"),
 	)
 
 	logger = logger.With(

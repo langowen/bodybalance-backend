@@ -41,6 +41,7 @@ services:
       - /srv/docker/bodybalance/video/:/app/data/video/
       - /srv/docker/bodybalance/config/:/app/config/
       - /srv/docker/bodybalance/img/:/app/data/img/
+      - /srv/docker/bodybalance/logs/:/app/logs/
     restart: unless-stopped
     depends_on:
       - postgres_body
