@@ -3,8 +3,8 @@ package video
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/lib/logger/logdiscart"
 	"github.com/stretchr/testify/assert"
-	"github.com/theartofdevel/logging"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -29,7 +29,7 @@ func TestServeVideoFile_Success(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()
@@ -58,7 +58,7 @@ func TestServeVideoFile_NotFound(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()
@@ -101,7 +101,7 @@ func TestServeVideoFile_PathTraversal(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()
@@ -139,7 +139,7 @@ func TestServeVideoFile_EmptyFilename(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()
@@ -177,7 +177,7 @@ func TestServeVideoFile_RangeRequest(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()
@@ -215,7 +215,7 @@ func TestServeVideoFile_IfNoneMatchHeader(t *testing.T) {
 		},
 	}
 
-	logger := logging.NewLogger()
+	logger := logdiscart.NewDiscardLogger()
 
 	// Создаем роутер с нужным параметром
 	r := chi.NewRouter()

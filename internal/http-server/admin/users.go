@@ -216,40 +216,42 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	logger := h.logger.With(
 		"op", op,
-		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	ctx := r.Context()
+
+	userIDParam := chi.URLParam(r, "id")
+	if userIDParam == "" {
+		logger.Info("no user ID provided")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		return
+	}
+
+	id, err := strconv.ParseInt(userIDParam, 10, 64)
 	if err != nil {
-		logger.Error("invalid user ID", sl.Err(err))
+		logger.Error("failed to parse user ID", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	ctx := r.Context()
-
 	err = h.storage.DeleteUser(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("user not found", "user_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
-			return
-		}
 		logger.Error("failed to delete user", sl.Err(err), "user_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		if errors.Is(err, sql.ErrNoRows) {
+			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
+		} else {
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		}
 		return
 	}
 
-	go func() {
-		user, err := h.storage.GetUser(ctx, id)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			logger.Error("failed to get user data", sl.Err(err), "user_id", id)
-			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
-			return
-		}
-		h.removeUserCache(user.Username)
-	}()
+	user, err := h.storage.GetUser(ctx, id)
+	if err == nil {
+		go h.removeUserCache(user.Username)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		logger.Warn("failed to get user data for cache invalidation", sl.Err(err), "user_id", id)
+
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
