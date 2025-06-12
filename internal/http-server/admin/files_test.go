@@ -308,8 +308,9 @@ func TestHandler_UploadVideoHandler_SaveError(t *testing.T) {
 		return true
 	}
 
-	// Устанавливаем директорию только для чтения чтобы вызвать ошибку при записи
-	h.cfg.Media.VideoPatch = "/root/readonly_dir"
+	// Создаем невалидный путь для гарантированной ошибки записи во всех окружениях
+	// Создаем путь с символами, которые невалидны для имени файла/директории
+	h.cfg.Media.VideoPatch = string([]byte{0, 1, 2, 3})
 
 	// Создаем тестовый запрос с фиктивным видеофайлом
 	req := createFileUploadRequest(t, "video", "test.mp4", "test video content", "video/mp4")
@@ -318,6 +319,12 @@ func TestHandler_UploadVideoHandler_SaveError(t *testing.T) {
 	// Вызываем функцию обработчика
 	h.uploadVideoHandler(w, req)
 
-	// Проверяем результаты - предполагаем ошибку из-за невозможности записи в директорию
+	// Проверяем результаты - предполагаем ошибку из-за невозможности записи
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	// Дополнительно проверяем, что в ответе содержится сообщение об ошибке
+	var response map[string]interface{}
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Contains(t, response["error"], "Failed to save file")
 }
