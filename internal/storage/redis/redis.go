@@ -211,7 +211,7 @@ func (s *Storage) DeleteVideo(ctx context.Context, videoID int64) error {
 func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID int64) (*[]response.VideoResponse, error) {
 	const op = "storage.redis.GetVideosByCategoryAndType"
 
-	cacheKey := fmt.Sprintf("videos:type:%d:category:%d", typeID, catID)
+	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
 	data, err := s.redis.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -232,7 +232,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos *[]response.VideoResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetVideosByCategoryAndType"
 
-	cacheKey := fmt.Sprintf("videos:type:%d:category:%d", typeID, catID)
+	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
 	data, err := json.Marshal(videos)
 	if err != nil {
 		return fmt.Errorf("%s: failed to marshal videos: %w", op, err)

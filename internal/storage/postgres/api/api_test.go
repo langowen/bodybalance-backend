@@ -43,8 +43,8 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
-		category := "2"
+		contentType := int64(1)
+		category := int64(2)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -72,13 +72,14 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 
 		// Проверяем результат
 		assert.NoError(t, err)
-		assert.Len(t, videos, 2)
-		assert.Equal(t, float64(1), videos[0].ID)
-		assert.Equal(t, "http://localhost:8080/video/video1.mp4", videos[0].URL)
-		assert.Equal(t, "Video 1", videos[0].Name)
-		assert.Equal(t, "Description 1", videos[0].Description)
-		assert.Equal(t, "Category 1", videos[0].Category)
-		assert.Equal(t, "http://localhost:8080/img/img1.jpg", videos[0].ImgURL)
+		assert.Len(t, *videos, 2)
+		videosList := *videos
+		assert.Equal(t, int64(1), videosList[0].ID)
+		assert.Equal(t, "http://localhost:8080/video/video1.mp4", videosList[0].URL)
+		assert.Equal(t, "Video 1", videosList[0].Name)
+		assert.Equal(t, "Description 1", videosList[0].Description)
+		assert.Equal(t, "Category 1", videosList[0].Category)
+		assert.Equal(t, "http://localhost:8080/img/img1.jpg", videosList[0].ImgURL)
 
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -89,8 +90,8 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "999"
-		category := "1"
+		contentType := int64(999)
+		category := int64(1)
 
 		// Мокаем проверку типа контента - тип не существует
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(false)
@@ -115,8 +116,8 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
-		category := "999"
+		contentType := int64(1)
+		category := int64(999)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -147,8 +148,8 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
-		category := "2"
+		contentType := int64(1)
+		category := int64(2)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -186,8 +187,8 @@ func TestGetVideosByCategoryAndType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
-		category := "2"
+		contentType := int64(1)
+		category := int64(2)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -242,7 +243,7 @@ func TestCheckAccount(t *testing.T) {
 
 		// Проверяем результат
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1), account.TypeID)
+		assert.Equal(t, int64(1), account.TypeID)
 		assert.Equal(t, "premium", account.TypeName)
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -306,7 +307,7 @@ func TestGetCategories(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
+		contentType := int64(1)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -328,10 +329,12 @@ func TestGetCategories(t *testing.T) {
 
 		// Проверяем результат
 		assert.NoError(t, err)
-		assert.Len(t, categories, 2)
-		assert.Equal(t, float64(1), categories[0].ID)
-		assert.Equal(t, "Category 1", categories[0].Name)
-		assert.Equal(t, "http://localhost:8080/img/cat1.jpg", categories[0].ImgURL)
+		assert.NotNil(t, categories)
+		categoriesList := *categories
+		assert.Len(t, categoriesList, 2)
+		assert.Equal(t, int64(1), categoriesList[0].ID)
+		assert.Equal(t, "Category 1", categoriesList[0].Name)
+		assert.Equal(t, "http://localhost:8080/img/cat1.jpg", categoriesList[0].ImgURL)
 
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -342,7 +345,7 @@ func TestGetCategories(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "999"
+		contentType := int64(999)
 
 		// Мокаем проверку типа контента - тип не существует
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(false)
@@ -367,7 +370,7 @@ func TestGetCategories(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
+		contentType := int64(1)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -399,7 +402,7 @@ func TestGetCategories(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
+		contentType := int64(1)
 
 		// Мокаем проверку типа контента
 		contentTypeExists := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -433,7 +436,7 @@ func TestGetVideo(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		videoID := "1"
+		videoID := int64(1)
 
 		// Мокаем запрос
 		rows := sqlmock.NewRows([]string{"id", "url", "name", "description", "category", "img_url"}).
@@ -448,7 +451,7 @@ func TestGetVideo(t *testing.T) {
 
 		// Проверяем результат
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1), video.ID)
+		assert.Equal(t, int64(1), video.ID)
 		assert.Equal(t, "http://localhost:8080/video/video1.mp4", video.URL)
 		assert.Equal(t, "Video 1", video.Name)
 		assert.Equal(t, "Description 1", video.Description)
@@ -464,7 +467,7 @@ func TestGetVideo(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		videoID := "999"
+		videoID := int64(999)
 
 		// Мокаем запрос - видео не найдено
 		mock.ExpectQuery(`SELECT v.id, v.url, v.name, v.description, c.name as category, v.img_url.*FROM videos v.*WHERE v.id = \$1`).
@@ -488,7 +491,7 @@ func TestGetVideo(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		videoID := "1"
+		videoID := int64(1)
 
 		// Мокаем запрос - возвращаем ошибку
 		dbErr := errors.New("database error")
@@ -559,7 +562,7 @@ func TestCheckFunctions(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "1"
+		contentType := int64(1)
 		op := "test"
 
 		// Мокаем проверку типа контента
@@ -582,7 +585,7 @@ func TestCheckFunctions(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		contentType := "999"
+		contentType := int64(999)
 		op := "test"
 
 		// Мокаем проверку типа контента - тип не существует
@@ -606,7 +609,7 @@ func TestCheckFunctions(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		category := "1"
+		category := int64(1)
 		op := "test"
 
 		// Мокаем проверку категории
@@ -629,7 +632,7 @@ func TestCheckFunctions(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		category := "999"
+		category := int64(999)
 		op := "test"
 
 		// Мокаем проверку категории - категория не существует

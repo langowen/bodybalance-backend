@@ -84,7 +84,7 @@ type UserRequest struct {
 type UserResponse struct {
 	ID            int64  `json:"id"`                // ID пользователя; example: 1
 	Username      string `json:"username"`          // Имя пользователя; example: admin
-	ContentTypeID string `json:"content_type_id"`   // ID типа контента; example: 1
+	ContentTypeID int64  `json:"content_type_id"`   // ID типа контента; example: 1
 	ContentType   string `json:"content_type_name"` // Название типа контента; example: Йога
 	Admin         bool   `json:"admin"`             // Флаг администратора; example: true
 	DateCreated   string `json:"date_created"`      // Дата создания; example: 02.01.2006

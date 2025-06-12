@@ -143,7 +143,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 }
 
 // GetCategories возвращает все категории
-func (s *Storage) GetCategories(ctx context.Context) (*[]admResponse.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Сначала получаем все категории
@@ -203,16 +203,13 @@ func (s *Storage) GetCategories(ctx context.Context) (*[]admResponse.CategoryRes
 			categories[i].Types = append(categories[i].Types, t)
 		}
 
-		if err = rows.Close(); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
-		}
-
-		if err = rows.Err(); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+		rows.Close()
+		if rows.Err() != nil {
+			return nil, fmt.Errorf("%s: %w", op, rows.Err())
 		}
 	}
 
-	return &categories, nil
+	return categories, nil
 }
 
 // UpdateCategory обновляет данные категории

@@ -132,7 +132,7 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) (*[]adm
 
 		typesRows, err := s.db.QueryContext(ctx, typesQuery, cat.ID)
 		if err != nil {
-			return nil, fmt.Errorf("%s: failed to get content types for category %.0f: %w", op, cat.ID, err)
+			return nil, fmt.Errorf("%s: failed to get content types for category %d: %w", op, cat.ID, err)
 		}
 
 		var types []admResponse.TypeResponse

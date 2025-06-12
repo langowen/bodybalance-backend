@@ -45,7 +45,7 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запрос для добавления категории
 		createdAt := time.Now()
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), req.Name, req.ImgURL, createdAt)
+			AddRow(int64(1), req.Name, req.ImgURL, createdAt)
 
 		mock.ExpectQuery(`INSERT INTO categories`).
 			WithArgs(req.Name, req.ImgURL).
@@ -54,35 +54,35 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запросы для добавления связей с типами
 		for _, typeID := range req.TypeIDs {
 			mock.ExpectExec(`INSERT INTO category_content_types`).
-				WithArgs(float64(1), typeID).
+				WithArgs(int64(1), typeID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 		}
 
 		// Ожидаем запрос на получение связанных типов
 		typeRows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow(float64(1), "Type 1").
-			AddRow(float64(2), "Type 2")
+			AddRow(int64(1), "Type 1").
+			AddRow(int64(2), "Type 2")
 
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(1)).
+			WithArgs(int64(1)).
 			WillReturnRows(typeRows)
 
 		// Ожидаем коммит транзакции
 		mock.ExpectCommit()
 
 		// Вызов тестируемого метода
-		category, err := storage.AddCategory(ctx, req)
+		category, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, float64(1), category.ID)
+		assert.Equal(t, int64(1), category.ID)
 		assert.Equal(t, req.Name, category.Name)
 		assert.Equal(t, req.ImgURL, category.ImgURL)
 		assert.Equal(t, createdAt.Format("02.01.2006"), category.DateCreated)
 		assert.Len(t, category.Types, 2)
-		assert.Equal(t, float64(1), category.Types[0].ID)
+		assert.Equal(t, int64(1), category.Types[0].ID)
 		assert.Equal(t, "Type 1", category.Types[0].Name)
-		assert.Equal(t, float64(2), category.Types[1].ID)
+		assert.Equal(t, int64(2), category.Types[1].ID)
 		assert.Equal(t, "Type 2", category.Types[1].Name)
 
 		// Проверка, что все ожидания были выполнены
@@ -105,7 +105,7 @@ func TestAddCategory(t *testing.T) {
 		mock.ExpectBegin().WillReturnError(errors.New("begin error"))
 
 		// Вызов тестируемого метода
-		_, err := storage.AddCategory(ctx, req)
+		_, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -139,7 +139,7 @@ func TestAddCategory(t *testing.T) {
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		_, err := storage.AddCategory(ctx, req)
+		_, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -167,7 +167,7 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запрос для добавления категории
 		createdAt := time.Now()
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), req.Name, req.ImgURL, createdAt)
+			AddRow(int64(1), req.Name, req.ImgURL, createdAt)
 
 		mock.ExpectQuery(`INSERT INTO categories`).
 			WithArgs(req.Name, req.ImgURL).
@@ -175,14 +175,14 @@ func TestAddCategory(t *testing.T) {
 
 		// Ожидаем ошибку при добавлении связи с типом
 		mock.ExpectExec(`INSERT INTO category_content_types`).
-			WithArgs(float64(1), req.TypeIDs[0]).
+			WithArgs(int64(1), req.TypeIDs[0]).
 			WillReturnError(errors.New("relation insert error"))
 
 		// Ожидаем откат транзакции из-за ошибки
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		_, err := storage.AddCategory(ctx, req)
+		_, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -210,7 +210,7 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запрос для добавления категории
 		createdAt := time.Now()
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), req.Name, req.ImgURL, createdAt)
+			AddRow(int64(1), req.Name, req.ImgURL, createdAt)
 
 		mock.ExpectQuery(`INSERT INTO categories`).
 			WithArgs(req.Name, req.ImgURL).
@@ -219,20 +219,20 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запросы для добавления связей с типами
 		for _, typeID := range req.TypeIDs {
 			mock.ExpectExec(`INSERT INTO category_content_types`).
-				WithArgs(float64(1), typeID).
+				WithArgs(int64(1), typeID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 		}
 
 		// Ожидаем ошибку при запросе типов
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(1)).
+			WithArgs(int64(1)).
 			WillReturnError(errors.New("select types error"))
 
 		// Ожидаем откат транзакции из-за ошибки
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		_, err := storage.AddCategory(ctx, req)
+		_, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -260,7 +260,7 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запрос для добавления категории
 		createdAt := time.Now()
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), req.Name, req.ImgURL, createdAt)
+			AddRow(int64(1), req.Name, req.ImgURL, createdAt)
 
 		mock.ExpectQuery(`INSERT INTO categories`).
 			WithArgs(req.Name, req.ImgURL).
@@ -269,24 +269,24 @@ func TestAddCategory(t *testing.T) {
 		// Ожидаем INSERT запросы для добавления связей с типами
 		for _, typeID := range req.TypeIDs {
 			mock.ExpectExec(`INSERT INTO category_content_types`).
-				WithArgs(float64(1), typeID).
+				WithArgs(int64(1), typeID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 		}
 
 		// Ожидаем запрос на получение связанных типов
 		typeRows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow(float64(1), "Type 1").
-			AddRow(float64(2), "Type 2")
+			AddRow(int64(1), "Type 1").
+			AddRow(int64(2), "Type 2")
 
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(1)).
+			WithArgs(int64(1)).
 			WillReturnRows(typeRows)
 
 		// Ожидаем ошибку при коммите транзакции
 		mock.ExpectCommit().WillReturnError(errors.New("commit error"))
 
 		// Вызов тестируемого метода
-		_, err := storage.AddCategory(ctx, req)
+		_, err := storage.AddCategory(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -310,7 +310,7 @@ func TestGetCategory(t *testing.T) {
 
 		// Ожидаем запрос для получения категории
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), "Test Category", "test.jpg", createdAt)
+			AddRow(int64(1), "Test Category", "test.jpg", createdAt)
 
 		mock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE id = \$1`).
 			WithArgs(categoryID).
@@ -318,11 +318,11 @@ func TestGetCategory(t *testing.T) {
 
 		// Ожидаем запрос на получение связанных типов
 		typeRows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow(float64(1), "Type 1").
-			AddRow(float64(2), "Type 2")
+			AddRow(int64(1), "Type 1").
+			AddRow(int64(2), "Type 2")
 
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(categoryID). // Используем categoryID типа int64 вместо float64(1)
+			WithArgs(categoryID). // Используем categoryID типа int64 вместо int64(1)
 			WillReturnRows(typeRows)
 
 		// Вызов тестируемого метода
@@ -330,14 +330,14 @@ func TestGetCategory(t *testing.T) {
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, float64(1), category.ID)
+		assert.Equal(t, int64(1), category.ID)
 		assert.Equal(t, "Test Category", category.Name)
 		assert.Equal(t, "test.jpg", category.ImgURL)
 		assert.Equal(t, createdAt.Format("02.01.2006"), category.DateCreated)
 		assert.Len(t, category.Types, 2)
-		assert.Equal(t, float64(1), category.Types[0].ID)
+		assert.Equal(t, int64(1), category.Types[0].ID)
 		assert.Equal(t, "Type 1", category.Types[0].Name)
-		assert.Equal(t, float64(2), category.Types[1].ID)
+		assert.Equal(t, int64(2), category.Types[1].ID)
 		assert.Equal(t, "Type 2", category.Types[1].Name)
 
 		// Проверка, что все ожидания были выполнены
@@ -403,7 +403,7 @@ func TestGetCategory(t *testing.T) {
 
 		// Ожидаем запрос для получения категории
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), "Test Category", "test.jpg", createdAt)
+			AddRow(int64(1), "Test Category", "test.jpg", createdAt)
 
 		mock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE id = \$1`).
 			WithArgs(categoryID).
@@ -411,7 +411,7 @@ func TestGetCategory(t *testing.T) {
 
 		// Ожидаем запрос на получение типов с ошибкой
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(categoryID). // Используем categoryID вместо float64(1)
+			WithArgs(categoryID). // Используем categoryID вместо int64(1)
 			WillReturnError(errors.New("types query error"))
 
 		// Вызов тестируемого метода
@@ -439,28 +439,28 @@ func TestGetCategories(t *testing.T) {
 
 		// Ожидаем запрос для получения всех категорий
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), "Category 1", "img1.jpg", createdAt1).
-			AddRow(float64(2), "Category 2", "img2.jpg", createdAt2)
+			AddRow(int64(1), "Category 1", "img1.jpg", createdAt1).
+			AddRow(int64(2), "Category 2", "img2.jpg", createdAt2)
 
 		mock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories`).
 			WillReturnRows(categoryRows)
 
 		// Ожидаем запрос на получение типов для первой категории
 		type1Rows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow(float64(1), "Type 1").
-			AddRow(float64(2), "Type 2")
+			AddRow(int64(1), "Type 1").
+			AddRow(int64(2), "Type 2")
 
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(1)).
+			WithArgs(int64(1)).
 			WillReturnRows(type1Rows)
 
 		// Ожидаем запрос на получение типов для второй категории
 		type2Rows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow(float64(2), "Type 2").
-			AddRow(float64(3), "Type 3")
+			AddRow(int64(2), "Type 2").
+			AddRow(int64(3), "Type 3")
 
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(2)).
+			WithArgs(int64(2)).
 			WillReturnRows(type2Rows)
 
 		// Вызов тестируемого метода
@@ -471,25 +471,25 @@ func TestGetCategories(t *testing.T) {
 		assert.Len(t, categories, 2)
 
 		// Проверка первой категории
-		assert.Equal(t, float64(1), categories[0].ID)
+		assert.Equal(t, int64(1), categories[0].ID)
 		assert.Equal(t, "Category 1", categories[0].Name)
 		assert.Equal(t, "img1.jpg", categories[0].ImgURL)
 		assert.Equal(t, createdAt1.Format("02.01.2006"), categories[0].DateCreated)
 		assert.Len(t, categories[0].Types, 2)
-		assert.Equal(t, float64(1), categories[0].Types[0].ID)
+		assert.Equal(t, int64(1), categories[0].Types[0].ID)
 		assert.Equal(t, "Type 1", categories[0].Types[0].Name)
-		assert.Equal(t, float64(2), categories[0].Types[1].ID)
+		assert.Equal(t, int64(2), categories[0].Types[1].ID)
 		assert.Equal(t, "Type 2", categories[0].Types[1].Name)
 
 		// Проверка второй категории
-		assert.Equal(t, float64(2), categories[1].ID)
+		assert.Equal(t, int64(2), categories[1].ID)
 		assert.Equal(t, "Category 2", categories[1].Name)
 		assert.Equal(t, "img2.jpg", categories[1].ImgURL)
 		assert.Equal(t, createdAt2.Format("02.01.2006"), categories[1].DateCreated)
 		assert.Len(t, categories[1].Types, 2)
-		assert.Equal(t, float64(2), categories[1].Types[0].ID)
+		assert.Equal(t, int64(2), categories[1].Types[0].ID)
 		assert.Equal(t, "Type 2", categories[1].Types[0].Name)
-		assert.Equal(t, float64(3), categories[1].Types[1].ID)
+		assert.Equal(t, int64(3), categories[1].Types[1].ID)
 		assert.Equal(t, "Type 3", categories[1].Types[1].Name)
 
 		// Проверка, что все ожидания были выполнены
@@ -528,14 +528,14 @@ func TestGetCategories(t *testing.T) {
 
 		// Ожидаем запрос для получения всех категорий
 		categoryRows := sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(float64(1), "Category 1", "img1.jpg", createdAt)
+			AddRow(int64(1), "Category 1", "img1.jpg", createdAt)
 
 		mock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories`).
 			WillReturnRows(categoryRows)
 
 		// Ожидаем запрос на получение типов с ошибкой
 		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types`).
-			WithArgs(float64(1)).
+			WithArgs(int64(1)).
 			WillReturnError(errors.New("types query error"))
 
 		// Вызов тестируемого метода
@@ -589,7 +589,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectCommit()
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req) // Передаем указатель на req
 
 		// Проверка результатов
 		require.NoError(t, err)
@@ -615,7 +615,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectBegin().WillReturnError(errors.New("begin error"))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -650,7 +650,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -685,7 +685,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -725,7 +725,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -770,7 +770,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -817,7 +817,7 @@ func TestUpdateCategory(t *testing.T) {
 		mock.ExpectCommit().WillReturnError(errors.New("commit error"))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateCategory(ctx, categoryID, req)
+		err := storage.UpdateCategory(ctx, categoryID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)

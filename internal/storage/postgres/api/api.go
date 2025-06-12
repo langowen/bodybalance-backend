@@ -59,7 +59,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID 
 
 	// Проверка на отсутствие категорий для данного типа
 	if len(videos) == 0 {
-		return nil, fmt.Errorf("%s: %w: no videos found for content type '%s' and category '%s'",
+		return nil, fmt.Errorf("%s: %w: no videos found for content type '%d' and category '%d'",
 			op, storage.ErrVideoNotFound, TypeID, CatID)
 	}
 
@@ -139,7 +139,7 @@ func (s *Storage) GetCategories(ctx context.Context, TypeID int64) (*[]response.
 
 	// Проверка на отсутствие категорий для данного типа
 	if len(categories) == 0 {
-		return nil, fmt.Errorf("%s: %w: no categories found for content type '%s'",
+		return nil, fmt.Errorf("%s: %w: no categories found for content type '%d'",
 			op, storage.ErrNoCategoriesFound, TypeID)
 	}
 
@@ -170,7 +170,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoR
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("%s: %w: video with id '%s' not found",
+			return nil, fmt.Errorf("%s: %w: video with id '%d' not found",
 				op, storage.ErrVideoNotFound, videoID)
 		}
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
@@ -227,7 +227,7 @@ func (s *Storage) chekCategory(ctx context.Context, CatID int64, op string) erro
 	}
 
 	if !categoryNameExists {
-		return fmt.Errorf("%s: %w: category name '%s' not found",
+		return fmt.Errorf("%s: %w: category name '%d' not found",
 			op, storage.ErrNoCategoriesFound, CatID)
 	}
 

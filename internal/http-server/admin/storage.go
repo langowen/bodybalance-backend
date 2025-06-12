@@ -33,7 +33,7 @@ type AdmStorage interface {
 
 	AddCategory(ctx context.Context, req *admResponse.CategoryRequest) (*admResponse.CategoryResponse, error)
 	GetCategory(ctx context.Context, id int64) (*admResponse.CategoryResponse, error)
-	GetCategories(ctx context.Context) (*[]admResponse.CategoryResponse, error)
+	GetCategories(ctx context.Context) ([]admResponse.CategoryResponse, error)
 	UpdateCategory(ctx context.Context, id int64, req *admResponse.CategoryRequest) error
 	DeleteCategory(ctx context.Context, id int64) error
 }

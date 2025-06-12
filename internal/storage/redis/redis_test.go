@@ -11,7 +11,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/redis/go-redis/v9"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -91,8 +90,8 @@ func TestGetSetCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 
 		mock.ExpectGet(cacheKey).SetErr(redis.Nil)
 
@@ -114,8 +113,8 @@ func TestGetSetCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 
 		expectedCategories := []response.CategoryResponse{
 			{ID: 1, Name: "Test Category", ImgURL: "https://example.com/image.jpg"},
@@ -130,7 +129,8 @@ func TestGetSetCategories(t *testing.T) {
 
 		// Assert
 		require.NoError(t, err)
-		require.Equal(t, expectedCategories, categories)
+		require.NotNil(t, categories)
+		require.Equal(t, expectedCategories, *categories) // Сравниваем сам слайс, а не указатель
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -143,8 +143,8 @@ func TestGetSetCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 
 		mock.ExpectGet(cacheKey).SetErr(errors.New("redis error"))
 
@@ -166,8 +166,8 @@ func TestGetSetCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 		ttl := 30 * time.Minute
 
 		categories := []response.CategoryResponse{
@@ -179,7 +179,7 @@ func TestGetSetCategories(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetVal("OK")
 
 		// Act
-		err := storage.SetCategories(ctx, contentType, categories, ttl)
+		err := storage.SetCategories(ctx, contentType, &categories, ttl)
 
 		// Assert
 		require.NoError(t, err)
@@ -195,8 +195,8 @@ func TestGetSetCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 		ttl := 30 * time.Minute
 
 		categories := []response.CategoryResponse{
@@ -208,113 +208,10 @@ func TestGetSetCategories(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetErr(errors.New("redis error"))
 
 		// Act
-		err := storage.SetCategories(ctx, contentType, categories, ttl)
+		err := storage.SetCategories(ctx, contentType, &categories, ttl)
 
 		// Assert
 		require.Error(t, err)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-}
-
-// TestGetCategoriesWithFallback тестирует получение категорий с фолбэком
-func TestGetCategoriesWithFallback(t *testing.T) {
-	t.Run("categories exist in cache", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
-		ttl := 30 * time.Minute
-
-		expectedCategories := []response.CategoryResponse{
-			{ID: 1, Name: "Test Category", ImgURL: "https://example.com/image.jpg"},
-		}
-
-		data, _ := json.Marshal(expectedCategories)
-
-		mock.ExpectGet(cacheKey).SetVal(string(data))
-
-		fallbackCalled := false
-		fallback := func() ([]response.CategoryResponse, error) {
-			fallbackCalled = true
-			return nil, nil
-		}
-
-		// Act
-		categories, err := storage.GetCategoriesWithFallback(ctx, contentType, ttl, fallback)
-
-		// Assert
-		require.NoError(t, err)
-		require.Equal(t, expectedCategories, categories)
-		assert.False(t, fallbackCalled)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("categories not in cache, fallback success", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
-		ttl := 30 * time.Minute
-
-		mock.ExpectGet(cacheKey).SetErr(redis.Nil)
-
-		fallbackCategories := []response.CategoryResponse{
-			{ID: 1, Name: "Fallback Category", ImgURL: "https://example.com/fallback.jpg"},
-		}
-
-		fallback := func() ([]response.CategoryResponse, error) {
-			return fallbackCategories, nil
-		}
-
-		data, _ := json.Marshal(fallbackCategories)
-		mock.ExpectSet(cacheKey, data, ttl).SetVal("OK")
-
-		// Act
-		categories, err := storage.GetCategoriesWithFallback(ctx, contentType, ttl, fallback)
-
-		// Assert
-		require.NoError(t, err)
-		require.Equal(t, fallbackCategories, categories)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("categories not in cache, fallback fails", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
-		ttl := 30 * time.Minute
-
-		mock.ExpectGet(cacheKey).SetErr(redis.Nil)
-
-		fallback := func() ([]response.CategoryResponse, error) {
-			return nil, errors.New("fallback error")
-		}
-
-		// Act
-		categories, err := storage.GetCategoriesWithFallback(ctx, contentType, ttl, fallback)
-
-		// Assert
-		require.Error(t, err)
-		require.Nil(t, categories)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 }
@@ -330,8 +227,8 @@ func TestDeleteCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 
 		mock.ExpectDel(cacheKey).SetVal(1)
 
@@ -352,8 +249,8 @@ func TestDeleteCategories(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		cacheKey := "categories:video"
+		contentType := int64(1)
+		cacheKey := "categories:1"
 
 		mock.ExpectDel(cacheKey).SetErr(errors.New("redis error"))
 
@@ -485,7 +382,7 @@ func TestVideoOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		videoID := "123"
+		videoID := int64(123)
 		cacheKey := "video:123"
 
 		mock.ExpectGet(cacheKey).SetErr(redis.Nil)
@@ -508,7 +405,7 @@ func TestVideoOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		videoID := "123"
+		videoID := int64(123)
 		cacheKey := "video:123"
 
 		expectedVideo := &response.VideoResponse{
@@ -539,7 +436,7 @@ func TestVideoOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		videoID := "123"
+		videoID := int64(123)
 		cacheKey := "video:123"
 		ttl := 30 * time.Minute
 
@@ -570,7 +467,7 @@ func TestVideoOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		videoID := "123"
+		videoID := int64(123)
 		cacheKey := "video:123"
 
 		mock.ExpectDel(cacheKey).SetVal(1)
@@ -595,9 +492,9 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		category := "sports"
-		cacheKey := "videos:video:sports"
+		contentType := int64(123)
+		category := int64(123)
+		cacheKey := "videos:123:123"
 
 		mock.ExpectGet(cacheKey).SetErr(redis.Nil)
 
@@ -619,9 +516,9 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		category := "sports"
-		cacheKey := "videos:video:sports"
+		contentType := int64(123)
+		category := int64(1234)
+		cacheKey := "videos:123:1234"
 
 		expectedVideos := []response.VideoResponse{
 			{ID: 123, Name: "Test Video 1", URL: "https://example.com/video1.mp4"},
@@ -637,7 +534,8 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 
 		// Assert
 		require.NoError(t, err)
-		require.Equal(t, expectedVideos, videos)
+		require.NotNil(t, videos)
+		require.Equal(t, expectedVideos, *videos) // Сравниваем сам слайс, а не указатель
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -650,9 +548,9 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		category := "sports"
-		cacheKey := "videos:video:sports"
+		contentType := int64(123)
+		category := int64(1234)
+		cacheKey := "videos:123:1234"
 		ttl := 30 * time.Minute
 
 		videos := []response.VideoResponse{
@@ -665,7 +563,7 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetVal("OK")
 
 		// Act
-		err := storage.SetVideosByCategoryAndType(ctx, contentType, category, videos, ttl)
+		err := storage.SetVideosByCategoryAndType(ctx, contentType, category, &videos, ttl)
 
 		// Assert
 		require.NoError(t, err)
@@ -681,9 +579,9 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := "video"
-		category := "sports"
-		cacheKey := "videos:video:sports"
+		contentType := int64(123)
+		category := int64(1234)
+		cacheKey := "videos:123:1234"
 
 		mock.ExpectDel(cacheKey).SetVal(1)
 

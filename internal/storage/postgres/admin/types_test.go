@@ -40,18 +40,18 @@ func TestAddType(t *testing.T) {
 		// Ожидаем INSERT запрос для добавления типа
 		createdAt := time.Now()
 		rows := sqlmock.NewRows([]string{"id", "name", "created_at"}).
-			AddRow(float64(1), req.Name, createdAt)
+			AddRow(int64(1), req.Name, createdAt)
 
 		mock.ExpectQuery(`INSERT INTO content_types`).
 			WithArgs(req.Name).
 			WillReturnRows(rows)
 
 		// Вызов тестируемого метода
-		typeResponse, err := storage.AddType(ctx, req)
+		typeResponse, err := storage.AddType(ctx, &req)
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, float64(1), typeResponse.ID)
+		assert.Equal(t, int64(1), typeResponse.ID)
 		assert.Equal(t, req.Name, typeResponse.Name)
 		assert.Equal(t, createdAt.Format("02.01.2006"), typeResponse.DateCreated)
 
@@ -75,7 +75,7 @@ func TestAddType(t *testing.T) {
 			WillReturnError(errors.New("database error"))
 
 		// Вызов тестируемого метода
-		_, err := storage.AddType(ctx, req)
+		_, err := storage.AddType(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -99,7 +99,7 @@ func TestGetType(t *testing.T) {
 
 		// Ожидаем SELECT запрос для получения типа
 		rows := sqlmock.NewRows([]string{"id", "name", "created_at"}).
-			AddRow(float64(1), "Test Type", createdAt)
+			AddRow(int64(1), "Test Type", createdAt)
 
 		mock.ExpectQuery(`SELECT id, name, created_at FROM content_types`).
 			WithArgs(typeID).
@@ -110,7 +110,7 @@ func TestGetType(t *testing.T) {
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, float64(1), typeResponse.ID)
+		assert.Equal(t, int64(1), typeResponse.ID)
 		assert.Equal(t, "Test Type", typeResponse.Name)
 		assert.Equal(t, createdAt.Format("02.01.2006"), typeResponse.DateCreated)
 
@@ -180,8 +180,8 @@ func TestGetTypes(t *testing.T) {
 
 		// Ожидаем SELECT запрос для получения всех типов
 		rows := sqlmock.NewRows([]string{"id", "name", "created_at"}).
-			AddRow(float64(1), "Type 1", createdAt1).
-			AddRow(float64(2), "Type 2", createdAt2)
+			AddRow(int64(1), "Type 1", createdAt1).
+			AddRow(int64(2), "Type 2", createdAt2)
 
 		mock.ExpectQuery(`SELECT id, name, created_at FROM content_types`).
 			WillReturnRows(rows)
@@ -191,15 +191,19 @@ func TestGetTypes(t *testing.T) {
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Len(t, types, 2)
+		require.NotNil(t, types)
 
-		assert.Equal(t, float64(1), types[0].ID)
-		assert.Equal(t, "Type 1", types[0].Name)
-		assert.Equal(t, createdAt1.Format("02.01.2006"), types[0].DateCreated)
+		// Разыменовываем указатель перед использованием len()
+		typesSlice := *types
+		assert.Len(t, typesSlice, 2)
 
-		assert.Equal(t, float64(2), types[1].ID)
-		assert.Equal(t, "Type 2", types[1].Name)
-		assert.Equal(t, createdAt2.Format("02.01.2006"), types[1].DateCreated)
+		assert.Equal(t, int64(1), typesSlice[0].ID)
+		assert.Equal(t, "Type 1", typesSlice[0].Name)
+		assert.Equal(t, createdAt1.Format("02.01.2006"), typesSlice[0].DateCreated)
+
+		assert.Equal(t, int64(2), typesSlice[1].ID)
+		assert.Equal(t, "Type 2", typesSlice[1].Name)
+		assert.Equal(t, createdAt2.Format("02.01.2006"), typesSlice[1].DateCreated)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -295,7 +299,7 @@ func TestUpdateType(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateType(ctx, typeID, req)
+		err := storage.UpdateType(ctx, typeID, &req)
 
 		// Проверка результатов
 		require.NoError(t, err)
@@ -321,7 +325,7 @@ func TestUpdateType(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 0))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateType(ctx, typeID, req)
+		err := storage.UpdateType(ctx, typeID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -348,7 +352,7 @@ func TestUpdateType(t *testing.T) {
 			WillReturnError(errors.New("database error"))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateType(ctx, typeID, req)
+		err := storage.UpdateType(ctx, typeID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -376,7 +380,7 @@ func TestUpdateType(t *testing.T) {
 			WillReturnResult(result)
 
 		// Вызов тестируемого метода
-		err := storage.UpdateType(ctx, typeID, req)
+		err := storage.UpdateType(ctx, typeID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)

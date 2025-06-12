@@ -36,7 +36,7 @@ func TestAddUser(t *testing.T) {
 		ctx := context.Background()
 		req := admResponse.UserRequest{
 			Username:      "testuser",
-			ContentTypeID: "1",
+			ContentTypeID: 1,
 			Admin:         false,
 			Password:      "password123",
 		}
@@ -51,11 +51,11 @@ func TestAddUser(t *testing.T) {
 			WillReturnRows(rows)
 
 		// Вызов тестируемого метода
-		user, err := storage.AddUser(ctx, req)
+		user, err := storage.AddUser(ctx, &req)
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, "1", user.ID)
+		assert.Equal(t, int64(1), user.ID)
 		assert.Equal(t, req.Username, user.Username)
 		assert.Equal(t, req.ContentTypeID, user.ContentTypeID)
 		assert.Equal(t, "TestType", user.ContentType)
@@ -74,7 +74,7 @@ func TestAddUser(t *testing.T) {
 		ctx := context.Background()
 		req := admResponse.UserRequest{
 			Username:      "existinguser",
-			ContentTypeID: "1",
+			ContentTypeID: 1,
 			Admin:         false,
 			Password:      "password123",
 		}
@@ -86,7 +86,7 @@ func TestAddUser(t *testing.T) {
 			WillReturnError(duplicateErr)
 
 		// Вызов тестируемого метода
-		_, err := storage.AddUser(ctx, req)
+		_, err := storage.AddUser(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -104,7 +104,7 @@ func TestAddUser(t *testing.T) {
 		ctx := context.Background()
 		req := admResponse.UserRequest{
 			Username:      "testuser",
-			ContentTypeID: "1",
+			ContentTypeID: 1,
 			Admin:         false,
 			Password:      "password123",
 		}
@@ -116,7 +116,7 @@ func TestAddUser(t *testing.T) {
 			WillReturnError(dbErr)
 
 		// Вызов тестируемого метода
-		_, err := storage.AddUser(ctx, req)
+		_, err := storage.AddUser(ctx, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -140,7 +140,7 @@ func TestGetUser(t *testing.T) {
 
 		// Ожидаем SELECT запрос для получения пользователя
 		rows := sqlmock.NewRows([]string{"id", "username", "content_type_id", "content_type", "admin", "created_at"}).
-			AddRow(float64(1), "testuser", 1, "TestType", false, createdAt)
+			AddRow(int64(1), "testuser", 1, "TestType", false, createdAt)
 
 		mock.ExpectQuery(`SELECT a\.id, a\.username, a\.content_type_id, ct\.name, a\.admin, a\.created_at FROM accounts a LEFT JOIN content_types ct ON a\.content_type_id = ct\.id WHERE a\.id = \$1 AND a\.deleted IS NOT TRUE`).
 			WithArgs(userID).
@@ -151,9 +151,9 @@ func TestGetUser(t *testing.T) {
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Equal(t, "1", user.ID)
+		assert.Equal(t, int64(1), user.ID)
 		assert.Equal(t, "testuser", user.Username)
-		assert.Equal(t, "1", user.ContentTypeID)
+		assert.Equal(t, int64(1), user.ContentTypeID)
 		assert.Equal(t, "TestType", user.ContentType)
 		assert.Equal(t, false, user.Admin)
 		assert.Equal(t, createdAt.Format("02.01.2006"), user.DateCreated)
@@ -224,8 +224,8 @@ func TestGetUsers(t *testing.T) {
 
 		// Ожидаем SELECT запрос для получения всех пользователей
 		rows := sqlmock.NewRows([]string{"id", "username", "content_type_id", "content_type", "admin", "created_at"}).
-			AddRow(float64(1), "user1", 1, "Type1", false, createdAt1).
-			AddRow(float64(2), "user2", 2, "Type2", true, createdAt2)
+			AddRow(int64(1), "user1", 1, "Type1", false, createdAt1).
+			AddRow(int64(2), "user2", 2, "Type2", true, createdAt2)
 
 		mock.ExpectQuery(`SELECT a\.id, a\.username, a\.content_type_id, ct\.name, a\.admin, a\.created_at FROM accounts a LEFT JOIN content_types ct ON a\.content_type_id = ct\.id WHERE a\.deleted IS NOT TRUE ORDER BY a\.id`).
 			WillReturnRows(rows)
@@ -235,23 +235,25 @@ func TestGetUsers(t *testing.T) {
 
 		// Проверка результатов
 		require.NoError(t, err)
-		assert.Len(t, users, 2)
+		require.NotNil(t, users)
+		usersTest := *users
+		assert.Len(t, usersTest, 2)
 
 		// Проверка первого пользователя
-		assert.Equal(t, "1", users[0].ID)
-		assert.Equal(t, "user1", users[0].Username)
-		assert.Equal(t, "1", users[0].ContentTypeID)
-		assert.Equal(t, "Type1", users[0].ContentType)
-		assert.Equal(t, false, users[0].Admin)
-		assert.Equal(t, createdAt1.Format("02.01.2006"), users[0].DateCreated)
+		assert.Equal(t, int64(1), usersTest[0].ID)
+		assert.Equal(t, "user1", usersTest[0].Username)
+		assert.Equal(t, int64(1), usersTest[0].ContentTypeID)
+		assert.Equal(t, "Type1", usersTest[0].ContentType)
+		assert.Equal(t, false, usersTest[0].Admin)
+		assert.Equal(t, createdAt1.Format("02.01.2006"), usersTest[0].DateCreated)
 
 		// Проверка второго пользователя
-		assert.Equal(t, "2", users[1].ID)
-		assert.Equal(t, "user2", users[1].Username)
-		assert.Equal(t, "2", users[1].ContentTypeID)
-		assert.Equal(t, "Type2", users[1].ContentType)
-		assert.Equal(t, true, users[1].Admin)
-		assert.Equal(t, createdAt2.Format("02.01.2006"), users[1].DateCreated)
+		assert.Equal(t, int64(2), usersTest[1].ID)
+		assert.Equal(t, "user2", usersTest[1].Username)
+		assert.Equal(t, int64(2), usersTest[1].ContentTypeID)
+		assert.Equal(t, "Type2", usersTest[1].ContentType)
+		assert.Equal(t, true, usersTest[1].Admin)
+		assert.Equal(t, createdAt2.Format("02.01.2006"), usersTest[1].DateCreated)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -343,7 +345,7 @@ func TestUpdateUser(t *testing.T) {
 		userID := int64(1)
 		req := admResponse.UserRequest{
 			Username:      "updateduser",
-			ContentTypeID: "2",
+			ContentTypeID: 2,
 			Admin:         true,
 			Password:      "newpassword",
 		}
@@ -354,7 +356,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateUser(ctx, userID, req)
+		err := storage.UpdateUser(ctx, userID, &req)
 
 		// Проверка результатов
 		require.NoError(t, err)
@@ -372,7 +374,7 @@ func TestUpdateUser(t *testing.T) {
 		userID := int64(999)
 		req := admResponse.UserRequest{
 			Username:      "updateduser",
-			ContentTypeID: "2",
+			ContentTypeID: 2,
 			Admin:         true,
 			Password:      "newpassword",
 		}
@@ -383,7 +385,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 0))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateUser(ctx, userID, req)
+		err := storage.UpdateUser(ctx, userID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -402,7 +404,7 @@ func TestUpdateUser(t *testing.T) {
 		userID := int64(1)
 		req := admResponse.UserRequest{
 			Username:      "updateduser",
-			ContentTypeID: "2",
+			ContentTypeID: 2,
 			Admin:         true,
 			Password:      "newpassword",
 		}
@@ -413,7 +415,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnError(errors.New("database error"))
 
 		// Вызов тестируемого метода
-		err := storage.UpdateUser(ctx, userID, req)
+		err := storage.UpdateUser(ctx, userID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
@@ -432,7 +434,7 @@ func TestUpdateUser(t *testing.T) {
 		userID := int64(1)
 		req := admResponse.UserRequest{
 			Username:      "updateduser",
-			ContentTypeID: "2",
+			ContentTypeID: 2,
 			Admin:         true,
 			Password:      "newpassword",
 		}
@@ -444,7 +446,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(result)
 
 		// Вызов тестируемого метода
-		err := storage.UpdateUser(ctx, userID, req)
+		err := storage.UpdateUser(ctx, userID, &req)
 
 		// Проверка результатов
 		require.Error(t, err)
