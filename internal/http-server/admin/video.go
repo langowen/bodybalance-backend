@@ -148,14 +148,27 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, video := range *videos {
-		categories, err := h.storage.GetVideoCategories(ctx, video.ID)
+	// Используем индексы для доступа к элементам, а не range с копией
+	for i := range *videos {
+		// Получаем указатель на конкретный элемент слайса
+		videoPtr := &(*videos)[i]
+
+		// Инициализируем слайс категорий, если он nil
+		if videoPtr.Categories == nil {
+			videoPtr.Categories = []admResponse.CategoryResponse{}
+		}
+
+		categories, err := h.storage.GetVideoCategories(ctx, videoPtr.ID)
 		if err != nil {
-			logger.Error("failed to get video categories", sl.Err(err), "video_id", video.ID)
+			logger.Error("failed to get video categories", sl.Err(err), "video_id", videoPtr.ID)
 			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
 			return
 		}
-		video.Categories = *categories
+
+		if categories != nil {
+			// Добавляем категории напрямую к элементу в оригинальном слайсе
+			videoPtr.Categories = append(videoPtr.Categories, *categories...)
+		}
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
