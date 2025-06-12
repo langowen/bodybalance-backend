@@ -1,14 +1,1310 @@
-basePath: /api/v1
-host: https://body.7375.org
+basePath: /admin
+definitions:
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest:
+    properties:
+      img_url:
+        description: 'URL изображения категории; example: https://example.com/category.jpg'
+        type: string
+      name:
+        description: 'Название категории; required: true; example: Утренние практики'
+        type: string
+      type_ids:
+        description: 'Список ID типов; required: true; example: [1, 2]'
+        items:
+          type: integer
+        type: array
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse:
+    properties:
+      date_created:
+        description: 'Дата создания; example: 02.01.2006'
+        type: string
+      id:
+        description: 'ID категории; example: 1'
+        type: integer
+      img_url:
+        description: 'URL изображения категории; example: https://example.com/category.jpg'
+        type: string
+      name:
+        description: 'Название категории; example: Утренние практики'
+        type: string
+      types:
+        description: Список типов категории
+        items:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+        type: array
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse:
+    properties:
+      details:
+        description: 'Детали ошибки (опционально); example: Login field is required'
+        type: string
+      error:
+        description: 'Текст ошибки; example: Invalid request'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo:
+    properties:
+      mod_time:
+        description: 'Время последнего изменения; example: 2023-01-01T12:00:00Z'
+        type: string
+      name:
+        description: 'Имя файла; example: video.mp4'
+        type: string
+      size:
+        description: 'Размер файла в байтах; example: 1024000'
+        type: integer
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest:
+    properties:
+      login:
+        description: 'Логин администратора; required: true; example: admin'
+        type: string
+      password:
+        description: 'Пароль администратора; required: true; example: hash(password123)'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse:
+    properties:
+      error:
+        description: 'Сообщение об ошибке; example: Invalid credentials'
+        type: string
+      message:
+        description: 'Сообщение об успехе; example: Authentication successful'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest:
+    properties:
+      name:
+        description: 'Название типа; required: true; example: Йога'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse:
+    properties:
+      created_at:
+        description: 'Дата создания; example: 02.01.2006'
+        type: string
+      id:
+        description: 'ID типа; example: 1'
+        type: integer
+      name:
+        description: 'Название типа; example: Йога'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest:
+    properties:
+      admin:
+        description: 'Флаг администратора; example: true'
+        type: boolean
+      content_type_id:
+        description: 'ID типа контента; example: 1'
+        type: integer
+      password:
+        description: 'Пароль пользователя; required: true; example: hash(password123)'
+        type: string
+      username:
+        description: 'Имя пользователя; required: true; example: admin'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse:
+    properties:
+      admin:
+        description: 'Флаг администратора; example: true'
+        type: boolean
+      content_type_id:
+        description: 'ID типа контента; example: 1'
+        type: integer
+      content_type_name:
+        description: 'Название типа контента; example: Йога'
+        type: string
+      date_created:
+        description: 'Дата создания; example: 02.01.2006'
+        type: string
+      id:
+        description: 'ID пользователя; example: 1'
+        type: integer
+      username:
+        description: 'Имя пользователя; example: admin'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest:
+    properties:
+      category_ids:
+        description: 'Список ID категорий; example: [1, 2, 3]'
+        items:
+          type: integer
+        type: array
+      description:
+        description: 'Описание видео; example: 30-минутный комплекс утренних упражнений'
+        type: string
+      img_url:
+        description: 'URL превью изображения; example: https://example.com/preview.jpg'
+        type: string
+      name:
+        description: 'Название видео; required: true; example: Утренняя йога'
+        type: string
+      url:
+        description: 'URL видеофайла; required: true; example: https://example.com/video.mp4'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse:
+    properties:
+      categories:
+        description: Список категорий видео
+        items:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+        type: array
+      created_at:
+        description: 'Дата создания; example: 02.01.2006'
+        type: string
+      description:
+        description: 'Описание видео; example: 30-минутный комплекс утренних упражнений'
+        type: string
+      id:
+        description: 'ID видео; example: 1'
+        type: integer
+      img_url:
+        description: 'URL превью изображения; example: https://example.com/preview.jpg'
+        type: string
+      name:
+        description: 'Название видео; example: Утренняя йога'
+        type: string
+      url:
+        description: 'URL видеофайла; example: https://example.com/video.mp4'
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse:
+    description: Информация о типе аккаунта пользователя
+    properties:
+      type_id:
+        description: ID type из БД
+        type: integer
+      type_name:
+        description: Название type
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse:
+    description: Информация о категории контента
+    properties:
+      id:
+        description: ID из БД
+        type: integer
+      img_url:
+        description: Превью картинка для категории
+        type: string
+      name:
+        description: Название категории
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse:
+    description: Стандартная структура для возврата ошибок
+    properties:
+      details:
+        description: Дополнительные детали ошибки
+        type: string
+      error:
+        description: Наименование ошибки
+        type: string
+    type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse:
+    description: Информация о видео, включая URL, описание и категорию
+    properties:
+      category:
+        description: Название категории
+        type: string
+      description:
+        description: Описание видео
+        type: string
+      id:
+        description: ID из БД
+        type: integer
+      img_url:
+        description: Превью картинка для видео
+        type: string
+      name:
+        description: Название видео
+        type: string
+      url:
+        description: URL адрес до файла
+        type: string
+    type: object
+host: body.7375.org
 info:
   contact:
     email: info@7375.org
     name: Sergei
-  description: API для управления видео-контентом BodyBalance.
+  description: API для управления административной частью BodyBalance.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  title: BodyBalance API
+  title: BodyBalance Admin API
   version: "1.0"
-paths: {}
+paths:
+  /admin/category:
+    get:
+      description: Возвращает список всех категорий в системе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить все категории
+      tags:
+      - Admin Categories
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новую категорию в систему
+      parameters:
+      - description: Данные категории
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Категория успешно создана
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Создать новую категорию
+      tags:
+      - Admin Categories
+  /admin/category/{id}:
+    delete:
+      description: Удаляет категорию из системы
+      parameters:
+      - description: ID категории
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Категория успешно удалена
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Удалить категорию
+      tags:
+      - Admin Categories
+    get:
+      description: Возвращает информацию о категории по её идентификатору
+      parameters:
+      - description: ID категории
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить категорию по ID
+      tags:
+      - Admin Categories
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о существующей категории
+      parameters:
+      - description: ID категории
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные категории
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Категория успешно обновлена
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Обновить категорию
+      tags:
+      - Admin Categories
+  /admin/files/img:
+    get:
+      description: Возвращает список всех изображений на сервере
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить список изображений
+      tags:
+      - Admin Files
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает изображение на сервер (макс. 20MB)
+      parameters:
+      - description: Изображение для загрузки
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Изображение успешно загружено
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Загрузить изображение
+      tags:
+      - Admin Files
+  /admin/files/video:
+    get:
+      description: Возвращает список всех видеофайлов на сервере
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить список видеофайлов
+      tags:
+      - Admin Files
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает видеофайл на сервер (макс. 500MB)
+      parameters:
+      - description: Видеофайл для загрузки
+        in: formData
+        name: video
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Файл успешно загружен
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Загрузить видеофайл
+      tags:
+      - Admin Files
+  /admin/logout:
+    post:
+      description: Завершает сеанс администратора, удаляя токен аутентификации
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse'
+      summary: Выход из системы
+      tags:
+      - Auth
+  /admin/signin:
+    post:
+      consumes:
+      - application/json
+      description: Вход в систему с логином и паролем администратора
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      summary: Аутентификация администратора
+      tags:
+      - Auth
+  /admin/type:
+    get:
+      description: Возвращает список всех типов контента в системе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить все типы
+      tags:
+      - Admin Types
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новый тип контента в систему
+      parameters:
+      - description: Данные типа
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Тип успешно создан
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Создать новый тип
+      tags:
+      - Admin Types
+  /admin/type/{id}:
+    delete:
+      description: Удаляет тип контента из системы
+      parameters:
+      - description: ID типа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Тип успешно удален
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Удалить тип
+      tags:
+      - Admin Types
+    get:
+      description: Возвращает информацию о типе контента по его идентификатору
+      parameters:
+      - description: ID типа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить тип по ID
+      tags:
+      - Admin Types
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о существующем типе контента
+      parameters:
+      - description: ID типа
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные типа
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Тип успешно обновлен
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Обновить тип
+      tags:
+      - Admin Types
+  /admin/users:
+    get:
+      description: Возвращает список всех пользователей в системе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить всех пользователей
+      tags:
+      - Admin Users
+    post:
+      consumes:
+      - application/json
+      description: Добавляет нового пользователя в систему
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            properties:
+              admin:
+                type: boolean
+              content_type:
+                type: string
+              content_type_id:
+                type: string
+              date_created:
+                type: string
+              id:
+                type: string
+              message:
+                type: string
+              username:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "409":
+          description: Пользователь уже существует
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Создать нового пользователя
+      tags:
+      - Admin Users
+  /admin/users/{id}:
+    delete:
+      description: Удаляет пользователя из системы
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Удалить пользователя
+      tags:
+      - Admin Users
+    get:
+      description: Возвращает информацию о пользователе по его идентификатору
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить пользователя по ID
+      tags:
+      - Admin Users
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о существующем пользователе
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные пользователя
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно обновлен
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Обновить пользователя
+      tags:
+      - Admin Users
+  /admin/video:
+    get:
+      description: Возвращает список всех видео в системе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить список всех видео
+      tags:
+      - Admin Videos
+    post:
+      consumes:
+      - application/json
+      description: Создает новую запись видео в системе
+      parameters:
+      - description: Данные видео
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Видео успешно добавлено
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Добавить новое видео
+      tags:
+      - Admin Videos
+  /admin/video/{id}:
+    delete:
+      description: Помечает видео как удаленное в системе
+      parameters:
+      - description: ID видео
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Видео успешно удалено
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Удалить видео
+      tags:
+      - Admin Videos
+    get:
+      description: Возвращает информацию о конкретном видео
+      parameters:
+      - description: ID видео
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Получить видео по ID
+      tags:
+      - Admin Videos
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о существующем видео
+      parameters:
+      - description: ID видео
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные видео
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Видео успешно обновлено
+          schema:
+            properties:
+              id:
+                type: integer
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Обновить данные видео
+      tags:
+      - Admin Videos
+  /category:
+    get:
+      description: Returns all categories for specified type, ordered by name
+      parameters:
+      - description: Type ID
+        in: query
+        name: type
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+      summary: Get categories by type
+      tags:
+      - API v1
+  /img/{filename}:
+    get:
+      consumes:
+      - application/json
+      description: Send img file by filename
+      parameters:
+      - description: Video filename (e.g. 'shee_video.jpg')
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Serve img file
+      tags:
+      - Files
+  /login:
+    get:
+      description: Checks if account with specified username exists and returns type
+        info
+      parameters:
+      - description: Username to check
+        in: query
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+      summary: Check account existence
+      tags:
+      - API v1
+  /video:
+    get:
+      description: Returns video details by its ID
+      parameters:
+      - description: Video ID
+        in: query
+        name: video_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+      summary: Get video by ID
+      tags:
+      - API v1
+  /video/{filename}:
+    get:
+      consumes:
+      - application/json
+      description: Streams video file by filename
+      parameters:
+      - description: Video filename (e.g. 'Sheya_baza.mp4')
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "304":
+          description: Not Modified
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Serve video file
+      tags:
+      - Files
+  /video_categories:
+    get:
+      description: Returns videos filtered by type and category, ordered by name
+      parameters:
+      - description: Type ID
+        in: query
+        name: type
+        required: true
+        type: integer
+      - description: Category ID
+        in: query
+        name: category
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+      summary: Get videos by category and type
+      tags:
+      - API v1
+schemes:
+- https
+securityDefinitions:
+  AdminAuth:
+    in: cookie
+    name: token
+    type: apiKey
 swagger: "2.0"

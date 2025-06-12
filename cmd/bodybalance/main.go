@@ -1,4 +1,4 @@
-//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --output ../../docs --parseDependency --parseInternal
+//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --output ../../docs --parseDepth 3 --parseDependency --parseInternal
 package main
 
 import (
@@ -19,6 +19,8 @@ import (
 	"syscall"
 
 	_ "github.com/langowen/bodybalance-backend/docs"
+	_ "github.com/langowen/bodybalance-backend/internal/http-server/admin"
+	_ "github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
 )
 
 // Безопасность
@@ -28,17 +30,38 @@ var (
 	GitCommit = "unknown"
 )
 
+// BodyBalance API
 // @title BodyBalance API
 // @version 1.0
 // @description API для управления видео-контентом BodyBalance.
-// @host https://body.7375.org
-// @BasePath /api/v1
-
+// @host body.7375.org
+// @BasePath /v1
+// @schemes https
+//
 // @contact.name Sergei
 // @contact.email info@7375.org
-
+//
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// BodyBalance Admin API
+// @title BodyBalance Admin API
+// @version 1.0
+// @description API для управления административной частью BodyBalance.
+// @host body.7375.org
+// @BasePath /admin
+// @schemes https
+//
+// @contact.name Sergei
+// @contact.email info@7375.org
+//
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+//
+// @securityDefinitions.apikey AdminAuth
+// @in cookie
+// @name token
+
 func main() {
 	// Инициализируем конфиг
 	cfg := config.MustGetConfig()

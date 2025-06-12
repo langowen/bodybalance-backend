@@ -1,3 +1,17 @@
+// Package admin содержит обработчики административного API
+// @title BodyBalance Admin API
+// @version 1.0
+// @description API для управления административной частью BodyBalance.
+// @contact.name Sergei
+// @contact.email info@7375.org
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host body.7375.org
+// @BasePath /admin
+// @schemes https
+// @securityDefinitions.apikey AdminAuth
+// @in cookie
+// @name token
 package admin
 
 import (
@@ -26,15 +40,6 @@ func New(app *app.App) *Handler {
 	}
 }
 
-// @title Admin API
-// @version 1.0
-// @description API для административной панели BodyBalance
-// @securityDefinitions.apikey AdminAuth
-// @in cookie
-// @name token
-// @description JWT токен аутентификации администратора (доступен после /admin/signin)
-
-// @BasePath /admin
 func (h *Handler) Router(r ...chi.Router) chi.Router {
 	var router chi.Router
 	if len(r) > 0 {

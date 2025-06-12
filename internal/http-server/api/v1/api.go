@@ -1,3 +1,14 @@
+// Package v1 содержит обработчики API версии 1
+// @title BodyBalance API
+// @version 1.0
+// @description API для управления видео-контентом BodyBalance.
+// @contact.name Sergei
+// @contact.email info@7375.org
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host body.7375.org
+// @BasePath /v1
+// @schemes https
 package v1
 
 import (

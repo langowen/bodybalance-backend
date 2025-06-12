@@ -55,7 +55,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 
 		// 5. Обработка CORS
 		if h.cfg.Env == "prod" && r.Header.Get("Origin") != "" {
-			// Для одного домена с разными поддоменами (например web, api и т.д.)
+
 			requestOrigin := r.Header.Get("Origin")
 
 			baseURLDomain := ""
@@ -68,7 +68,6 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 				}
 			}
 
-			// Пропускаем запросы с того же домена или из доверенного домена из конфига
 			if r.Host == requestOrigin || (baseURLDomain != "" && strings.Contains(requestOrigin, baseURLDomain)) {
 				// Устанавливаем CORS заголовки для того же домена
 				w.Header().Set("Access-Control-Allow-Origin", requestOrigin)

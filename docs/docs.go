@@ -21,17 +21,2001 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/admin/category": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех категорий в системе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Categories"
+                ],
+                "summary": "Получить все категории",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Добавляет новую категорию в систему",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Categories"
+                ],
+                "summary": "Создать новую категорию",
+                "parameters": [
+                    {
+                        "description": "Данные категории",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Категория успешно создана",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/category/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о категории по её идентификатору",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Categories"
+                ],
+                "summary": "Получить категорию по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID категории",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о существующей категории",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Categories"
+                ],
+                "summary": "Обновить категорию",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID категории",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные категории",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Категория успешно обновлена",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Удаляет категорию из системы",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Categories"
+                ],
+                "summary": "Удалить категорию",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID категории",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Категория успешно удалена",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/files/img": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех изображений на сервере",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Files"
+                ],
+                "summary": "Получить список изображений",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Загружает изображение на сервер (макс. 20MB)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Files"
+                ],
+                "summary": "Загрузить изображение",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Изображение для загрузки",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Изображение успешно загружено",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/files/video": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех видеофайлов на сервере",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Files"
+                ],
+                "summary": "Получить список видеофайлов",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Загружает видеофайл на сервер (макс. 500MB)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Files"
+                ],
+                "summary": "Загрузить видеофайл",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Видеофайл для загрузки",
+                        "name": "video",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Файл успешно загружен",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/logout": {
+            "post": {
+                "description": "Завершает сеанс администратора, удаляя токен аутентификации",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Выход из системы",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/signin": {
+            "post": {
+                "description": "Вход в систему с логином и паролем администратора",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Аутентификация администратора",
+                "parameters": [
+                    {
+                        "description": "Данные для входа",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/type": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех типов контента в системе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Types"
+                ],
+                "summary": "Получить все типы",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Добавляет новый тип контента в систему",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Types"
+                ],
+                "summary": "Создать новый тип",
+                "parameters": [
+                    {
+                        "description": "Данные типа",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Тип успешно создан",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/type/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о типе контента по его идентификатору",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Types"
+                ],
+                "summary": "Получить тип по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID типа",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о существующем типе контента",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Types"
+                ],
+                "summary": "Обновить тип",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID типа",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные типа",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Тип успешно обновлен",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Удаляет тип контента из системы",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Types"
+                ],
+                "summary": "Удалить тип",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID типа",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Тип успешно удален",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех пользователей в системе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Получить всех пользователей",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Добавляет нового пользователя в систему",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Создать нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные пользователя",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Пользователь успешно создан",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "admin": {
+                                    "type": "boolean"
+                                },
+                                "content_type": {
+                                    "type": "string"
+                                },
+                                "content_type_id": {
+                                    "type": "string"
+                                },
+                                "date_created": {
+                                    "type": "string"
+                                },
+                                "id": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                },
+                                "username": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Пользователь уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о пользователе по его идентификатору",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Получить пользователя по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о существующем пользователе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Обновить пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные пользователя",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пользователь успешно обновлен",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Удаляет пользователя из системы",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Удалить пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пользователь успешно удален",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/video": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех видео в системе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Videos"
+                ],
+                "summary": "Получить список всех видео",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Создает новую запись видео в системе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Videos"
+                ],
+                "summary": "Добавить новое видео",
+                "parameters": [
+                    {
+                        "description": "Данные видео",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Видео успешно добавлено",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/video/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о конкретном видео",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Videos"
+                ],
+                "summary": "Получить видео по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID видео",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о существующем видео",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Videos"
+                ],
+                "summary": "Обновить данные видео",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID видео",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные видео",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Видео успешно обновлено",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Помечает видео как удаленное в системе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Videos"
+                ],
+                "summary": "Удалить видео",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID видео",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Видео успешно удалено",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/category": {
+            "get": {
+                "description": "Returns all categories for specified type, ordered by name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API v1"
+                ],
+                "summary": "Get categories by type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Type ID",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/img/{filename}": {
+            "get": {
+                "description": "Send img file by filename",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Serve img file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video filename (e.g. 'shee_video.jpg')",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
+            "get": {
+                "description": "Checks if account with specified username exists and returns type info",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API v1"
+                ],
+                "summary": "Check account existence",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to check",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/video": {
+            "get": {
+                "description": "Returns video details by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API v1"
+                ],
+                "summary": "Get video by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/video/{filename}": {
+            "get": {
+                "description": "Streams video file by filename",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Serve video file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video filename (e.g. 'Sheya_baza.mp4')",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/video_categories": {
+            "get": {
+                "description": "Returns videos filtered by type and category, ordered by name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API v1"
+                ],
+                "summary": "Get videos by category and type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Type ID",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Category ID",
+                        "name": "category",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest": {
+            "type": "object",
+            "properties": {
+                "img_url": {
+                    "description": "URL изображения категории; example: https://example.com/category.jpg",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название категории; required: true; example: Утренние практики",
+                    "type": "string"
+                },
+                "type_ids": {
+                    "description": "Список ID типов; required: true; example: [1, 2]",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse": {
+            "type": "object",
+            "properties": {
+                "date_created": {
+                    "description": "Дата создания; example: 02.01.2006",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID категории; example: 1",
+                    "type": "integer"
+                },
+                "img_url": {
+                    "description": "URL изображения категории; example: https://example.com/category.jpg",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название категории; example: Утренние практики",
+                    "type": "string"
+                },
+                "types": {
+                    "description": "Список типов категории",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                    }
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "Детали ошибки (опционально); example: Login field is required",
+                    "type": "string"
+                },
+                "error": {
+                    "description": "Текст ошибки; example: Invalid request",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo": {
+            "type": "object",
+            "properties": {
+                "mod_time": {
+                    "description": "Время последнего изменения; example: 2023-01-01T12:00:00Z",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Имя файла; example: video.mp4",
+                    "type": "string"
+                },
+                "size": {
+                    "description": "Размер файла в байтах; example: 1024000",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest": {
+            "type": "object",
+            "properties": {
+                "login": {
+                    "description": "Логин администратора; required: true; example: admin",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Пароль администратора; required: true; example: hash(password123)",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Сообщение об ошибке; example: Invalid credentials",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "Сообщение об успехе; example: Authentication successful",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Название типа; required: true; example: Йога",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Дата создания; example: 02.01.2006",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID типа; example: 1",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "Название типа; example: Йога",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "description": "Флаг администратора; example: true",
+                    "type": "boolean"
+                },
+                "content_type_id": {
+                    "description": "ID типа контента; example: 1",
+                    "type": "integer"
+                },
+                "password": {
+                    "description": "Пароль пользователя; required: true; example: hash(password123)",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Имя пользователя; required: true; example: admin",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "description": "Флаг администратора; example: true",
+                    "type": "boolean"
+                },
+                "content_type_id": {
+                    "description": "ID типа контента; example: 1",
+                    "type": "integer"
+                },
+                "content_type_name": {
+                    "description": "Название типа контента; example: Йога",
+                    "type": "string"
+                },
+                "date_created": {
+                    "description": "Дата создания; example: 02.01.2006",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID пользователя; example: 1",
+                    "type": "integer"
+                },
+                "username": {
+                    "description": "Имя пользователя; example: admin",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest": {
+            "type": "object",
+            "properties": {
+                "category_ids": {
+                    "description": "Список ID категорий; example: [1, 2, 3]",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "description": {
+                    "description": "Описание видео; example: 30-минутный комплекс утренних упражнений",
+                    "type": "string"
+                },
+                "img_url": {
+                    "description": "URL превью изображения; example: https://example.com/preview.jpg",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название видео; required: true; example: Утренняя йога",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "URL видеофайла; required: true; example: https://example.com/video.mp4",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "description": "Список категорий видео",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                    }
+                },
+                "created_at": {
+                    "description": "Дата создания; example: 02.01.2006",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Описание видео; example: 30-минутный комплекс утренних упражнений",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID видео; example: 1",
+                    "type": "integer"
+                },
+                "img_url": {
+                    "description": "URL превью изображения; example: https://example.com/preview.jpg",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название видео; example: Утренняя йога",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "URL видеофайла; example: https://example.com/video.mp4",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse": {
+            "description": "Информация о типе аккаунта пользователя",
+            "type": "object",
+            "properties": {
+                "type_id": {
+                    "description": "ID type из БД",
+                    "type": "integer"
+                },
+                "type_name": {
+                    "description": "Название type",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse": {
+            "description": "Информация о категории контента",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "ID из БД",
+                    "type": "integer"
+                },
+                "img_url": {
+                    "description": "Превью картинка для категории",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название категории",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse": {
+            "description": "Стандартная структура для возврата ошибок",
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "Дополнительные детали ошибки",
+                    "type": "string"
+                },
+                "error": {
+                    "description": "Наименование ошибки",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse": {
+            "description": "Информация о видео, включая URL, описание и категорию",
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "Название категории",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Описание видео",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID из БД",
+                    "type": "integer"
+                },
+                "img_url": {
+                    "description": "Превью картинка для видео",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название видео",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "URL адрес до файла",
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "AdminAuth": {
+            "type": "apiKey",
+            "name": "token",
+            "in": "cookie"
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "https://body.7375.org",
-	BasePath:         "/api/v1",
-	Schemes:          []string{},
-	Title:            "BodyBalance API",
-	Description:      "API для управления видео-контентом BodyBalance.",
+	Host:             "body.7375.org",
+	BasePath:         "/admin",
+	Schemes:          []string{"https"},
+	Title:            "BodyBalance Admin API",
+	Description:      "API для управления административной частью BodyBalance.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
