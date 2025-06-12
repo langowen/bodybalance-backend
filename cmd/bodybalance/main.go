@@ -21,6 +21,7 @@ import (
 	_ "github.com/langowen/bodybalance-backend/docs"
 )
 
+// Безопасность
 // Информация о сборке
 var (
 	Version   = "unknown"
@@ -30,7 +31,7 @@ var (
 // @title BodyBalance API
 // @version 1.0
 // @description API для управления видео-контентом BodyBalance.
-// @host https://api.7375.org
+// @host https://body.7375.org
 // @BasePath /api/v1
 
 // @contact.name Sergei

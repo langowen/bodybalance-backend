@@ -106,11 +106,11 @@ func (h *Handler) SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 
 		csp := "default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; " +
-			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-			"img-src 'self' data:; " +
-			"font-src 'self' https://cdn.jsdelivr.net; " +
-			"connect-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; " +
+			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+			"img-src 'self' data: https://*; " +
+			"font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; " +
+			"connect-src 'self' https://*; " +
 			"object-src 'none'; " +
 			"base-uri 'self'; " +
 			"frame-ancestors 'none'"

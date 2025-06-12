@@ -13,7 +13,7 @@
         },
         "version": "1.0"
     },
-    "host": "https://api.7375.org",
+    "host": "https://body.7375.org",
     "basePath": "/api/v1",
     "paths": {}
 }

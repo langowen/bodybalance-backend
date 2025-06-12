@@ -1,5 +1,5 @@
 basePath: /api/v1
-host: https://api.7375.org
+host: https://body.7375.org
 info:
   contact:
     email: info@7375.org
