@@ -381,21 +381,20 @@ func TestGetVideoCategories(t *testing.T) {
 		// Проверка результатов
 		require.NoError(t, err)
 		require.NotNil(t, categories)
-		catTest := *categories
-		assert.Len(t, catTest, 2)
-		assert.Equal(t, int64(1), catTest[0].ID)
-		assert.Equal(t, "Category 1", catTest[0].Name)
-		assert.Equal(t, int64(2), catTest[1].ID)
-		assert.Equal(t, "Category 2", catTest[1].Name)
+		assert.Len(t, categories, 2)
+		assert.Equal(t, int64(1), categories[0].ID)
+		assert.Equal(t, "Category 1", categories[0].Name)
+		assert.Equal(t, int64(2), categories[1].ID)
+		assert.Equal(t, "Category 2", categories[1].Name)
 
 		// Проверка, что у категорий есть типы контента
-		assert.Len(t, catTest[0].Types, 2)
-		assert.Equal(t, int64(1), catTest[0].Types[0].ID)
-		assert.Equal(t, "Type 1", catTest[0].Types[0].Name)
+		assert.Len(t, categories[0].Types, 2)
+		assert.Equal(t, int64(1), categories[0].Types[0].ID)
+		assert.Equal(t, "Type 1", categories[0].Types[0].Name)
 
-		assert.Len(t, catTest[1].Types, 2)
-		assert.Equal(t, int64(3), catTest[1].Types[0].ID)
-		assert.Equal(t, "Type 3", catTest[1].Types[0].Name)
+		assert.Len(t, categories[1].Types, 2)
+		assert.Equal(t, int64(3), categories[1].Types[0].ID)
+		assert.Equal(t, "Type 3", categories[1].Types[0].Name)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -505,24 +504,23 @@ func TestGetVideos(t *testing.T) {
 		// Проверка результатов
 		require.NoError(t, err)
 		require.NotNil(t, videos)
-		videoTest := *videos
-		assert.Len(t, videoTest, 2)
+		assert.Len(t, videos, 2)
 
 		// Первое видео
-		assert.Equal(t, int64(1), videoTest[0].ID)
-		assert.Equal(t, "https://example.com/video1.mp4", videoTest[0].URL)
-		assert.Equal(t, "Video 1", videoTest[0].Name)
-		assert.Equal(t, "Description 1", videoTest[0].Description)
-		assert.Equal(t, "https://example.com/image1.jpg", videoTest[0].ImgURL)
-		assert.Equal(t, createdAt1.Format("02.01.2006"), videoTest[0].DateCreated)
+		assert.Equal(t, int64(1), videos[0].ID)
+		assert.Equal(t, "https://example.com/video1.mp4", videos[0].URL)
+		assert.Equal(t, "Video 1", videos[0].Name)
+		assert.Equal(t, "Description 1", videos[0].Description)
+		assert.Equal(t, "https://example.com/image1.jpg", videos[0].ImgURL)
+		assert.Equal(t, createdAt1.Format("02.01.2006"), videos[0].DateCreated)
 
 		// Второе видео
-		assert.Equal(t, int64(2), videoTest[1].ID)
-		assert.Equal(t, "https://example.com/video2.mp4", videoTest[1].URL)
-		assert.Equal(t, "Video 2", videoTest[1].Name)
-		assert.Equal(t, "Description 2", videoTest[1].Description)
-		assert.Equal(t, "https://example.com/image2.jpg", videoTest[1].ImgURL)
-		assert.Equal(t, createdAt2.Format("02.01.2006"), videoTest[1].DateCreated)
+		assert.Equal(t, int64(2), videos[1].ID)
+		assert.Equal(t, "https://example.com/video2.mp4", videos[1].URL)
+		assert.Equal(t, "Video 2", videos[1].Name)
+		assert.Equal(t, "Description 2", videos[1].Description)
+		assert.Equal(t, "https://example.com/image2.jpg", videos[1].ImgURL)
+		assert.Equal(t, createdAt2.Format("02.01.2006"), videos[1].DateCreated)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

@@ -23,8 +23,6 @@ import (
 	_ "github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
 )
 
-// Безопасность
-// Информация о сборке
 var (
 	Version   = "unknown"
 	GitCommit = "unknown"

@@ -99,7 +99,7 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (*admResponse.VideoRes
 }
 
 // GetVideoCategories возвращает категории видео
-func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) (*[]admResponse.CategoryResponse, error) {
+func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.GetVideoCategories"
 
 	query := `
@@ -161,11 +161,11 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) (*[]adm
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &categories, nil
+	return categories, nil
 }
 
 // GetVideos возвращает все не удаленные видео
-func (s *Storage) GetVideos(ctx context.Context) (*[]admResponse.VideoResponse, error) {
+func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, error) {
 	const op = "storage.postgres.GetVideos"
 
 	query := `
@@ -204,7 +204,7 @@ func (s *Storage) GetVideos(ctx context.Context) (*[]admResponse.VideoResponse, 
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &videos, nil
+	return videos, nil
 }
 
 // UpdateVideo обновляет данные видео

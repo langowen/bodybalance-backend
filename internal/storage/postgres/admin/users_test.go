@@ -236,24 +236,23 @@ func TestGetUsers(t *testing.T) {
 		// Проверка результатов
 		require.NoError(t, err)
 		require.NotNil(t, users)
-		usersTest := *users
-		assert.Len(t, usersTest, 2)
+		assert.Len(t, users, 2)
 
 		// Проверка первого пользователя
-		assert.Equal(t, int64(1), usersTest[0].ID)
-		assert.Equal(t, "user1", usersTest[0].Username)
-		assert.Equal(t, int64(1), usersTest[0].ContentTypeID)
-		assert.Equal(t, "Type1", usersTest[0].ContentType)
-		assert.Equal(t, false, usersTest[0].Admin)
-		assert.Equal(t, createdAt1.Format("02.01.2006"), usersTest[0].DateCreated)
+		assert.Equal(t, int64(1), users[0].ID)
+		assert.Equal(t, "user1", users[0].Username)
+		assert.Equal(t, int64(1), users[0].ContentTypeID)
+		assert.Equal(t, "Type1", users[0].ContentType)
+		assert.Equal(t, false, users[0].Admin)
+		assert.Equal(t, createdAt1.Format("02.01.2006"), users[0].DateCreated)
 
 		// Проверка второго пользователя
-		assert.Equal(t, int64(2), usersTest[1].ID)
-		assert.Equal(t, "user2", usersTest[1].Username)
-		assert.Equal(t, int64(2), usersTest[1].ContentTypeID)
-		assert.Equal(t, "Type2", usersTest[1].ContentType)
-		assert.Equal(t, true, usersTest[1].Admin)
-		assert.Equal(t, createdAt2.Format("02.01.2006"), usersTest[1].DateCreated)
+		assert.Equal(t, int64(2), users[1].ID)
+		assert.Equal(t, "user2", users[1].Username)
+		assert.Equal(t, int64(2), users[1].ContentTypeID)
+		assert.Equal(t, "Type2", users[1].ContentType)
+		assert.Equal(t, true, users[1].Admin)
+		assert.Equal(t, createdAt2.Format("02.01.2006"), users[1].DateCreated)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

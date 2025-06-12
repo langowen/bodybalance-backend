@@ -87,7 +87,7 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (*admResponse.UserRespo
 }
 
 // GetUsers возвращает всех пользователей
-func (s *Storage) GetUsers(ctx context.Context) (*[]admResponse.UserResponse, error) {
+func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, error) {
 	const op = "storage.postgres.GetUsers"
 
 	query := `
@@ -129,7 +129,7 @@ func (s *Storage) GetUsers(ctx context.Context) (*[]admResponse.UserResponse, er
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &users, nil
+	return users, nil
 }
 
 // UpdateUser обновляет данные пользователя

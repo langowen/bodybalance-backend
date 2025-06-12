@@ -71,7 +71,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeRespo
 }
 
 // GetTypes возвращает все типы
-func (s *Storage) GetTypes(ctx context.Context) (*[]admResponse.TypeResponse, error) {
+func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, error) {
 	const op = "storage.postgres.GetTypes"
 
 	query := `
@@ -109,7 +109,7 @@ func (s *Storage) GetTypes(ctx context.Context) (*[]admResponse.TypeResponse, er
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &types, nil
+	return types, nil
 }
 
 // UpdateType обновляет данные типа

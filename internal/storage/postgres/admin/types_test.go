@@ -192,18 +192,15 @@ func TestGetTypes(t *testing.T) {
 		// Проверка результатов
 		require.NoError(t, err)
 		require.NotNil(t, types)
+		assert.Len(t, types, 2)
 
-		// Разыменовываем указатель перед использованием len()
-		typesSlice := *types
-		assert.Len(t, typesSlice, 2)
+		assert.Equal(t, int64(1), types[0].ID)
+		assert.Equal(t, "Type 1", types[0].Name)
+		assert.Equal(t, createdAt1.Format("02.01.2006"), types[0].DateCreated)
 
-		assert.Equal(t, int64(1), typesSlice[0].ID)
-		assert.Equal(t, "Type 1", typesSlice[0].Name)
-		assert.Equal(t, createdAt1.Format("02.01.2006"), typesSlice[0].DateCreated)
-
-		assert.Equal(t, int64(2), typesSlice[1].ID)
-		assert.Equal(t, "Type 2", typesSlice[1].Name)
-		assert.Equal(t, createdAt2.Format("02.01.2006"), typesSlice[1].DateCreated)
+		assert.Equal(t, int64(2), types[1].ID)
+		assert.Equal(t, "Type 2", types[1].Name)
+		assert.Equal(t, createdAt2.Format("02.01.2006"), types[1].DateCreated)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

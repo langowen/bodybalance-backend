@@ -116,7 +116,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if categories != nil {
-		video.Categories = *categories
+		video.Categories = categories
 	} else {
 		video.Categories = []admResponse.CategoryResponse{}
 	}
@@ -148,26 +148,15 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Используем индексы для доступа к элементам, а не range с копией
-	for i := range *videos {
-		// Получаем указатель на конкретный элемент слайса
-		videoPtr := &(*videos)[i]
-
-		// Инициализируем слайс категорий, если он nil
-		if videoPtr.Categories == nil {
-			videoPtr.Categories = []admResponse.CategoryResponse{}
-		}
-
-		categories, err := h.storage.GetVideoCategories(ctx, videoPtr.ID)
+	for _, video := range videos {
+		categories, err := h.storage.GetVideoCategories(ctx, video.ID)
 		if err != nil {
-			logger.Error("failed to get video categories", sl.Err(err), "video_id", videoPtr.ID)
+			logger.Error("failed to get video categories", sl.Err(err), "video_id", video.ID)
 			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
 			return
 		}
-
-		if categories != nil {
-			// Добавляем категории напрямую к элементу в оригинальном слайсе
-			videoPtr.Categories = append(videoPtr.Categories, *categories...)
+		for _, category := range categories {
+			video.Categories = append(video.Categories, category)
 		}
 	}
 
@@ -325,10 +314,10 @@ func (h *Handler) removeVideoCache(id int64) {
 		logger.Warn("failed to get video categories for cache invalidation", sl.Err(err))
 	}
 
-	if categories != nil && len(*categories) > 0 {
-		logger.Debug("Invalidating category/type cache for video", "categories_count", len(*categories))
+	if categories != nil && len(categories) > 0 {
+		logger.Debug("Invalidating category/type cache for video", "categories_count", len(categories))
 
-		for _, category := range *categories {
+		for _, category := range categories {
 			if category.ID == 0 {
 				continue
 			}
