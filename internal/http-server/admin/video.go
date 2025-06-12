@@ -148,16 +148,19 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, video := range videos {
-		categories, err := h.storage.GetVideoCategories(ctx, video.ID)
+	for i := range videos {
+		categories, err := h.storage.GetVideoCategories(ctx, videos[i].ID)
 		if err != nil {
-			logger.Error("failed to get video categories", sl.Err(err), "video_id", video.ID)
+			logger.Error("failed to get video categories", sl.Err(err), "video_id", videos[i].ID)
 			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
 			return
 		}
-		for _, category := range categories {
-			video.Categories = append(video.Categories, category)
+
+		if videos[i].Categories == nil {
+			videos[i].Categories = make([]admResponse.CategoryResponse, 0, len(categories))
 		}
+
+		videos[i].Categories = append(videos[i].Categories, categories...)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
