@@ -107,7 +107,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
 	if h.cfg.Env == "prod" {
 		secure = true
-		httpOnly = false //user reverse proxy
+		httpOnly = false
 		sameSite = http.SameSiteStrictMode
 
 	}
@@ -116,8 +116,8 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
-		Path:     "/admin", // Должен совпадать с путем установки
-		MaxAge:   -1,       // Удалить cookie
+		Path:     "/admin",
+		MaxAge:   -1, // Удалить cookie
 		HttpOnly: httpOnly,
 		Secure:   secure,
 		SameSite: sameSite,

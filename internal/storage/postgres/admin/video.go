@@ -10,7 +10,7 @@ import (
 )
 
 // AddVideo добавляет новое видео в БД
-func (s *Storage) AddVideo(ctx context.Context, video admResponse.VideoRequest) (int64, error) {
+func (s *Storage) AddVideo(ctx context.Context, video *admResponse.VideoRequest) (int64, error) {
 	const op = "storage.postgres.AddVideo"
 
 	query := `
@@ -65,7 +65,7 @@ func (s *Storage) AddVideoCategories(ctx context.Context, videoID int64, categor
 }
 
 // GetVideo возвращает видео по ID (только не удаленные)
-func (s *Storage) GetVideo(ctx context.Context, id int64) (admResponse.VideoResponse, error) {
+func (s *Storage) GetVideo(ctx context.Context, id int64) (*admResponse.VideoResponse, error) {
 	const op = "storage.postgres.GetVideo"
 
 	query := `
@@ -88,18 +88,18 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (admResponse.VideoResp
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return admResponse.VideoResponse{}, sql.ErrNoRows
+			return nil, sql.ErrNoRows
 		}
-		return admResponse.VideoResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	video.DateCreated = createdAt.Format("02.01.2006")
 
-	return video, nil
+	return &video, nil
 }
 
 // GetVideoCategories возвращает категории видео
-func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admResponse.CategoryResponse, error) {
+func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) (*[]admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.GetVideoCategories"
 
 	query := `
@@ -121,6 +121,39 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admR
 		if err := rows.Scan(&cat.ID, &cat.Name); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
+
+		// Получаем типы контента для данной категории
+		typesQuery := `
+			SELECT ct.id, ct.name
+			FROM content_types ct
+			JOIN category_content_types cct ON ct.id = cct.content_type_id
+			WHERE cct.category_id = $1
+		`
+
+		typesRows, err := s.db.QueryContext(ctx, typesQuery, cat.ID)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to get content types for category %.0f: %w", op, cat.ID, err)
+		}
+
+		var types []admResponse.TypeResponse
+		for typesRows.Next() {
+			var t admResponse.TypeResponse
+			if err := typesRows.Scan(&t.ID, &t.Name); err != nil {
+				typesRows.Close()
+				return nil, fmt.Errorf("%s: failed to scan content type: %w", op, err)
+			}
+			types = append(types, t)
+		}
+
+		typesRows.Close()
+
+		if err := typesRows.Err(); err != nil {
+			return nil, fmt.Errorf("%s: error after scanning content types: %w", op, err)
+		}
+
+		// Устанавливаем типы для категории
+		cat.Types = types
+
 		categories = append(categories, cat)
 	}
 
@@ -128,11 +161,11 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admR
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return categories, nil
+	return &categories, nil
 }
 
 // GetVideos возвращает все не удаленные видео
-func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, error) {
+func (s *Storage) GetVideos(ctx context.Context) (*[]admResponse.VideoResponse, error) {
 	const op = "storage.postgres.GetVideos"
 
 	query := `
@@ -171,11 +204,11 @@ func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, e
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return videos, nil
+	return &videos, nil
 }
 
 // UpdateVideo обновляет данные видео
-func (s *Storage) UpdateVideo(ctx context.Context, id int64, video admResponse.VideoRequest) error {
+func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *admResponse.VideoRequest) error {
 	const op = "storage.postgres.UpdateVideo"
 
 	query := `

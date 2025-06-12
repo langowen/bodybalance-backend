@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	"github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 // @Produce  json
 // @Param filename path string true "Video filename (e.g. 'Sheya_baza.mp4')"
 // @Success 200 {file} file
+// @Failure 304 {string} string "Not Modified"
 // @Failure 403 {string} string "Forbidden"
 // @Failure 404 {string} string "Not Found"
 // @Failure 500 {string} string "Internal Server Error"
@@ -56,45 +58,39 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		}
 		defer file.Close()
 
-		// Логируем начало обработки
-		logger.Debug("start serving video",
-			"filename", filename,
-			"method", r.Method,
-			"range_header", r.Header.Get("Range"),
-			"eTag", r.Header.Get("ETag"))
-
-		// Замер времени чтения файла
-		readStart := time.Now()
-		stat, err := file.Stat()
+		// Получаем информацию о файле для метрик
+		fileInfo, err := file.Stat()
 		if err != nil {
-			logger.Error("File stat error", "filename", filename, sl.Err(err))
+			logger.Error("Failed to get file info", "filename", filename, sl.Err(err))
 			response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
-		readDuration := time.Since(readStart)
 
-		etag := fmt.Sprintf("\"%x-%x\"", stat.Size(), stat.ModTime().Unix())
+		// Если это TempResponseRecorder из нашего middleware, устанавливаем размер файла
+		// Используется только для сбора метрик
+		if tempRecorder, ok := w.(*metrics.TempResponseRecorder); ok {
+			tempRecorder.SetFileSize(fileInfo.Size())
+			return
+		}
+
+		// Генерируем ETag на основе имени файла и времени последнего изменения
+		etag := fmt.Sprintf(`"%s-%d"`, filename, fileInfo.ModTime().UnixNano())
 		w.Header().Set("ETag", etag)
 
-		if match := r.Header.Get("If-None-Match"); match == etag {
+		// Проверяем If-None-Match заголовок
+		if match := r.Header.Get("If-None-Match"); match != "" && match == etag {
 			w.WriteHeader(http.StatusNotModified)
 			return
 		}
 
-		serveStart := time.Now()
-		http.ServeContent(w, r, filename, stat.ModTime(), file)
-		serveDuration := time.Since(serveStart)
+		http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
 
-		// Логируем результаты
-		logger.Debug("video served",
+		// Логируем информацию о запросе
+		duration := time.Since(start)
+		logger.Info(fmt.Sprintf("Video served in %v", duration),
 			"filename", filename,
-			"file_size", stat.Size(),
-			"read_duration", readDuration.String(),
-			"server_duration", serveDuration.String(),
-			"total_duration", time.Since(start).String(),
-			"range_header", r.Header.Get("Range"),
-			"eTag", r.Header.Get("ETag"),
-			"status", getStatusFromResponse(w))
+			"size", fileInfo.Size(),
+			"duration", duration.Nanoseconds())
 	}
 }
 

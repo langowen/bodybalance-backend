@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	numWorkers        = 5     // Количество параллельных горутин
-	requestsPerWorker = 10000 // Сколько запросов отсылает одна горутина
+	numWorkers        = 500 // Количество параллельных горутин
+	requestsPerWorker = 100 // Сколько запросов отсылает одна горутина
 )
 
 type Request struct {
@@ -22,24 +22,25 @@ func main() {
 	var wg sync.WaitGroup
 
 	//requestList := []Request{
-	//	{"https://api.7375.org/video/Vstuplenie.mp4"},
-	//	{"https://api.7375.org/video/Koleno_baza.mp4"},
+	//	{"https://body.7375.org/video/Vstuplenie.mp4"},
+	//	{"https://body.7375.org/video/Koleno_baza.mp4"},
+	//	{"https://body.7375.org/video/IMG_3522.mov"},
 	//}
 	requestList := []Request{
-		{"https://api.7375.org/v1/video_categories?type=2&category=1"},
-		{"https://api.7375.org/v1/video_categories?type=3&category=3"},
-		{"https://api.7375.org/v1/category?type=2"},
-		{"https://api.7375.org/v1/category?type=3"},
-		{"https://api.7375.org/v1/login?username=base"},
-		{"https://api.7375.org/v1/video?video_id=3"},
-		{"https://api.7375.org/v1/video?video_id=2"},
-		{"https://api.7375.org/v1/video?video_id=3"},
-		{"https://api.7375.org/v1/video?video_id=2"},
-		{"https://api.7375.org/v1/video?video_id=1"},
+		{"https://body.7375.org/v1/video_categories?type=2&category=1"},
+		{"https://body.7375.org/v1/video_categories?type=3&category=3"},
+		{"https://body.7375.org/v1/category?type=2"},
+		{"https://body.7375.org/v1/category?type=3"},
+		{"https://body.7375.org/v1/login?username=base"},
+		{"https://body.7375.org/v1/video?video_id=3"},
+		{"https://body.7375.org/v1/video?video_id=2"},
+		{"https://body.7375.org/v1/video?video_id=3"},
+		{"https://body.7375.org/v1/video?video_id=2"},
+		{"https://body.7375.org/v1/video?video_id=1"},
 	}
 
-	flag.IntVar(&requestsPerWorker, "requests", 10000, "Количество запросов на одного воркера")
-	flag.IntVar(&numWorkers, "workers", 5, "Количество параллельных воркеров")
+	flag.IntVar(&requestsPerWorker, "requests", requestsPerWorker, "Количество запросов на одного воркера")
+	flag.IntVar(&numWorkers, "workers", numWorkers, "Количество параллельных воркеров")
 	flag.Parse()
 
 	fmt.Printf("Количество работников: %d\n", numWorkers)

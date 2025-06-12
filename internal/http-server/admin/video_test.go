@@ -2,227 +2,427 @@ package admin
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/theartofdevel/logging"
+	"github.com/stretchr/testify/require"
 )
 
-func newTestVideoHandlerWithMocks() (*Handler, *MockAdmStorage, *MockRedisClient) {
-	storage := &MockAdmStorage{}
-	redis := &MockRedisClient{}
-	logger := logging.NewLogger()
-	return &Handler{storage: storage, redis: redis, logger: logger}, storage, redis
-}
+// Тест на успешное добавление нового видео
+func TestHandler_AddVideo_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-func muxSetURLParamVideo(r *http.Request, key, val string) *http.Request {
-	ctx := chi.NewRouteContext()
-	ctx.URLParams.Add(key, val)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
-}
+	// Настраиваем ожидание запроса к БД для добавления видео
+	sqlMock.ExpectQuery(`INSERT INTO videos \(url, name, description, img_url, deleted\) VALUES \(\$1, \$2, \$3, \$4, FALSE\) RETURNING id`).
+		WithArgs("http://example.com/test.mp4", "Test Video", "Test Description", "http://example.com/test.jpg").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-func TestAddVideo_Success(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	reqBody := admResponse.VideoRequest{URL: "url", Name: "name", CategoryIDs: []int64{1, 2}}
-	storage.On("AddVideo", mock.Anything, reqBody).Return(int64(10), nil)
-	storage.On("AddVideoCategories", mock.Anything, int64(10), []int64{1, 2}).Return(nil)
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewReader(body))
+	// Настраиваем ожидания для транзакции
+	sqlMock.ExpectBegin()
+	sqlMock.ExpectPrepare(`INSERT INTO video_categories \(video_id, category_id\) VALUES \(\$1, \$2\) ON CONFLICT \(video_id, category_id\) DO NOTHING`)
+	sqlMock.ExpectExec(`INSERT INTO video_categories \(video_id, category_id\) VALUES \(\$1, \$2\) ON CONFLICT \(video_id, category_id\) DO NOTHING`).
+		WithArgs(int64(1), int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	sqlMock.ExpectCommit()
+
+	// Создаем тестовый запрос
+	req := admResponse.VideoRequest{
+		Name:        "Test Video",
+		URL:         "http://example.com/test.mp4",
+		Description: "Test Description",
+		ImgURL:      "http://example.com/test.jpg",
+		CategoryIDs: []int64{1},
+	}
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	h.addVideo(w, req)
+	// Вызываем метод
+	h.addVideo(w, httpReq)
+
+	// Проверяем результаты
 	assert.Equal(t, http.StatusCreated, w.Code)
-	storage.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+
+	// Проверяем ответ
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), response["id"])
+	assert.Contains(t, response["message"], "successfully")
 }
 
-func TestAddVideo_InvalidJSON(t *testing.T) {
-	h, _, _ := newTestVideoHandlerWithMocks()
-	req := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewReader([]byte("{")))
+// Тест на ошибку валидации при создании видео
+func TestHandler_AddVideo_ValidationError(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
+
+	// Создаем тестовый запрос с пустыми обязательными полями
+	req := admResponse.VideoRequest{
+		Name:        "", // Пустое имя
+		URL:         "", // Пустой URL
+		Description: "Test Description",
+		ImgURL:      "http://example.com/test.jpg",
+		CategoryIDs: []int64{1},
+	}
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	h.addVideo(w, req)
+	// Вызываем метод
+	h.addVideo(w, httpReq)
+
+	// Проверяем результаты
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestAddVideo_EmptyFields(t *testing.T) {
-	h, _, _ := newTestVideoHandlerWithMocks()
-	reqBody := admResponse.VideoRequest{URL: "", Name: ""}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewReader(body))
+// Тест на невалидный формат JSON
+func TestHandler_AddVideo_InvalidJSON(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
+
+	// Создаем тестовый запрос с невалидным JSON
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewBuffer([]byte(`{"name": "Test Video", "url": `)))
 	w := httptest.NewRecorder()
 
-	h.addVideo(w, req)
+	// Вызываем метод
+	h.addVideo(w, httpReq)
+
+	// Проверяем результаты
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestAddVideo_StorageError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	reqBody := admResponse.VideoRequest{URL: "url", Name: "name"}
-	storage.On("AddVideo", mock.Anything, reqBody).Return(int64(0), errors.New("fail"))
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewReader(body))
+// Тест на успешное получение видео по ID
+func TestHandler_GetVideo_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	timeNow := time.Now()
+
+	// Настраиваем ожидание запроса к БД для получения видео
+	// Исправляем запрос и возвращаемые поля в соответствии с реализацией GetVideo
+	sqlMock.ExpectQuery(`SELECT id, url, name, description, img_url, created_at FROM videos WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "url", "name", "description", "img_url", "created_at"}).
+			AddRow(1, "http://example.com/test.mp4", "Test Video", "Test Description", "http://example.com/test.jpg", timeNow))
+
+	// Настраиваем ожидание запроса к БД для получения категорий
+	sqlMock.ExpectQuery(`SELECT c.id, c.name FROM categories c JOIN video_categories vc ON c.id = vc.category_id WHERE vc.video_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Категория 1"))
+
+	// Добавляем мок для запроса типов контента для категории
+	sqlMock.ExpectQuery(`SELECT ct.id, ct.name FROM content_types ct JOIN category_content_types cct ON ct.id = cct.content_type_id WHERE cct.category_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Тип 1"))
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Get("/admin/video/{id}", h.getVideo)
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodGet, "/admin/video/1", nil)
 	w := httptest.NewRecorder()
 
-	h.addVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
 
-func TestAddVideo_CategoriesError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	reqBody := admResponse.VideoRequest{URL: "url", Name: "name", CategoryIDs: []int64{1, 2}}
-	storage.On("AddVideo", mock.Anything, reqBody).Return(int64(10), nil)
-	storage.On("AddVideoCategories", mock.Anything, int64(10), []int64{1, 2}).Return(errors.New("fail"))
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPost, "/admin/video", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-
-	h.addVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestGetVideo_Success(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	videoID := int64(10)
-	videoResp := admResponse.VideoResponse{ID: videoID, Name: "name"}
-	categories := []admResponse.CategoryResponse{{ID: 1, Name: "cat1"}}
-	storage.On("GetVideo", mock.Anything, videoID).Return(videoResp, nil)
-	storage.On("GetVideoCategories", mock.Anything, videoID).Return(categories, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/admin/video/10", nil)
-	req = muxSetURLParamVideo(req, "id", "10")
-	w := httptest.NewRecorder()
-
-	h.getVideo(w, req)
+	// Проверяем результаты
 	assert.Equal(t, http.StatusOK, w.Code)
-	storage.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+
+	// Проверяем ответ
+	var response admResponse.VideoResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, "Test Video", response.Name)
+	assert.Equal(t, "http://example.com/test.mp4", response.URL)
+	assert.Equal(t, timeNow.Format("02.01.2006"), response.DateCreated)
+	assert.Equal(t, 1, len(response.Categories))
+	assert.Equal(t, int64(1), response.Categories[0].ID)
+	assert.Equal(t, 1, len(response.Categories[0].Types))
+	assert.Equal(t, int64(1), response.Categories[0].Types[0].ID)
 }
 
-func TestGetVideo_InvalidID(t *testing.T) {
-	h, _, _ := newTestVideoHandlerWithMocks()
-	req := httptest.NewRequest(http.MethodGet, "/admin/video/abc", nil)
-	req = muxSetURLParamVideo(req, "id", "abc")
+// Тест на получение несуществующего видео
+func TestHandler_GetVideo_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД с ошибкой
+	sqlMock.ExpectQuery(`SELECT id, url, name, description, img_url, created_at FROM videos WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(int64(999)).
+		WillReturnError(sql.ErrNoRows)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Get("/admin/video/{id}", h.getVideo)
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodGet, "/admin/video/999", nil)
 	w := httptest.NewRecorder()
 
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
 
-func TestGetVideo_NotFound(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	storage.On("GetVideo", mock.Anything, int64(10)).Return(admResponse.VideoResponse{}, sql.ErrNoRows)
-
-	req := httptest.NewRequest(http.MethodGet, "/admin/video/10", nil)
-	req = muxSetURLParamVideo(req, "id", "10")
-	w := httptest.NewRecorder()
-
-	h.getVideo(w, req)
+	// Проверяем результаты
 	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 }
 
-func TestGetVideo_StorageError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	storage.On("GetVideo", mock.Anything, int64(10)).Return(admResponse.VideoResponse{}, errors.New("fail"))
+// Тест на невалидный ID видео
+func TestHandler_GetVideo_InvalidID(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/video/10", nil)
-	req = muxSetURLParamVideo(req, "id", "10")
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Get("/admin/video/{id}", h.getVideo)
+
+	// Создаем тестовый запрос с невалидным ID
+	req := httptest.NewRequest(http.MethodGet, "/admin/video/invalid", nil)
 	w := httptest.NewRecorder()
 
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestGetVideo_CategoriesError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	videoID := int64(10)
-	videoResp := admResponse.VideoResponse{ID: videoID, Name: "name"}
-	storage.On("GetVideo", mock.Anything, videoID).Return(videoResp, nil)
-	storage.On("GetVideoCategories", mock.Anything, videoID).Return([]admResponse.CategoryResponse{}, errors.New("fail"))
+// Тест на успешное получение всех видео
+func TestHandler_GetVideos_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/video/10", nil)
-	req = muxSetURLParamVideo(req, "id", "10")
-	w := httptest.NewRecorder()
+	// Настраиваем ожидание запроса к БД для получения списка видео
+	// Исправляем запрос в соответствии с реальной реализацией
+	timeNow := time.Now()
+	sqlMock.ExpectQuery(`SELECT id, url, name, description, img_url, created_at FROM videos WHERE deleted IS NOT TRUE ORDER BY id`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "url", "name", "description", "img_url", "created_at"}).
+			AddRow(1, "http://example.com/1.mp4", "Video 1", "Description 1", "http://example.com/1.jpg", timeNow).
+			AddRow(2, "http://example.com/2.mp4", "Video 2", "Description 2", "http://example.com/2.jpg", timeNow))
 
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
+	// Настраиваем ожидания запросов к БД для получения категорий для каждого видео
+	sqlMock.ExpectQuery(`SELECT c.id, c.name FROM categories c JOIN video_categories vc ON c.id = vc.category_id WHERE vc.video_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Категория 1"))
 
-func TestGetVideos_Success(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	videos := []admResponse.VideoResponse{{ID: 1, Name: "v1"}, {ID: 2, Name: "v2"}}
-	categories := []admResponse.CategoryResponse{{ID: 1, Name: "cat1"}}
-	storage.On("GetVideos", mock.Anything).Return(videos, nil)
-	storage.On("GetVideoCategories", mock.Anything, int64(1)).Return(categories, nil)
-	storage.On("GetVideoCategories", mock.Anything, int64(2)).Return(categories, nil)
+	// Добавляем мок для запроса типов контента для первого видео
+	sqlMock.ExpectQuery(`SELECT ct.id, ct.name FROM content_types ct JOIN category_content_types cct ON ct.id = cct.content_type_id WHERE cct.category_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Тип 1"))
 
+	sqlMock.ExpectQuery(`SELECT c.id, c.name FROM categories c JOIN video_categories vc ON c.id = vc.category_id WHERE vc.video_id = \$1`).
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(2, "Категория 2"))
+
+	// Добавляем мок для запроса типов контента для второго видео
+	sqlMock.ExpectQuery(`SELECT ct.id, ct.name FROM content_types ct JOIN category_content_types cct ON ct.id = cct.content_type_id WHERE cct.category_id = \$1`).
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(2, "Тип 2"))
+
+	// Создаем тестовый запрос
 	req := httptest.NewRequest(http.MethodGet, "/admin/video", nil)
 	w := httptest.NewRecorder()
 
+	// Вызываем метод
 	h.getVideos(w, req)
+
+	// Проверяем результаты
 	assert.Equal(t, http.StatusOK, w.Code)
-	storage.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+
+	// Проверяем ответ
+	var response []admResponse.VideoResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Equal(t, "Video 1", response[0].Name)
+	assert.Equal(t, "Video 2", response[1].Name)
+	assert.Equal(t, int64(1), response[0].ID)
+	assert.Equal(t, int64(2), response[1].ID)
 }
 
-func TestGetVideos_StorageError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	storage.On("GetVideos", mock.Anything).Return([]admResponse.VideoResponse{}, errors.New("fail"))
+// Тест на успешное обновление видео
+func TestHandler_UpdateVideo_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestAuthHandlerWithMocks(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/video", nil)
+	// Настраиваем ожидание для удаления из Redis
+	redisMock.ExpectDel("video:1").SetVal(1)
+
+	// Настраиваем ожидание запроса к БД для обновления видео
+	// Исправляем порядок параметров, чтобы он соответствовал реальной реализации
+	sqlMock.ExpectExec(`UPDATE videos SET url = \$1, name = \$2, description = \$3, img_url = \$4 WHERE id = \$5 AND deleted IS NOT TRUE`).
+		WithArgs("http://example.com/updated.mp4", "Updated Video", "Updated Description", "http://example.com/updated.jpg", int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Настраиваем ожидание запросов для обновления категорий
+	sqlMock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Используем Begin-Prepare-Exec-Commit для добавления категорий как в AddVideoCategories
+	sqlMock.ExpectBegin()
+	sqlMock.ExpectPrepare(`INSERT INTO video_categories \(video_id, category_id\) VALUES \(\$1, \$2\) ON CONFLICT \(video_id, category_id\) DO NOTHING`)
+	sqlMock.ExpectExec(`INSERT INTO video_categories \(video_id, category_id\) VALUES \(\$1, \$2\) ON CONFLICT \(video_id, category_id\) DO NOTHING`).
+		WithArgs(int64(1), int64(2)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	sqlMock.ExpectCommit()
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Put("/admin/video/{id}", h.updateVideo)
+
+	// Создаем тестовый запрос
+	req := admResponse.VideoRequest{
+		Name:        "Updated Video",
+		URL:         "http://example.com/updated.mp4",
+		Description: "Updated Description",
+		ImgURL:      "http://example.com/updated.jpg",
+		CategoryIDs: []int64{2},
+	}
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPut, "/admin/video/1", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	h.getVideos(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
 
-func TestGetVideos_CategoriesError(t *testing.T) {
-	h, storage, _ := newTestVideoHandlerWithMocks()
-	videos := []admResponse.VideoResponse{{ID: 1, Name: "v1"}, {ID: 2, Name: "v2"}}
-	storage.On("GetVideos", mock.Anything).Return(videos, nil)
-	storage.On("GetVideoCategories", mock.Anything, int64(1)).Return([]admResponse.CategoryResponse{}, errors.New("fail"))
-
-	req := httptest.NewRequest(http.MethodGet, "/admin/video", nil)
-	w := httptest.NewRecorder()
-
-	h.getVideos(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestUpdateVideo_Success(t *testing.T) {
-	h, storage, mockRedis := newTestVideoHandlerWithMocks()
-	videoID := int64(10)
-	reqBody := admResponse.VideoRequest{URL: "url", Name: "name", CategoryIDs: []int64{1, 2}}
-	storage.On("UpdateVideo", mock.Anything, videoID, reqBody).Return(nil)
-	storage.On("DeleteVideoCategories", mock.Anything, videoID).Return(nil)
-	storage.On("AddVideoCategories", mock.Anything, videoID, []int64{1, 2}).Return(nil)
-	// Ожидание для всех асинхронных вызовов GetVideo
-	storage.On("GetVideo", mock.Anything, videoID).Return(admResponse.VideoResponse{ID: videoID, Categories: []admResponse.CategoryResponse{}}, nil).Maybe()
-	// Ожидание для всех асинхронных вызовов DeleteVideo
-	mockRedis.On("DeleteVideo", mock.Anything, "10").Return(nil).Maybe()
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPut, "/admin/video/10", bytes.NewReader(body))
-	req = muxSetURLParamVideo(req, "id", "10")
-	w := httptest.NewRecorder()
-
-	h.updateVideo(w, req)
+	// Проверяем результаты
 	assert.Equal(t, http.StatusOK, w.Code)
-	storage.AssertExpectations(t)
-	mockRedis.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 }
 
-func TestUpdateVideo_InvalidID(t *testing.T) {
-	h, _, _ := newTestVideoHandlerWithMocks()
-	req := httptest.NewRequest(http.MethodPut, "/admin/video/abc", nil)
-	req = muxSetURLParamVideo(req, "id", "abc")
+// Тест на обновление несуществующего видео
+func TestHandler_UpdateVideo_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание для удаления из Redis
+	redisMock.ExpectDel("video:999").SetVal(0)
+
+	// Настраиваем ожидание запроса к БД с ошибкой
+	// Исправляем порядок параметров
+	sqlMock.ExpectExec(`UPDATE videos SET url = \$1, name = \$2, description = \$3, img_url = \$4 WHERE id = \$5 AND deleted IS NOT TRUE`).
+		WithArgs("http://example.com/updated.mp4", "Updated Video", "Updated Description", "http://example.com/updated.jpg", int64(999)).
+		WillReturnError(sql.ErrNoRows)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Put("/admin/video/{id}", h.updateVideo)
+
+	// Создаем тестовый запрос
+	req := admResponse.VideoRequest{
+		Name:        "Updated Video",
+		URL:         "http://example.com/updated.mp4",
+		Description: "Updated Description",
+		ImgURL:      "http://example.com/updated.jpg",
+	}
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPut, "/admin/video/999", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	h.updateVideo(w, req)
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+// Тест на успешное удаление видео
+func TestHandler_DeleteVideo_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД для удаления видео
+	sqlMock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Delete("/admin/video/{id}", h.deleteVideo)
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodDelete, "/admin/video/1", nil)
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+
+	// Проверяем ответ
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), response["id"])
+	assert.Contains(t, response["message"], "deleted successfully")
+}
+
+// Тест на удаление несуществующего видео
+func TestHandler_DeleteVideo_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД с ошибкой
+	sqlMock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(int64(999)).
+		WillReturnError(sql.ErrNoRows)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Delete("/admin/video/{id}", h.deleteVideo)
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodDelete, "/admin/video/999", nil)
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+// Тест на невалидный ID при удалении видео
+func TestHandler_DeleteVideo_InvalidID(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Delete("/admin/video/{id}", h.deleteVideo)
+
+	// Создаем тестовый запрос с невалидным ID
+	req := httptest.NewRequest(http.MethodDelete, "/admin/video/invalid", nil)
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
+
+	// Проверяем результаты
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

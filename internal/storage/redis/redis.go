@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/redis/go-redis/v9"
-	"github.com/theartofdevel/logging"
 	"time"
 )
 
@@ -42,45 +40,20 @@ func New(cfg *config.Config) (*Storage, error) {
 	return storage, nil
 }
 
-// GetCategoriesWithFallback пытается получить категории из кэша, а если их нет - вызывает fallback функцию
-func (s *Storage) GetCategoriesWithFallback(
-	ctx context.Context,
-	contentType string,
-	ttl time.Duration,
-	fallback func() ([]response.CategoryResponse, error),
-) ([]response.CategoryResponse, error) {
-	const op = "storage.redis.GetCategoriesWithFallback"
-
-	// Пытаемся получить из кэша
-	categories, err := s.GetCategories(ctx, contentType)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+// NewStorage создает новый экземпляр хранилища Redis с предоставленным клиентом Redis
+// Используется для тестирования с помощью redismock.ClientMock
+func NewStorage(client redis.UniversalClient) *Storage {
+	return &Storage{
+		redis: client.(*redis.Client),
+		cfg:   &config.Config{}, // Пустой конфиг для тестирования
 	}
-
-	// Если нашли в кэше - возвращаем
-	if categories != nil {
-		return categories, nil
-	}
-
-	// Если нет в кэше - вызываем fallback функцию
-	categories, err = fallback()
-	if err != nil {
-		return nil, fmt.Errorf("%s: fallback failed: %w", op, err)
-	}
-
-	// Сохраняем результат в кэш
-	if err := s.SetCategories(ctx, contentType, categories, ttl); err != nil {
-		logging.L(ctx).Error("Failed to set fallback categories", sl.Err(err))
-	}
-
-	return categories, nil
 }
 
 // GetCategories получает категории из кэша Redis
-func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context, typeID int64) (*[]response.CategoryResponse, error) {
 	const op = "storage.redis.GetCategories"
 
-	cacheKey := fmt.Sprintf("categories:%s", contentType)
+	cacheKey := fmt.Sprintf("categories:%d", typeID)
 
 	// Пытаемся получить данные из Redis
 	data, err := s.redis.Get(ctx, cacheKey).Bytes()
@@ -98,14 +71,14 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
 		return nil, fmt.Errorf("%s: failed to unmarshal categories: %w", op, err)
 	}
 
-	return categories, nil
+	return &categories, nil
 }
 
 // SetCategories сохраняет категории в кэш Redis
-func (s *Storage) SetCategories(ctx context.Context, contentType string, categories []response.CategoryResponse, ttl time.Duration) error {
+func (s *Storage) SetCategories(ctx context.Context, typeID int64, categories *[]response.CategoryResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetCategories"
 
-	cacheKey := fmt.Sprintf("categories:%s", contentType)
+	cacheKey := fmt.Sprintf("categories:%d", typeID)
 
 	// Сериализуем категории в JSON
 	data, err := json.Marshal(categories)
@@ -122,10 +95,10 @@ func (s *Storage) SetCategories(ctx context.Context, contentType string, categor
 }
 
 // DeleteCategories удаляет категории из кэша Redis
-func (s *Storage) DeleteCategories(ctx context.Context, contentType string) error {
+func (s *Storage) DeleteCategories(ctx context.Context, typeID int64) error {
 	const op = "storage.redis.DeleteCategories"
 
-	cacheKey := fmt.Sprintf("categories:%s", contentType)
+	cacheKey := fmt.Sprintf("categories:%d", typeID)
 
 	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
 		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
@@ -185,10 +158,10 @@ func (s *Storage) DeleteAccount(ctx context.Context, username string) error {
 }
 
 // GetVideo получает данные видео из кэша Redis
-func (s *Storage) GetVideo(ctx context.Context, videoID string) (*response.VideoResponse, error) {
+func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoResponse, error) {
 	const op = "storage.redis.GetVideo"
 
-	cacheKey := fmt.Sprintf("video:%s", videoID)
+	cacheKey := fmt.Sprintf("video:%d", videoID)
 	data, err := s.redis.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -206,10 +179,10 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (*response.Video
 }
 
 // SetVideo сохраняет данные видео в кэш Redis
-func (s *Storage) SetVideo(ctx context.Context, videoID string, video *response.VideoResponse, ttl time.Duration) error {
+func (s *Storage) SetVideo(ctx context.Context, videoID int64, video *response.VideoResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetVideo"
 
-	cacheKey := fmt.Sprintf("video:%s", videoID)
+	cacheKey := fmt.Sprintf("video:%d", videoID)
 	data, err := json.Marshal(video)
 	if err != nil {
 		return fmt.Errorf("%s: failed to marshal video: %w", op, err)
@@ -223,10 +196,10 @@ func (s *Storage) SetVideo(ctx context.Context, videoID string, video *response.
 }
 
 // DeleteVideo удаляет данные видео из кэша Redis
-func (s *Storage) DeleteVideo(ctx context.Context, videoID string) error {
+func (s *Storage) DeleteVideo(ctx context.Context, videoID int64) error {
 	const op = "storage.redis.DeleteVideo"
 
-	cacheKey := fmt.Sprintf("video:%s", videoID)
+	cacheKey := fmt.Sprintf("video:%d", videoID)
 	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
 		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
 	}
@@ -235,10 +208,10 @@ func (s *Storage) DeleteVideo(ctx context.Context, videoID string) error {
 }
 
 // GetVideosByCategoryAndType получает видео из кэша Redis
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]response.VideoResponse, error) {
+func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID int64) (*[]response.VideoResponse, error) {
 	const op = "storage.redis.GetVideosByCategoryAndType"
 
-	cacheKey := fmt.Sprintf("videos:%s:%s", contentType, category)
+	cacheKey := fmt.Sprintf("videos:type:%d:category:%d", typeID, catID)
 	data, err := s.redis.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -252,14 +225,14 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 		return nil, fmt.Errorf("%s: failed to unmarshal videos: %w", op, err)
 	}
 
-	return videos, nil
+	return &videos, nil
 }
 
 // SetVideosByCategoryAndType сохраняет видео в кэш Redis
-func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, contentType, category string, videos []response.VideoResponse, ttl time.Duration) error {
+func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos *[]response.VideoResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetVideosByCategoryAndType"
 
-	cacheKey := fmt.Sprintf("videos:%s:%s", contentType, category)
+	cacheKey := fmt.Sprintf("videos:type:%d:category:%d", typeID, catID)
 	data, err := json.Marshal(videos)
 	if err != nil {
 		return fmt.Errorf("%s: failed to marshal videos: %w", op, err)
@@ -273,10 +246,10 @@ func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, contentType, c
 }
 
 // DeleteVideosByCategoryAndType удаляет видео из кэша Redis
-func (s *Storage) DeleteVideosByCategoryAndType(ctx context.Context, contentType, category string) error {
+func (s *Storage) DeleteVideosByCategoryAndType(ctx context.Context, typeID, catID int64) error {
 	const op = "storage.redis.DeleteVideosByCategoryAndType"
 
-	cacheKey := fmt.Sprintf("videos:%s:%s", contentType, category)
+	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
 	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
 		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
 	}

@@ -46,14 +46,13 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	videoID, err := h.storage.AddVideo(ctx, req)
+	videoID, err := h.storage.AddVideo(ctx, &req)
 	if err != nil {
 		logger.Error("failed to add video", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add video")
 		return
 	}
 
-	// Добавляем связи с категориями
 	if len(req.CategoryIDs) > 0 {
 		err = h.storage.AddVideoCategories(ctx, videoID, req.CategoryIDs)
 		if err != nil {
@@ -109,7 +108,6 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем категории видео
 	categories, err := h.storage.GetVideoCategories(ctx, id)
 	if err != nil {
 		logger.Error("failed to get video categories", sl.Err(err), "video_id", id)
@@ -117,7 +115,11 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	video.Categories = categories
+	if categories != nil {
+		video.Categories = *categories
+	} else {
+		video.Categories = []admResponse.CategoryResponse{}
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, video)
 }
@@ -146,15 +148,14 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Для каждого видео получаем категории
-	for i := range videos {
-		categories, err := h.storage.GetVideoCategories(ctx, int64(videos[i].ID))
+	for _, video := range *videos {
+		categories, err := h.storage.GetVideoCategories(ctx, video.ID)
 		if err != nil {
-			logger.Error("failed to get video categories", sl.Err(err), "video_id", videos[i].ID)
+			logger.Error("failed to get video categories", sl.Err(err), "video_id", video.ID)
 			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
 			return
 		}
-		videos[i].Categories = categories
+		video.Categories = *categories
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, videos)
@@ -182,6 +183,7 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 	)
 
 	idStr := chi.URLParam(r, "id")
+
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid video ID", sl.Err(err))
@@ -189,33 +191,11 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Инвалидируем кэщ
-	go func() {
-		if err := h.redis.DeleteVideo(context.Background(), idStr); err != nil {
-			h.logger.Warn("failed to invalidate video cache", sl.Err(err))
-		}
-	}()
+	if err := h.redis.DeleteVideo(r.Context(), id); err != nil {
+		logger.Warn("failed to invalidate video cache", sl.Err(err))
+	}
 
-	go func() {
-		video, err := h.storage.GetVideo(context.Background(), id)
-		if err != nil {
-			h.logger.Warn("failed to get video for cache invalidation", sl.Err(err))
-			return
-		}
-
-		// Инвалидируем кэш для этой комбинации тип+категория
-		for _, category := range video.Categories {
-			for _, catType := range category.Types {
-				if err := h.redis.DeleteVideosByCategoryAndType(
-					context.Background(),
-					strconv.FormatFloat(catType.ID, 'f', 0, 64),
-					strconv.FormatFloat(category.ID, 'f', 0, 64),
-				); err != nil {
-					h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
-				}
-			}
-		}
-	}()
+	ctx := r.Context()
 
 	var req admResponse.VideoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -224,8 +204,7 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	err = h.storage.UpdateVideo(ctx, id, req)
+	err = h.storage.UpdateVideo(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("video not found", "video_id", id)
@@ -255,6 +234,8 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	go h.removeVideoCache(id)
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -289,35 +270,8 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Инвалидируем кэщ
-	go func() {
-		if err := h.redis.DeleteVideo(context.Background(), idStr); err != nil {
-			h.logger.Warn("failed to invalidate video cache", sl.Err(err))
-		}
-	}()
-
-	go func() {
-		video, err := h.storage.GetVideo(context.Background(), id)
-		if err != nil {
-			h.logger.Warn("failed to get video for cache invalidation", sl.Err(err))
-			return
-		}
-
-		// Инвалидируем кэш для этой комбинации тип+категория
-		for _, category := range video.Categories {
-			for _, catType := range category.Types {
-				if err := h.redis.DeleteVideosByCategoryAndType(
-					context.Background(),
-					strconv.FormatFloat(catType.ID, 'f', 0, 64),
-					strconv.FormatFloat(category.ID, 'f', 0, 64),
-				); err != nil {
-					h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
-				}
-			}
-		}
-	}()
-
 	ctx := r.Context()
+
 	err = h.storage.DeleteVideo(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -330,8 +284,69 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go h.removeVideoCache(id)
+
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Video deleted successfully",
 	})
+}
+
+func (h *Handler) removeVideoCache(id int64) {
+	const op = "admin.removeVideoCache"
+
+	logger := h.logger.With(
+		"op", op,
+		"video_id", id,
+	)
+
+	ctx := context.Background()
+
+	err := h.redis.DeleteVideo(ctx, id)
+	if err != nil {
+		logger.Warn("failed to invalidate video cache", sl.Err(err))
+	}
+
+	categories, err := h.storage.GetVideoCategories(ctx, id)
+	if err != nil {
+		logger.Warn("failed to get video categories for cache invalidation", sl.Err(err))
+	}
+
+	if categories != nil && len(*categories) > 0 {
+		logger.Debug("Invalidating category/type cache for video", "categories_count", len(*categories))
+
+		for _, category := range *categories {
+			if category.ID == 0 {
+				continue
+			}
+
+			if category.Types == nil || len(category.Types) == 0 {
+				continue
+			}
+
+			for _, catType := range category.Types {
+				if catType.ID == 0 {
+					continue
+				}
+
+				logger.Debug("Invalidating category/type cache",
+					"type_id", catType.ID,
+					"category_id", category.ID)
+
+				err := h.redis.DeleteVideosByCategoryAndType(ctx, catType.ID, category.ID)
+
+				if err != nil {
+					logger.Warn("failed to invalidate videos cache by category and type",
+						sl.Err(err),
+						"type_id", catType.ID,
+						"category_id", category.ID)
+				}
+
+				logger.Debug("Category/type cache invalidated successfully",
+					"type_id", catType.ID,
+					"category_id", category.ID)
+
+			}
+		}
+	}
 }

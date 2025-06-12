@@ -6,6 +6,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/server"
+	"github.com/langowen/bodybalance-backend/internal/lib/logger/logpretty"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
 	"github.com/langowen/bodybalance-backend/internal/storage/redis"
@@ -105,12 +106,26 @@ func main() {
 }
 
 func newLogger(cfg *config.Config) *logging.Logger {
-	logger := logging.NewLogger(
-		logging.WithLevel(cfg.LogLevel),
-		logging.WithIsJSON(true),
-		logging.WithSetDefault(true),
-		logging.WithLogFilePath("logs/body_balance.log"),
-	)
+	var logger *logging.Logger
+
+	switch cfg.Env {
+	case "local":
+		logger = setupPrettySlog()
+	case "prod", "dev", "test":
+		logger = logging.NewLogger(
+			logging.WithLevel(cfg.LogLevel),
+			logging.WithIsJSON(true),
+			logging.WithSetDefault(true),
+			logging.WithLogFilePath("logs/body_balance.log"),
+		)
+	default:
+		logger = logging.NewLogger(
+			logging.WithLevel(cfg.LogLevel),
+			logging.WithIsJSON(true),
+			logging.WithSetDefault(true),
+			logging.WithLogFilePath(""),
+		)
+	}
 
 	logger = logger.With(
 		slog.Group("program_info",
@@ -119,4 +134,16 @@ func newLogger(cfg *config.Config) *logging.Logger {
 		))
 
 	return logger
+}
+
+func setupPrettySlog() *logging.Logger {
+	opts := logpretty.PrettyHandlerOptions{
+		SlogOpts: &logging.HandlerOptions{
+			Level: logging.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyHandler(os.Stdout)
+
+	return logging.New(handler)
 }

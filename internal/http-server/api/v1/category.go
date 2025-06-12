@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
-	"time"
+	"strconv"
 )
 
 // @Summary Get categories by type
@@ -25,7 +26,6 @@ import (
 // @Router /category [get]
 func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getCategoriesByType"
-	const cacheTTL = time.Hour * 24
 
 	contentType := r.URL.Query().Get("type")
 
@@ -40,10 +40,16 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	typeID, err := strconv.ParseInt(contentType, 10, 64)
+	if err != nil {
+		logger.Error("invalid type ID", sl.Err(err))
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+		return
+	}
+
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	// Пытаемся получить данные из кэша
-	cachedCategories, err := h.redis.GetCategories(ctx, contentType)
+	cachedCategories, err := h.redis.GetCategories(ctx, typeID)
 	if err != nil {
 		logger.Warn("redis get error", sl.Err(err))
 	}
@@ -54,19 +60,18 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Данных нет в кэше - запрашиваем из основного хранилища
-	categories, err := h.storage.GetCategories(ctx, contentType)
+	categories, err := h.storage.GetCategories(ctx, typeID)
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
 		logger.Warn("content type not found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found",
-			fmt.Sprintf("Content type '%s' does not exist", contentType))
+			fmt.Sprintf("Content type '%d' does not exist", typeID))
 		return
 
 	case errors.Is(err, storage.ErrNoCategoriesFound):
 		logger.Warn("no categories found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found",
-			fmt.Sprintf("Category '%s' does not exist", contentType))
+			fmt.Sprintf("Category '%d' does not exist", typeID))
 		return
 
 	case err != nil:
@@ -75,10 +80,9 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Сохраняем данные в кэш
 	go func() {
 		ctx := context.Background()
-		if err := h.redis.SetCategories(ctx, contentType, categories, cacheTTL); err != nil {
+		if err := h.redis.SetCategories(ctx, typeID, categories, h.cfg.Redis.CacheTTL); err != nil {
 			logger.Warn("failed to set cache", sl.Err(err))
 		}
 	}()

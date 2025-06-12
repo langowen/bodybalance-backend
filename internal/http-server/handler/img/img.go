@@ -6,12 +6,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	"github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // ServeImgFile
@@ -29,7 +31,9 @@ import (
 // GET /img/{filename}
 func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.images.ServeVideoFile"
+		const op = "handlers.images.ServeImgFile"
+
+		start := time.Now()
 
 		logger = logger.With(
 			"op", op,
@@ -53,21 +57,29 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		}
 		defer file.Close()
 
-		stat, err := file.Stat()
+		// Получаем информацию о файле для метрик
+		fileInfo, err := file.Stat()
 		if err != nil {
-			logger.Error("File stat error", "filename", filename, sl.Err(err))
+			logger.Error("Failed to get file info", "filename", filename, sl.Err(err))
 			response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
 
-		etag := fmt.Sprintf("\"%x-%x\"", stat.Size(), stat.ModTime().Unix())
-		w.Header().Set("ETag", etag)
-
-		if match := r.Header.Get("If-None-Match"); match == etag {
-			w.WriteHeader(http.StatusNotModified)
+		// Если это TempResponseRecorder из нашего middleware, устанавливаем размер файла
+		// Используется только для сбора метрик
+		if tempRecorder, ok := w.(*metrics.TempResponseRecorder); ok {
+			tempRecorder.SetFileSize(fileInfo.Size())
 			return
 		}
 
-		http.ServeContent(w, r, filename, stat.ModTime(), file)
+		http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
+
+		// Логируем информацию о запросе
+		duration := time.Since(start)
+		logger.Info(fmt.Sprintf("Image served in %v", duration),
+			"filename", filename,
+			"size", fileInfo.Size(),
+			"duration", duration,
+		)
 	}
 }

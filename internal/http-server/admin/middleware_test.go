@@ -3,8 +3,8 @@ package admin
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/langowen/bodybalance-backend/internal/config"
+	"github.com/langowen/bodybalance-backend/internal/lib/logger/logdiscart"
 	"github.com/stretchr/testify/assert"
-	"github.com/theartofdevel/logging"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,7 +26,7 @@ func makeJWTToken(signingKey string, isAdmin bool, username string) string {
 
 func TestAuthMiddleware_NoCookie(t *testing.T) {
 	h := &Handler{
-		logger: logging.NewLogger(),
+		logger: logdiscart.NewDiscardLogger(),
 		cfg:    &config.Config{HTTPServer: config.HTTPServer{SigningKey: "testkey"}},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -43,7 +43,7 @@ func TestAuthMiddleware_NoCookie(t *testing.T) {
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	h := &Handler{
-		logger: logging.NewLogger(),
+		logger: logdiscart.NewDiscardLogger(),
 		cfg:    &config.Config{HTTPServer: config.HTTPServer{SigningKey: "testkey"}},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -61,7 +61,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 func TestAuthMiddleware_NotAdmin(t *testing.T) {
 	h := &Handler{
-		logger: logging.NewLogger(),
+		logger: logdiscart.NewDiscardLogger(),
 		cfg:    &config.Config{HTTPServer: config.HTTPServer{SigningKey: "testkey"}},
 	}
 	token := makeJWTToken("testkey", false, "user1")
@@ -80,7 +80,7 @@ func TestAuthMiddleware_NotAdmin(t *testing.T) {
 
 func TestAuthMiddleware_AdminOK(t *testing.T) {
 	h := &Handler{
-		logger: logging.NewLogger(),
+		logger: logdiscart.NewDiscardLogger(),
 		cfg:    &config.Config{HTTPServer: config.HTTPServer{SigningKey: "testkey"}},
 	}
 	token := makeJWTToken("testkey", true, "adminuser")

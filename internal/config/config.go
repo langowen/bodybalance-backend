@@ -58,7 +58,7 @@ type Redis struct {
 	Host     string        `yaml:"host" env:"REDIS_HOST" env-default:"redis:6379"`
 	Password string        `yaml:"password" env:"REDIS_PASSWORD" env-default:""`
 	DB       int           `yaml:"db" env:"REDIS_DB" env-default:"1"`
-	cacheTTL time.Duration `yaml:"ttl" env:"REDIS_TTL" env-default:"24h"`
+	CacheTTL time.Duration `yaml:"ttl" env:"REDIS_TTL" env-default:"24h"`
 }
 
 var (

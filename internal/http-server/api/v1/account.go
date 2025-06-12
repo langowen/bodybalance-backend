@@ -10,7 +10,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
-	"time"
 )
 
 // @Summary Check account existence
@@ -25,7 +24,6 @@ import (
 // @Router /login [get]
 func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.checkAccountType"
-	const cacheTTL = time.Hour * 24
 
 	username := r.URL.Query().Get("username")
 
@@ -43,7 +41,6 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	// Пытаемся получить данные из кэша
 	cachedAccount, err := h.redis.GetAccount(ctx, username)
 	if err != nil {
 		logger.Warn("redis get error", sl.Err(err))
@@ -55,7 +52,6 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Данных нет в кэше - запрашиваем из основного хранилища
 	account, err := h.storage.CheckAccount(ctx, username)
 	switch {
 	case errors.Is(err, storage.ErrAccountNotFound):
@@ -70,11 +66,10 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Сохраняем данные в кэш
 	go func() {
 		ctx := context.Background()
 
-		if err := h.redis.SetAccount(ctx, username, &account, cacheTTL); err != nil {
+		if err := h.redis.SetAccount(ctx, username, account, h.cfg.Redis.CacheTTL); err != nil {
 			logger.Warn("failed to set account cache", sl.Err(err))
 		}
 	}()

@@ -10,34 +10,34 @@ import (
 // VideoResponse представляет информацию о видео
 // @description Информация о видео, включая URL, описание и категорию
 type VideoResponse struct {
-	ID          float64 `json:"id"`          // ID из БД
-	URL         string  `json:"url"`         // URL адрес до файла
-	Name        string  `json:"name"`        // Название видео
-	Description string  `json:"description"` // Описание видео
-	Category    string  `json:"category"`    // Название категории
-	ImgURL      string  `json:"img_url"`     // Превью картинка для видео
+	ID          int64  `json:"id"`          // ID из БД
+	URL         string `json:"url"`         // URL адрес до файла
+	Name        string `json:"name"`        // Название видео
+	Description string `json:"description"` // Описание видео
+	Category    string `json:"category"`    // Название категории
+	ImgURL      string `json:"img_url"`     // Превью картинка для видео
 }
 
 // CategoryResponse представляет информацию о категории
 // @description Информация о категории контента
 type CategoryResponse struct {
-	ID     float64 `json:"id"`      // ID из БД
-	Name   string  `json:"name"`    // Название категории
-	ImgURL string  `json:"img_url"` // Превью картинка для категории
+	ID     int64  `json:"id"`      // ID из БД
+	Name   string `json:"name"`    // Название категории
+	ImgURL string `json:"img_url"` // Превью картинка для категории
 }
 
 // AccountResponse представляет информацию об аккаунте
 // @description Информация о типе аккаунта пользователя
 type AccountResponse struct {
-	TypeID   float64 `json:"type_id"`   // ID type из БД
-	TypeName string  `json:"type_name"` // Название type
+	TypeID   int64  `json:"type_id"`   // ID type из БД
+	TypeName string `json:"type_name"` // Название type
 }
 
 // ErrorResponse представляет стандартный ответ об ошибке
 // @description Стандартная структура для возврата ошибок
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Details string `json:"details,omitempty"`
+	Error   string `json:"error"`             // Наименование ошибки
+	Details string `json:"details,omitempty"` // Дополнительные детали ошибки
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string, details ...string) {

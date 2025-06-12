@@ -11,7 +11,7 @@ import (
 )
 
 // AddUser добавляет нового пользователя
-func (s *Storage) AddUser(ctx context.Context, req admResponse.UserRequest) (admResponse.UserResponse, error) {
+func (s *Storage) AddUser(ctx context.Context, req *admResponse.UserRequest) (*admResponse.UserResponse, error) {
 	const op = "storage.postgres.AddUser"
 
 	query := `
@@ -42,17 +42,17 @@ func (s *Storage) AddUser(ctx context.Context, req admResponse.UserRequest) (adm
 	if err != nil {
 		// Проверяем, является ли ошибка ошибкой дубликата
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return admResponse.UserResponse{}, fmt.Errorf("%s: user already exists", op)
+			return nil, fmt.Errorf("%s: user already exists", op)
 		}
-		return admResponse.UserResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	user.DateCreated = createdAt.Format("02.01.2006")
-	return user, nil
+	return &user, nil
 }
 
 // GetUser возвращает пользователя по ID
-func (s *Storage) GetUser(ctx context.Context, id int64) (admResponse.UserResponse, error) {
+func (s *Storage) GetUser(ctx context.Context, id int64) (*admResponse.UserResponse, error) {
 	const op = "storage.postgres.GetUser"
 
 	query := `
@@ -77,17 +77,17 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (admResponse.UserRespon
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return admResponse.UserResponse{}, sql.ErrNoRows
+			return nil, sql.ErrNoRows
 		}
-		return admResponse.UserResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	user.DateCreated = createdAt.Format("02.01.2006")
-	return user, nil
+	return &user, nil
 }
 
 // GetUsers возвращает всех пользователей
-func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, error) {
+func (s *Storage) GetUsers(ctx context.Context) (*[]admResponse.UserResponse, error) {
 	const op = "storage.postgres.GetUsers"
 
 	query := `
@@ -129,11 +129,11 @@ func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, err
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return users, nil
+	return &users, nil
 }
 
 // UpdateUser обновляет данные пользователя
-func (s *Storage) UpdateUser(ctx context.Context, id int64, req admResponse.UserRequest) error {
+func (s *Storage) UpdateUser(ctx context.Context, id int64, req *admResponse.UserRequest) error {
 	const op = "storage.postgres.UpdateUser"
 
 	query := `

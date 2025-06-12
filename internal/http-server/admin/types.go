@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -45,7 +46,7 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	typeID, err := h.storage.AddType(ctx, req)
+	typeID, err := h.storage.AddType(ctx, &req)
 	if err != nil {
 		logger.Error("failed to add type", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add type")
@@ -164,8 +165,14 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Name == "" {
+		logger.Error("empty required field")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Name is required")
+		return
+	}
+
 	ctx := r.Context()
-	err = h.storage.UpdateType(ctx, id, req)
+	err = h.storage.UpdateType(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("type not found", "type_id", id)
@@ -223,8 +230,33 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go h.removeTypeCache(id)
+
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Type deleted successfully",
 	})
+}
+
+func (h *Handler) removeTypeCache(id int64) {
+	const op = "admin.removeTypeCache"
+
+	logger := h.logger.With(
+		"op", op,
+		"category_id", id)
+
+	ctx := context.Background()
+
+	err := h.redis.DeleteCategories(ctx, id)
+	if err != nil {
+		logger.Warn("failed to invalidate cache for type", sl.Err(err), "type_id", id)
+	}
+
+	//TODO реализация удаления кэша для видео по типу и категории, сейчас нет ID категории
+	//err = h.redis.DeleteVideosByCategoryAndType(
+	//	ctx, contentType.ID, category.ID)
+	//if err != nil {
+	//	h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
+	//}
+
 }

@@ -357,16 +357,43 @@ func TestGetVideoCategories(t *testing.T) {
 			WithArgs(videoID).
 			WillReturnRows(rows)
 
+		// Ожидаем запрос на получение типов контента для 1-й категории
+		typesRows1 := sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Type 1").
+			AddRow(2, "Type 2")
+
+		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types cct ON ct\.id = cct\.content_type_id WHERE cct\.category_id = \$1`).
+			WithArgs(1).
+			WillReturnRows(typesRows1)
+
+		// Ожидаем запрос на получение типов контента для 2-й категории
+		typesRows2 := sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(3, "Type 3").
+			AddRow(4, "Type 4")
+
+		mock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types cct ON ct\.id = cct\.content_type_id WHERE cct\.category_id = \$1`).
+			WithArgs(2).
+			WillReturnRows(typesRows2)
+
 		// Вызов тестируемого метода
 		categories, err := storage.GetVideoCategories(ctx, videoID)
 
 		// Проверка результатов
 		require.NoError(t, err)
 		assert.Len(t, categories, 2)
-		assert.Equal(t, float64(1), categories[0].ID) // Исправлено с int64 на float64
+		assert.Equal(t, float64(1), categories[0].ID)
 		assert.Equal(t, "Category 1", categories[0].Name)
-		assert.Equal(t, float64(2), categories[1].ID) // Исправлено с int64 на float64
+		assert.Equal(t, float64(2), categories[1].ID)
 		assert.Equal(t, "Category 2", categories[1].Name)
+
+		// Проверка, что у категорий есть типы контента
+		assert.Len(t, categories[0].Types, 2)
+		assert.Equal(t, float64(1), categories[0].Types[0].ID)
+		assert.Equal(t, "Type 1", categories[0].Types[0].Name)
+
+		assert.Len(t, categories[1].Types, 2)
+		assert.Equal(t, float64(3), categories[1].Types[0].ID)
+		assert.Equal(t, "Type 3", categories[1].Types[0].Name)
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

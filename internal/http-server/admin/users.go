@@ -48,11 +48,10 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	user, err := h.storage.AddUser(ctx, req)
+	user, err := h.storage.AddUser(ctx, &req)
 	if err != nil {
 		logger.Error("failed to add user", sl.Err(err))
 
-		// Проверяем, является ли ошибка ошибкой дубликата
 		if strings.Contains(err.Error(), "user already exists") {
 			admResponse.RespondWithError(w, http.StatusConflict, "duplicate key")
 			return
@@ -169,9 +168,6 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("invalid user ID", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
 		return
 	}
 
@@ -179,40 +175,24 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
 		return
 	}
 
 	ctx := r.Context()
 
-	err = h.storage.UpdateUser(ctx, id, req)
+	err = h.storage.UpdateUser(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("user not found", "user_id", id)
 			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
-			if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-				done <- struct{}{}
-			}
 			return
 		}
 		logger.Error("failed to update user", sl.Err(err), "user_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
 		return
 	}
 
-	// Инвалидация кэша (асинхронно)
-	go func() {
-		ctx := context.Background()
-		_ = h.redis.DeleteAccount(ctx, req.Username)
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
-	}()
+	go h.removeUserCache(req.Username)
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -244,53 +224,51 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("invalid user ID", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
 		return
 	}
 
 	ctx := r.Context()
-
-	// Получаем данные пользователя перед удалением (для инвалидации кэша)
-	user, err := h.storage.GetUser(ctx, id)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		logger.Error("failed to get user data", sl.Err(err), "user_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
-		return
-	}
 
 	err = h.storage.DeleteUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("user not found", "user_id", id)
 			admResponse.RespondWithError(w, http.StatusNotFound, "User not found")
-			if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-				done <- struct{}{}
-			}
 			return
 		}
 		logger.Error("failed to delete user", sl.Err(err), "user_id", id)
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
-		}
 		return
 	}
 
-	// Инвалидация кэша (асинхронно)
 	go func() {
-		_ = h.redis.DeleteAccount(context.Background(), user.Username)
-		if done, ok := r.Context().Value("done").(chan struct{}); ok && done != nil {
-			done <- struct{}{}
+		user, err := h.storage.GetUser(ctx, id)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			logger.Error("failed to get user data", sl.Err(err), "user_id", id)
+			admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+			return
 		}
+		h.removeUserCache(user.Username)
 	}()
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "User deleted successfully",
 	})
+}
+
+func (h *Handler) removeUserCache(Username string) {
+	const op = "admin.removeUserCache"
+
+	logger := h.logger.With(
+		"op", op,
+		"user", Username,
+	)
+
+	ctx := context.Background()
+
+	err := h.redis.DeleteAccount(ctx, Username)
+	if err != nil {
+		logger.Warn("failed to invalidate user cache", sl.Err(err), "username", Username)
+	}
 }

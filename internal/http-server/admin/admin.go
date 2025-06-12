@@ -2,8 +2,10 @@ package admin
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/docs"
+	"github.com/langowen/bodybalance-backend/internal/storage/redis"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -12,15 +14,15 @@ type Handler struct {
 	logger  *logging.Logger
 	storage AdmStorage
 	cfg     *config.Config
-	redis   RedisStorage
+	redis   *redis.Storage
 }
 
-func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config, redis RedisStorage) *Handler {
+func New(app *app.App) *Handler {
 	return &Handler{
-		logger:  logger,
-		storage: storage,
-		cfg:     cfg,
-		redis:   redis,
+		logger:  app.Logger,
+		storage: app.Storage.Admin,
+		cfg:     app.Cfg,
+		redis:   app.Redis,
 	}
 }
 
@@ -33,24 +35,29 @@ func New(logger *logging.Logger, storage AdmStorage, cfg *config.Config, redis R
 // @description JWT токен аутентификации администратора (доступен после /admin/signin)
 
 // @BasePath /admin
-func (h *Handler) Router() chi.Router {
-	r := chi.NewRouter()
-
-	if h.cfg.Env == "prod" {
-		r.Use(h.SecurityHeadersMiddleware) // Security headers для всех admin-эндпоинтов
+func (h *Handler) Router(r ...chi.Router) chi.Router {
+	var router chi.Router
+	if len(r) > 0 {
+		router = r[0]
+	} else {
+		router = chi.NewRouter()
 	}
 
-	r.Post("/signin", h.signing)
-	r.Post("/logout", h.logout)
+	if h.cfg.Env == "prod" {
+		router.Use(h.SecurityHeadersMiddleware)
+	}
+
+	router.Post("/signin", h.signing)
+	router.Post("/logout", h.logout)
 
 	// Документация
-	docs.RegisterRoutes(r, docs.Config{
+	docs.RegisterRoutes(router, docs.Config{
 		User:     h.cfg.Docs.User,
 		Password: h.cfg.Docs.Password,
 	})
 
-	r.Group(func(r chi.Router) {
-		r.Use(h.AuthMiddleware) // Защищенные роуты
+	router.Group(func(r chi.Router) {
+		r.Use(h.AuthMiddleware)
 
 		// API для работы с файлами
 		r.Route("/files", func(r chi.Router) {
@@ -97,8 +104,8 @@ func (h *Handler) Router() chi.Router {
 	})
 
 	fs := http.StripPrefix("/admin/web", http.FileServer(http.Dir("./web")))
-	r.Handle("/web/*", fs)
-	r.Handle("/web", fs)
+	router.Handle("/web/*", fs)
+	router.Handle("/web", fs)
 
-	return r
+	return router
 }

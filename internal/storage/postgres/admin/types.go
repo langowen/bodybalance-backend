@@ -10,7 +10,7 @@ import (
 )
 
 // AddType добавляет новый тип
-func (s *Storage) AddType(ctx context.Context, req admResponse.TypeRequest) (admResponse.TypeResponse, error) {
+func (s *Storage) AddType(ctx context.Context, req *admResponse.TypeRequest) (*admResponse.TypeResponse, error) {
 	const op = "storage.postgres.AddType"
 
 	query := `
@@ -29,17 +29,17 @@ func (s *Storage) AddType(ctx context.Context, req admResponse.TypeRequest) (adm
 	)
 
 	if err != nil {
-		return admResponse.TypeResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Форматируем дату
 	response.DateCreated = createdAt.Format("02.01.2006")
 
-	return response, nil
+	return &response, nil
 }
 
 // GetType возвращает тип по ID
-func (s *Storage) GetType(ctx context.Context, id int64) (admResponse.TypeResponse, error) {
+func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeResponse, error) {
 	const op = "storage.postgres.GetType"
 
 	query := `
@@ -59,19 +59,19 @@ func (s *Storage) GetType(ctx context.Context, id int64) (admResponse.TypeRespon
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return admResponse.TypeResponse{}, sql.ErrNoRows
+			return nil, sql.ErrNoRows
 		}
-		return admResponse.TypeResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Форматируем дату
 	contentType.DateCreated = createdAt.Format("02.01.2006")
 
-	return contentType, nil
+	return &contentType, nil
 }
 
 // GetTypes возвращает все типы
-func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, error) {
+func (s *Storage) GetTypes(ctx context.Context) (*[]admResponse.TypeResponse, error) {
 	const op = "storage.postgres.GetTypes"
 
 	query := `
@@ -109,11 +109,11 @@ func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, err
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return types, nil
+	return &types, nil
 }
 
 // UpdateType обновляет данные типа
-func (s *Storage) UpdateType(ctx context.Context, id int64, req admResponse.TypeRequest) error {
+func (s *Storage) UpdateType(ctx context.Context, id int64, req *admResponse.TypeRequest) error {
 	const op = "storage.postgres.UpdateType"
 
 	query := `

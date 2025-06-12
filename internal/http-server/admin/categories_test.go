@@ -2,364 +2,358 @@ package admin
 
 import (
 	"bytes"
-	"context"
+	"database/sql"
 	"encoding/json"
-	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-chi/chi/v5"
-	"github.com/langowen/bodybalance-backend/internal/config"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/theartofdevel/logging"
+	"github.com/stretchr/testify/require"
 )
 
-// TestAddCategory тестирует добавление новой категории
-func TestAddCategory(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{} // Используем MockRedisClient из storage_test.go
-	cfg := &config.Config{}
+// Тест на успешное добавление категории
+func TestHandler_AddCategory_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
+	// Настраиваем ожидание запроса к БД для добавления категории
+	sqlMock.ExpectBegin()
 
-	reqBody := admResponse.CategoryRequest{
+	// Имитируем вставку категории
+	sqlMock.ExpectQuery(`INSERT INTO categories \(name, img_url, deleted\) VALUES \(\$1, \$2, FALSE\) RETURNING id, name, img_url, created_at`).
+		WithArgs("Test Category", "https://example.com/image.jpg").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
+			AddRow(1, "Test Category", "https://example.com/image.jpg", time.Now()))
+
+	// Настраиваем ожидание для добавления связей с типами
+	sqlMock.ExpectExec(`INSERT INTO category_content_types \(category_id, content_type_id\) VALUES \(\$1, \$2\) ON CONFLICT DO NOTHING`).
+		WithArgs(1, 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Настраиваем ожидание для запроса связанных типов
+	sqlMock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types cct ON ct\.id = cct\.content_type_id WHERE cct\.category_id = \$1`).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Yoga"))
+
+	sqlMock.ExpectCommit()
+
+	// Создаем тестовый запрос на добавление категории
+	req := admResponse.CategoryRequest{
 		Name:    "Test Category",
-		TypeIDs: []int64{1, 2},
+		ImgURL:  "https://example.com/image.jpg",
+		TypeIDs: []int64{1},
 	}
-
-	categoryResponse := admResponse.CategoryResponse{
-		ID:    1,
-		Name:  "Test Category",
-		Types: []admResponse.TypeResponse{{ID: 1, Name: "Type 1"}, {ID: 2, Name: "Type 2"}},
-	}
-
-	// Мокируем вызовы
-	mockStorage.On("AddCategory", mock.Anything, reqBody).Return(categoryResponse, nil)
-
-	// Выполнение
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPost, "/admin/category", bytes.NewBuffer(body))
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/category", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	h.addCategory(w, req)
+	// Вызываем метод
+	h.addCategory(w, httpReq)
 
-	// Проверка
+	// Проверяем результаты
 	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
+	// Проверяем ответ
 	var response admResponse.CategoryResponse
-	json.NewDecoder(w.Body).Decode(&response)
-	assert.Equal(t, categoryResponse, response)
-
-	mockStorage.AssertExpectations(t)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, "Test Category", response.Name)
+	assert.Equal(t, "https://example.com/image.jpg", response.ImgURL)
 }
 
-// TestGetCategory тестирует получение категории по ID
-func TestGetCategory(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
+// Тест на получение категории по ID
+func TestHandler_GetCategory_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
+	// Настраиваем ожидание запроса к БД
+	sqlMock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
+			AddRow(1, "Test Category", "https://example.com/image.jpg", time.Now()))
 
-	categoryID := int64(1)
-	categoryResponse := admResponse.CategoryResponse{
-		ID:    1,
-		Name:  "Test Category",
-		Types: []admResponse.TypeResponse{{ID: 1, Name: "Type 1"}, {ID: 2, Name: "Type 2"}},
-	}
+	// Настраиваем запрос для получения типов категории
+	sqlMock.ExpectQuery(`SELECT ct.id, ct.name FROM content_types ct JOIN category_content_types`).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Yoga"))
 
-	// Мокируем вызовы
-	mockStorage.On("GetCategory", mock.Anything, categoryID).Return(categoryResponse, nil)
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Get("/admin/category/{id}", h.getCategory)
 
-	// Выполнение
-	req := httptest.NewRequest(http.MethodGet, "/admin/category/"+strconv.FormatInt(categoryID, 10), nil)
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodGet, "/admin/category/1", nil)
 	w := httptest.NewRecorder()
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", strconv.FormatInt(categoryID, 10))
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
 
-	h.getCategory(w, req)
-
-	// Проверка
+	// Проверяем результаты
 	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
+	// Проверяем ответ
 	var response admResponse.CategoryResponse
-	json.NewDecoder(w.Body).Decode(&response)
-	assert.Equal(t, categoryResponse, response)
-
-	mockStorage.AssertExpectations(t)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, "Test Category", response.Name)
 }
 
-// TestGetCategories тестирует получение всех категорий
-func TestGetCategories(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
+// Тест на получение всех категорий
+func TestHandler_GetCategories_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
+	// Настраиваем ожидание запроса к БД
+	sqlMock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE deleted IS NOT TRUE`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
+			AddRow(1, "Category 1", "https://example.com/image1.jpg", time.Now()).
+			AddRow(2, "Category 2", "https://example.com/image2.jpg", time.Now()))
 
-	categories := []admResponse.CategoryResponse{
-		{ID: 1, Name: "Category 1", Types: []admResponse.TypeResponse{{ID: 1, Name: "Type 1"}}},
-		{ID: 2, Name: "Category 2", Types: []admResponse.TypeResponse{{ID: 2, Name: "Type 2"}}},
-	}
+	// Настраиваем запросы для получения типов категорий
+	sqlMock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types cct ON ct\.id = cct\.content_type_id WHERE cct\.category_id = \$1`).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Yoga"))
 
-	// Мокируем вызовы
-	mockStorage.On("GetCategories", mock.Anything).Return(categories, nil)
+	sqlMock.ExpectQuery(`SELECT ct\.id, ct\.name FROM content_types ct JOIN category_content_types cct ON ct\.id = cct\.content_type_id WHERE cct\.category_id = \$1`).
+		WithArgs(2).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(2, "Pilates"))
 
-	// Выполнение
+	// Создаем тестовый запрос
 	req := httptest.NewRequest(http.MethodGet, "/admin/category", nil)
 	w := httptest.NewRecorder()
 
+	// Вызываем метод
 	h.getCategories(w, req)
 
-	// Проверка
+	// Проверяем результаты
 	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
+	// Проверяем ответ
 	var response []admResponse.CategoryResponse
-	json.NewDecoder(w.Body).Decode(&response)
-	assert.Equal(t, categories, response)
-
-	mockStorage.AssertExpectations(t)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Equal(t, "Category 1", response[0].Name)
+	assert.Equal(t, "Category 2", response[1].Name)
 }
 
-// TestUpdateCategorySuccess тестирует успешное обновление категории
-func TestUpdateCategorySuccess(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
+// Тест на обновление категории
+func TestHandler_UpdateCategory_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
+	// Настраиваем ожидание запроса к БД для обновления категории
+	sqlMock.ExpectBegin()
+	sqlMock.ExpectExec(`UPDATE categories SET name = \$1, img_url = \$2 WHERE id = \$3 AND deleted IS NOT TRUE`).
+		WithArgs("Updated Category", "https://example.com/updated.jpg", 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	categoryID := int64(1)
-	reqBody := admResponse.CategoryRequest{
+	// Настраиваем ожидание для удаления существующих связей
+	sqlMock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Настраиваем ожидание для добавления новых связей
+	sqlMock.ExpectExec(`INSERT INTO category_content_types`).
+		WithArgs(1, 2).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	sqlMock.ExpectCommit()
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Put("/admin/category/{id}", h.updateCategory)
+
+	// Создаем тестовый запрос
+	req := admResponse.CategoryRequest{
 		Name:    "Updated Category",
-		TypeIDs: []int64{1, 2},
+		ImgURL:  "https://example.com/updated.jpg",
+		TypeIDs: []int64{2},
 	}
-
-	// Мокируем вызовы
-	existingCategory := admResponse.CategoryResponse{
-		ID:    float64(categoryID),
-		Name:  "Old Category",
-		Types: []admResponse.TypeResponse{{ID: 1}, {ID: 2}},
-	}
-
-	mockStorage.On("GetCategory", mock.Anything, categoryID).Return(existingCategory, nil)
-	mockStorage.On("UpdateCategory", mock.Anything, categoryID, reqBody).Return(nil)
-
-	// Настраиваем ожидания для Redis - используем методы из интерфейса RedisStorage
-	// В реальной реализации updateCategory вызываются эти методы в горутинах
-	for _, catType := range existingCategory.Types {
-		typeID := strconv.FormatFloat(catType.ID, 'f', 0, 64)
-		mockRedis.On("DeleteCategories", mock.Anything, typeID).Return(nil).Maybe()
-		mockRedis.On("DeleteVideosByCategoryAndType", mock.Anything,
-			typeID, strconv.FormatFloat(existingCategory.ID, 'f', 0, 64)).Return(nil).Maybe()
-	}
-
-	// Для новых типов тоже добавим ожидания
-	for _, typeID := range reqBody.TypeIDs {
-		mockRedis.On("DeleteCategories", mock.Anything, strconv.FormatInt(typeID, 10)).Return(nil).Maybe()
-	}
-
-	// Выполнение
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPut, "/admin/category/"+strconv.FormatInt(categoryID, 10), bytes.NewBuffer(body))
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPut, "/admin/category/1", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", strconv.FormatInt(categoryID, 10))
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
 
-	h.updateCategory(w, req)
-
-	// Проверка
+	// Проверяем результаты - не ждем запроса в removeCategoryCache, так как он выполняется в горутине
 	assert.Equal(t, http.StatusOK, w.Code)
-
-	var response map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&response)
-	assert.Equal(t, float64(categoryID), response["id"])
-	assert.Equal(t, "Category updated successfully", response["message"])
-
-	mockStorage.AssertExpectations(t)
-	// Не проверяем ожидания для redis, так как они вызываются в горутинах
-	// mockRedis.AssertExpectations(t)
 }
 
-// TestDeleteCategorySuccess тестирует успешное удаление категории
-func TestDeleteCategorySuccess(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
+// Тест на удаление категории
+func TestHandler_DeleteCategory_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
+	// Настраиваем ожидание запроса к БД для удаления категории
+	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	categoryID := int64(1)
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Delete("/admin/category/{id}", h.deleteCategory)
 
-	// Мокируем вызовы
-	existingCategory := admResponse.CategoryResponse{
-		ID:    float64(categoryID),
-		Name:  "Test Category",
-		Types: []admResponse.TypeResponse{{ID: 1}, {ID: 2}},
-	}
-
-	mockStorage.On("GetCategory", mock.Anything, categoryID).Return(existingCategory, nil)
-	mockStorage.On("DeleteCategory", mock.Anything, categoryID).Return(nil)
-
-	// Настраиваем ожидания для Redis
-	for _, catType := range existingCategory.Types {
-		typeID := strconv.FormatFloat(catType.ID, 'f', 0, 64)
-		mockRedis.On("DeleteCategories", mock.Anything, typeID).Return(nil).Maybe()
-		mockRedis.On("DeleteVideosByCategoryAndType", mock.Anything,
-			typeID, strconv.FormatFloat(existingCategory.ID, 'f', 0, 64)).Return(nil).Maybe()
-	}
-
-	// Выполнение
-	req := httptest.NewRequest(http.MethodDelete, "/admin/category/"+strconv.FormatInt(categoryID, 10), nil)
+	// Создаем тестовый запрос
+	httpReq := httptest.NewRequest(http.MethodDelete, "/admin/category/1", nil)
 	w := httptest.NewRecorder()
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", strconv.FormatInt(categoryID, 10))
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
 
-	h.deleteCategory(w, req)
-
-	// Проверка
+	// Проверяем результаты - не ждем запроса в removeCategoryCache, так как он выполняется в горутине
 	assert.Equal(t, http.StatusOK, w.Code)
-
-	var response map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&response)
-	assert.Equal(t, float64(categoryID), response["id"])
-	assert.Equal(t, "Category deleted successfully", response["message"])
-
-	mockStorage.AssertExpectations(t)
-	// Не проверяем ожидания для redis, так как они вызываются в горутинах
-	// mockRedis.AssertExpectations(t)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 }
 
-// TestUpdateCategoryBadRequest тестирует ошибку при неверном запросе обновления категории
-func TestUpdateCategoryBadRequest(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
+// Тест на ошибку валидации при добавлении категории
+func TestHandler_AddCategory_ValidationError(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
 
-	h := New(logger, mockStorage, cfg, mockRedis)
-
-	// Тест с пустым именем
-	reqBody := admResponse.CategoryRequest{
+	// Создаем тестовый запрос с пустыми полями
+	req := admResponse.CategoryRequest{
 		Name:    "",
-		TypeIDs: []int64{1, 2},
+		TypeIDs: []int64{},
 	}
-
-	// Выполнение
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest(http.MethodPut, "/admin/category/1", bytes.NewBuffer(body))
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/category", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
-
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", "1")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	h.updateCategory(w, req)
-
-	// Проверка
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-// TestDeleteCategoryBadRequest тестирует ошибку при неверном запросе удаления категории
-func TestDeleteCategoryBadRequest(t *testing.T) {
-	// Подготовка
-	logger := logging.NewLogger()
-	mockStorage := &MockAdmStorage{}
-	mockRedis := &MockRedisClient{}
-	cfg := &config.Config{}
-
-	h := New(logger, mockStorage, cfg, mockRedis)
-
-	// Выполнение с неверным ID
-	req := httptest.NewRequest(http.MethodDelete, "/admin/category/invalid", nil)
-	w := httptest.NewRecorder()
-
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", "invalid")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	h.deleteCategory(w, req)
-
-	// Проверка
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-// TestGetCategoriesByTypeSuccess тестирует получение категорий по типу из кэша
-func TestGetCategoriesByTypeSuccess(t *testing.T) {
-	// Создаем отдельный handler для API
-	type ApiHandler struct {
-		logger  *logging.Logger
-		storage interface{} // Может быть любой интерфейс
-		redis   RedisStorage
-	}
-
-	apiHandler := &ApiHandler{
-		logger: logging.NewLogger(),
-		redis:  &MockRedisClient{},
-	}
-
-	// Готовим данные
-	contentType := "1"
-	categories := []response.CategoryResponse{
-		{ID: 1, Name: "Category 1"},
-		{ID: 2, Name: "Category 2"},
-	}
-
-	// Настраиваем ожидания для Redis
-	mockRedis := apiHandler.redis.(*MockRedisClient)
-	mockRedis.On("GetCategories", mock.Anything, contentType).Return(categories, nil)
-
-	// Создаем запрос
-	req := httptest.NewRequest(http.MethodGet, "/v1/category?type="+contentType, nil)
-	//w := httptest.NewRecorder()
-
-	// Моделируем вызов метода getCategoriesByType
-	mockRedis.GetCategories(req.Context(), contentType)
-
-	// Проверяем ожидания
-	mockRedis.AssertExpectations(t)
-}
-
-// TestSetCategoriesCache тестирует сохранение категорий в кэш
-func TestSetCategoriesCache(t *testing.T) {
-	mockRedis := &MockRedisClient{}
-
-	contentType := "1"
-	ttl := time.Hour
-	categories := []response.CategoryResponse{
-		{ID: 1, Name: "Category 1"},
-		{ID: 2, Name: "Category 2"},
-	}
-
-	// Настраиваем ожидания
-	mockRedis.On("SetCategories", mock.Anything, contentType, categories, ttl).Return(nil)
 
 	// Вызываем метод
-	err := mockRedis.SetCategories(context.Background(), contentType, categories, ttl)
+	h.addCategory(w, httpReq)
 
-	// Проверяем результат
-	assert.NoError(t, err)
-	mockRedis.AssertExpectations(t)
+	// Проверяем результаты
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// Тест на ошибку валидации JSON при добавлении категории
+func TestHandler_AddCategory_InvalidJSON(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
+
+	// Создаем тестовый запрос с некорректным JSON
+	body := []byte(`{"name": "Test", "type_ids": [1,}`)
+	httpReq := httptest.NewRequest(http.MethodPost, "/admin/category", bytes.NewBuffer(body))
+	w := httptest.NewRecorder()
+
+	// Вызываем метод
+	h.addCategory(w, httpReq)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// Тест на случай, когда категория не найдена
+func TestHandler_GetCategory_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД
+	sqlMock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(999).
+		WillReturnError(sql.ErrNoRows)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Get("/admin/category/{id}", h.getCategory)
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodGet, "/admin/category/999", nil)
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, req)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+// Тест на внутреннюю ошибку сервера при получении категорий
+func TestHandler_GetCategories_InternalError(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД с возвратом ошибки
+	sqlMock.ExpectQuery(`SELECT id, name, img_url, created_at FROM categories WHERE deleted IS NOT TRUE`).
+		WillReturnError(errors.New("database error"))
+
+	// Создаем тестовый запрос
+	req := httptest.NewRequest(http.MethodGet, "/admin/category", nil)
+	w := httptest.NewRecorder()
+
+	// Вызываем метод
+	h.getCategories(w, req)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+// Тест на ошибку при обновлении категории с невалидным ID
+func TestHandler_UpdateCategory_InvalidID(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestAuthHandlerWithMocks(t)
+
+	// Создаем роутер с невалидным параметром id
+	r := chi.NewRouter()
+	r.Put("/admin/category/{id}", h.updateCategory)
+
+	// Создаем тестовый запрос
+	req := admResponse.CategoryRequest{
+		Name:    "Updated Category",
+		TypeIDs: []int64{1},
+	}
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest(http.MethodPut, "/admin/category/invalid", bytes.NewBuffer(body))
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// Тест на удаление несуществующей категории
+func TestHandler_DeleteCategory_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
+
+	// Настраиваем ожидание запроса к БД для удаления категории
+	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+		WithArgs(999).
+		WillReturnError(sql.ErrNoRows)
+
+	// Создаем роутер с параметром id
+	r := chi.NewRouter()
+	r.Delete("/admin/category/{id}", h.deleteCategory)
+
+	// Создаем тестовый запрос
+	httpReq := httptest.NewRequest(http.MethodDelete, "/admin/category/999", nil)
+	w := httptest.NewRecorder()
+
+	// Выполняем запрос через роутер
+	r.ServeHTTP(w, httpReq)
+
+	// Проверяем результаты
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
 }

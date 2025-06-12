@@ -94,47 +94,6 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// isVideoContent проверяет, является ли содержимое буфера видеофайлом
-func isVideoContent(buff []byte) bool {
-	contentType := http.DetectContentType(buff)
-
-	// Проверяем MIME-тип через стандартную функцию
-	if strings.Contains(videoMIMETypes, contentType) {
-		return true
-	}
-
-	// Дополнительная проверка по сигнатуре файлов
-
-	// Проверка на MP4 (MPEG-4 Part 14)
-	// MP4 обычно начинается с "ftyp" на 4-м байте
-	if len(buff) > 8 && (string(buff[4:8]) == "ftyp") {
-		return true
-	}
-
-	// Проверка на MOV (QuickTime)
-	// MOV также обычно начинается с "ftyp" или "moov" или "free" или "mdat" после размера
-	if len(buff) > 12 && (string(buff[4:8]) == "ftyp" ||
-		string(buff[4:8]) == "moov" ||
-		string(buff[4:8]) == "free" ||
-		string(buff[4:8]) == "mdat") {
-		return true
-	}
-
-	// Проверка на WebM
-	// WebM начинается с сигнатуры EBML (1A 45 DF A3)
-	if len(buff) > 4 && buff[0] == 0x1A && buff[1] == 0x45 && buff[2] == 0xDF && buff[3] == 0xA3 {
-		return true
-	}
-
-	// Проверка на Ogg
-	// Ogg начинается с "OggS"
-	if len(buff) > 4 && string(buff[0:4]) == "OggS" {
-		return true
-	}
-
-	return false
-}
-
 // @Summary Получить список видеофайлов
 // @Description Возвращает список всех видеофайлов на сервере
 // @Tags Admin Files
@@ -378,7 +337,6 @@ func (h *Handler) getImageFilesList() ([]admResponse.FileInfo, error) {
 	return result, nil
 }
 
-// Вспомогательные функции для изображений
 func isImageExtension(ext string) bool {
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".gif", ".webp":
@@ -387,7 +345,6 @@ func isImageExtension(ext string) bool {
 	return false
 }
 
-// Вспомогательные функции для видео
 func isValidFilename(filename string) bool {
 	return !strings.ContainsAny(filename, "\\/:*?\"<>|")
 }
@@ -397,5 +354,43 @@ func isVideoExtension(ext string) bool {
 	case ".mp4", ".webm", ".ogg", ".mov", ".avi":
 		return true
 	}
+	return false
+}
+
+// isVideoContent проверяет, является ли содержимое буфера видеофайлом
+func isVideoContent(buff []byte) bool {
+	contentType := http.DetectContentType(buff)
+
+	if strings.Contains(videoMIMETypes, contentType) {
+		return true
+	}
+
+	// Проверка на MP4 (MPEG-4 Part 14)
+	// MP4 обычно начинается с "ftyp" на 4-м байте
+	if len(buff) > 8 && (string(buff[4:8]) == "ftyp") {
+		return true
+	}
+
+	// Проверка на MOV (QuickTime)
+	// MOV также обычно начинается с "ftyp" или "moov" или "free" или "mdat" после размера
+	if len(buff) > 12 && (string(buff[4:8]) == "ftyp" ||
+		string(buff[4:8]) == "moov" ||
+		string(buff[4:8]) == "free" ||
+		string(buff[4:8]) == "mdat") {
+		return true
+	}
+
+	// Проверка на WebM
+	// WebM начинается с сигнатуры EBML (1A 45 DF A3)
+	if len(buff) > 4 && buff[0] == 0x1A && buff[1] == 0x45 && buff[2] == 0xDF && buff[3] == 0xA3 {
+		return true
+	}
+
+	// Проверка на Ogg
+	// Ogg начинается с "OggS"
+	if len(buff) > 4 && string(buff[0:4]) == "OggS" {
+		return true
+	}
+
 	return false
 }

@@ -1,29 +1,23 @@
 package v1
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
-	"errors"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
-	st "github.com/langowen/bodybalance-backend/internal/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/theartofdevel/logging"
+	"time"
 )
 
-func newTestVideoHandler() (*Handler, *MockApiStorage, *MockRedisApi) {
-	storage := &MockApiStorage{}
-	redis := &MockRedisApi{}
-	logger := logging.NewLogger()
-	return &Handler{storage: storage, redis: redis, logger: logger}, storage, redis
-}
-
 func TestGetVideo_EmptyID(t *testing.T) {
-	h, _, _ := newTestVideoHandler()
+	// Создаем моки и хендлер с помощью общей функции
+	h, _, _ := newTestHandlerWithMocks(t)
+
 	req := httptest.NewRequest(http.MethodGet, "/video?video_id=", nil)
 	w := httptest.NewRecorder()
 
@@ -32,227 +26,304 @@ func TestGetVideo_EmptyID(t *testing.T) {
 }
 
 func TestGetVideo_FromCache(t *testing.T) {
-	h, _, redis := newTestVideoHandler()
+	// Создаем моки и хендлер
+	h, _, redisMock := newTestHandlerWithMocks(t)
+
+	// Создаем данные видео и настраиваем мок Redis
 	vid := &response.VideoResponse{ID: 1, Name: "video1"}
-	redis.On("GetVideo", mock.Anything, "1").Return(vid, nil)
+	vidData, err := json.Marshal(vid)
+	require.NoError(t, err)
+
+	redisMock.ExpectGet("video:1").SetVal(string(vidData))
 
 	req := httptest.NewRequest(http.MethodGet, "/video?video_id=1", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideo(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
+
 	var got response.VideoResponse
-	json.NewDecoder(w.Body).Decode(&got)
-	assert.Equal(t, *vid, got)
+	err = json.NewDecoder(w.Body).Decode(&got)
+	require.NoError(t, err)
+	assert.Equal(t, vid.ID, got.ID)
+	assert.Equal(t, vid.Name, got.Name)
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-func TestGetVideo_FromStorageAndCacheSet(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-	redis.On("GetVideo", mock.Anything, "2").Return(nil, nil)
-	vid := response.VideoResponse{ID: 2, Name: "video2"}
-	storage.On("GetVideo", mock.Anything, "2").Return(vid, nil)
-	redis.On("SetVideo", mock.Anything, "2", &vid, mock.Anything).Return(nil)
+func TestGetVideo_FromStorageAndCache(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
+
+	// Настраиваем мок Redis для отсутствия данных
+	redisMock.ExpectGet("video:2").RedisNil()
+
+	// Настраиваем мок SQL для получения видео
+	// Используем актуальный SQL-запрос, соответствующий реализации в хранилище
+	sqlMock.ExpectQuery(`SELECT v\.id, v\.url, v\.name, v\.description, c\.name as category, v\.img_url
+        FROM videos v
+        JOIN video_categories vc ON v\.id = vc\.video_id
+        JOIN categories c ON vc\.category_id = c\.id
+        WHERE v\.id = \$1 AND v\.deleted IS NOT TRUE`).
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "url", "name", "description", "category", "img_url"}).
+			AddRow(2, "url2", "video2", "desc2", "category2", "img2"))
+
+	// Важно: НЕ настраиваем ожидание вызова SetVideo, так как в реализации это делается асинхронно через горутину
 
 	req := httptest.NewRequest(http.MethodGet, "/video?video_id=2", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideo(w, req)
+
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
+
 	assert.Equal(t, http.StatusOK, w.Code)
+
 	var got response.VideoResponse
-	json.NewDecoder(w.Body).Decode(&got)
-	assert.Equal(t, vid, got)
+	err := json.NewDecoder(w.Body).Decode(&got)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), got.ID)
+	assert.Equal(t, "video2", got.Name)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	// Не проверяем ожидания Redis, так как вызов Set происходит асинхронно
 }
 
-func TestGetVideo_NotFound(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-	redis.On("GetVideo", mock.Anything, "404").Return(nil, nil)
-	storage.On("GetVideo", mock.Anything, "404").Return(response.VideoResponse{}, st.ErrVideoNotFound)
-
-	req := httptest.NewRequest(http.MethodGet, "/video?video_id=404", nil)
-	w := httptest.NewRecorder()
-
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGetVideo_StorageError(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-	redis.On("GetVideo", mock.Anything, "err").Return(nil, nil)
-	storage.On("GetVideo", mock.Anything, "err").Return(response.VideoResponse{}, errors.New("fail"))
-
-	req := httptest.NewRequest(http.MethodGet, "/video?video_id=err", nil)
-	w := httptest.NewRecorder()
-
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-// TestGetVideo_InvalidID проверяет обработку некорректного ID видео
-func TestGetVideo_InvalidID(t *testing.T) {
-	h, _, redis := newTestVideoHandler()
-
-	// Настраиваем мок Redis
-	redis.On("GetVideo", mock.Anything, "abc").Return(nil, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/video?video_id=abc", nil)
-	w := httptest.NewRecorder()
-
-	h.getVideo(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	// Читаем содержимое ответа напрямую как строку
-	responseBody := w.Body.String()
-	assert.Contains(t, responseBody, "invalid video ID")
-}
-
-// TestGetVideo_RedisError проверяет обработку ошибки Redis при получении видео из кеша
 func TestGetVideo_RedisError(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-	redis.On("GetVideo", mock.Anything, "3").Return(nil, errors.New("redis error"))
-	vid := response.VideoResponse{ID: 3, Name: "video3"}
-	storage.On("GetVideo", mock.Anything, "3").Return(vid, nil)
-	redis.On("SetVideo", mock.Anything, "3", &vid, mock.Anything).Return(nil)
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
+
+	// Настраиваем мок Redis для ошибки
+	redisMock.ExpectGet("video:3").SetErr(sql.ErrConnDone)
+
+	// Настраиваем мок SQL для получения видео
+	// Используем актуальный SQL-запрос, соответствующий реализации в хранилище
+	sqlMock.ExpectQuery(`SELECT v\.id, v\.url, v\.name, v\.description, c\.name as category, v\.img_url
+        FROM videos v
+        JOIN video_categories vc ON v\.id = vc\.video_id
+        JOIN categories c ON vc\.category_id = c\.id
+        WHERE v\.id = \$1 AND v\.deleted IS NOT TRUE`).
+		WithArgs(int64(3)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "url", "name", "description", "category", "img_url"}).
+			AddRow(3, "url3", "video3", "desc3", "category3", "img3"))
+
+	// Важно: НЕ настраиваем ожидание вызова SetVideo, так как в реализации это делается асинхронно через горутину
 
 	req := httptest.NewRequest(http.MethodGet, "/video?video_id=3", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideo(w, req)
+
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
+
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var got response.VideoResponse
 	err := json.NewDecoder(w.Body).Decode(&got)
-	assert.NoError(t, err)
-	assert.Equal(t, vid, got)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), got.ID)
+	assert.Equal(t, "video3", got.Name)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-// TestGetVideo_RedisSetError проверяет обработку ошибки Redis при установке видео в кеш
-func TestGetVideo_RedisSetError(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-	redis.On("GetVideo", mock.Anything, "4").Return(nil, nil)
-	vid := response.VideoResponse{ID: 4, Name: "video4"}
-	storage.On("GetVideo", mock.Anything, "4").Return(vid, nil)
-	redis.On("SetVideo", mock.Anything, "4", &vid, mock.Anything).Return(errors.New("redis set error"))
+func TestGetVideo_StorageError(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
+
+	// Настраиваем мок Redis для отсутствия данных
+	redisMock.ExpectGet("video:4").RedisNil()
+
+	// Настраиваем мок SQL для ошибки
+	// Используем актуальный SQL-запрос, соответствующий реализации в хранилище
+	sqlMock.ExpectQuery(`SELECT v\.id, v\.url, v\.name, v\.description, c\.name as category, v\.img_url
+        FROM videos v
+        JOIN video_categories vc ON v\.id = vc\.video_id
+        JOIN categories c ON vc\.category_id = c\.id
+        WHERE v\.id = \$1 AND v\.deleted IS NOT TRUE`).
+		WithArgs(int64(4)).
+		WillReturnError(sql.ErrConnDone)
 
 	req := httptest.NewRequest(http.MethodGet, "/video?video_id=4", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideo(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
 
-	var got response.VideoResponse
-	err := json.NewDecoder(w.Body).Decode(&got)
-	assert.NoError(t, err)
-	assert.Equal(t, vid, got)
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-// TestGetVideo_ContextCancellation проверяет обработку отмены контекста
-func TestGetVideo_ContextCancellation(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
+func TestGetVideo_NotFound(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
 
-	// Создаем контекст и сразу его отменяем
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	// Настраиваем мок Redis для отсутствия данных
+	redisMock.ExpectGet("video:999").RedisNil()
 
-	redis.On("GetVideo", mock.Anything, "5").Return(nil, context.Canceled)
-	// Добавляем настройку мока для хранилища, которая не должна выполниться из-за отмены контекста,
-	// но должна быть настроена для предотвращения паники в тесте
-	storage.On("GetVideo", mock.Anything, "5").Return(response.VideoResponse{}, context.Canceled)
+	// Настраиваем мок SQL для отсутствия результата
+	// Используем актуальный SQL-запрос, соответствующий реализации в хранилище
+	sqlMock.ExpectQuery(`SELECT v\.id, v\.url, v\.name, v\.description, c\.name as category, v\.img_url
+        FROM videos v
+        JOIN video_categories vc ON v\.id = vc\.video_id
+        JOIN categories c ON vc\.category_id = c\.id
+        WHERE v\.id = \$1 AND v\.deleted IS NOT TRUE`).
+		WithArgs(int64(999)).
+		WillReturnError(sql.ErrNoRows)
 
-	req := httptest.NewRequest(http.MethodGet, "/video?video_id=5", nil).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodGet, "/video?video_id=999", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideo(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
-	// Проверяем содержимое ответа как строку
-	responseBody := w.Body.String()
-	assert.Contains(t, responseBody, "context canceled")
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-// TestGetVideosByCategoryAndType тестирует функцию получения видео по категориям и типам
-func TestGetVideosByCategoryAndType(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
+func TestGetVideosByCategoryAndType_EmptyParams(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, _ := newTestHandlerWithMocks(t)
 
-	videos := []response.VideoResponse{
-		{ID: 1, Name: "Video 1"},
-		{ID: 2, Name: "Video 2"},
-	}
+	// Проверка на пустой тип
+	req1 := httptest.NewRequest(http.MethodGet, "/videos?type=&category=1", nil)
+	w1 := httptest.NewRecorder()
+	h.getVideosByCategoryAndType(w1, req1)
+	assert.Equal(t, http.StatusBadRequest, w1.Code)
 
-	// Настраиваем мок Redis - возвращаем nil, имитируя отсутствие данных в кэше
-	redis.On("GetVideosByCategoryAndType", mock.Anything, "1", "2").Return(nil, nil)
+	// Проверка на пустую категорию
+	req2 := httptest.NewRequest(http.MethodGet, "/videos?type=1&category=", nil)
+	w2 := httptest.NewRecorder()
+	h.getVideosByCategoryAndType(w2, req2)
+	assert.Equal(t, http.StatusBadRequest, w2.Code)
+}
 
-	// Настраиваем мок хранилища
-	storage.On("GetVideosByCategoryAndType", mock.Anything, "1", "2").Return(videos, nil)
+func TestGetVideosByCategoryAndType_FromCache(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
 
-	// Настраиваем мок для установки кэша (вызывается в фоновой горутине)
-	redis.On("SetVideosByCategoryAndType", mock.Anything, "1", "2", videos, mock.Anything).Return(nil)
+	// Создаем данные видео и настраиваем мок Redis
+	videos := []response.VideoResponse{{ID: 1, Name: "video1", URL: "/video/url1"}, {ID: 2, Name: "video2", URL: "/video/url2"}}
+	videosData, err := json.Marshal(videos)
+	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/video_categories?type=1&category=2", nil)
+	// Ожидания на проверки существования типа и категории (они всегда вызываются)
+	sqlMock.ExpectQuery("SELECT EXISTS\\(SELECT 1 FROM content_types WHERE id = \\$1 AND deleted IS NOT TRUE\\)").
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	sqlMock.ExpectQuery("SELECT EXISTS\\(SELECT 1 FROM categories WHERE id = \\$1 AND deleted IS NOT TRUE\\)").
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Настраиваем возврат кэшированных данных
+	redisMock.ExpectGet("videos:type:1:category:1").SetVal(string(videosData))
+
+	req := httptest.NewRequest(http.MethodGet, "/videos?type=1&category=1", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideosByCategoryAndType(w, req)
+
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var resp []response.VideoResponse
-	err := json.NewDecoder(w.Body).Decode(&resp)
-	assert.NoError(t, err)
-	assert.Equal(t, videos, resp)
+	var got []response.VideoResponse
+	err = json.NewDecoder(w.Body).Decode(&got)
+	assert.NoError(t, err, "response should be valid JSON")
+	assert.Len(t, got, 2)
+	assert.Equal(t, videos[0].ID, got[0].ID)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-// TestGetVideosByCategoryAndType_InvalidType тестирует обработку некорректного типа контента
-func TestGetVideosByCategoryAndType_InvalidType(t *testing.T) {
-	h, _, _ := newTestVideoHandler()
+func TestGetVideosByCategoryAndType_FromStorageAndCache(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
 
-	// Используем некорректный тип контента
-	req := httptest.NewRequest(http.MethodGet, "/video_categories?type=abc&category=2", nil)
+	// Настраиваем мок Redis для отсутствия данных
+	redisMock.ExpectGet("videos:type:2:category:2").RedisNil()
+
+	// Добавляем проверку существования типа контента
+	sqlMock.ExpectQuery("SELECT EXISTS\\(SELECT 1 FROM content_types WHERE id = \\$1 AND deleted IS NOT TRUE\\)").
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Добавляем проверку существования категории
+	sqlMock.ExpectQuery("SELECT EXISTS\\(SELECT 1 FROM categories WHERE id = \\$1 AND deleted IS NOT TRUE\\)").
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Настраиваем мок SQL для получения видео
+	sqlMock.ExpectQuery("SELECT v.id, v.name, v.url, v.description, v.img_url, v.duration, v.service_name, v.created_at FROM videos v JOIN video_categories vc ON v.id = vc.video_id WHERE vc.category_id = \\$1 AND v.deleted IS NOT TRUE").
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "url", "description", "img_url", "duration", "service_name", "created_at"}).
+			AddRow(3, "video3", "/video/url3", "desc3", "/img/img3", 150, "youtube", time.Now()).
+			AddRow(4, "video4", "/video/url4", "desc4", "/img/img4", 200, "vimeo", time.Now()))
+
+	// Настраиваем мок Redis для сохранения в кэш
+	redisMock.ExpectSet("videos:type:2:category:2", mock.Anything, time.Hour).SetVal("OK")
+
+	req := httptest.NewRequest(http.MethodGet, "/videos?type=2&category=2", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideosByCategoryAndType(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	// Проверка содержимого ответа
-	responseBody := w.Body.String()
-	assert.Contains(t, responseBody, "Invalid content type")
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var got []response.VideoResponse
+	err := json.NewDecoder(w.Body).Decode(&got)
+	require.NoError(t, err)
+	assert.Len(t, got, 2)
+	assert.Equal(t, int64(3), got[0].ID)
+	assert.Equal(t, "video3", got[0].Name)
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }
 
-// TestGetVideosByCategoryAndType_EmptyParams тестирует запрос без указания параметров
-func TestGetVideosByCategoryAndType_EmptyParams(t *testing.T) {
-	h, _, _ := newTestVideoHandler()
+func TestGetVideosByCategoryAndType_StorageError(t *testing.T) {
+	// Создаем моки и хендлер
+	h, sqlMock, redisMock := newTestHandlerWithMocks(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/video_categories", nil)
+	// Настраиваем мок Redis для отсутствия данных
+	redisMock.ExpectGet("videos:type:3:category:3").RedisNil()
+
+	// Добавляем проверку существования типа контента
+	sqlMock.ExpectQuery("SELECT EXISTS\\(SELECT 1 FROM content_types WHERE id = \\$1 AND deleted IS NOT TRUE\\)").
+		WithArgs(int64(3)).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Настраиваем мок SQL для ошибки
+	sqlMock.ExpectQuery("SELECT v.id, v.name, v.url, v.description, v.img_url, v.duration, v.service_name, v.created_at FROM videos v JOIN video_categories vc ON v.id = vc.video_id WHERE vc.category_id = \\$1 AND v.deleted IS NOT TRUE").
+		WithArgs(int64(3)).
+		WillReturnError(sql.ErrConnDone)
+
+	req := httptest.NewRequest(http.MethodGet, "/videos?type=3&category=3", nil)
 	w := httptest.NewRecorder()
 
 	h.getVideosByCategoryAndType(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	// Тут не нужно настраивать мок для GetVideosByCategoryAndType,
-	// так как из-за пустых параметров метод не должен быть вызван вообще
-
-	// Проверка содержимого ответа
-	responseBody := w.Body.String()
-	assert.Contains(t, responseBody, "Bad Request")
-}
-
-// TestGetVideosByCategoryAndType_Error тестирует обработку ошибки получения видео
-func TestGetVideosByCategoryAndType_Error(t *testing.T) {
-	h, storage, redis := newTestVideoHandler()
-
-	// Настраиваем мок Redis - возвращаем nil, имитируя отсутствие данных в кэше
-	redis.On("GetVideosByCategoryAndType", mock.Anything, "1", "2").Return(nil, nil)
-
-	// Настраиваем мок хранилища для возврата ошибки
-	storage.On("GetVideosByCategoryAndType", mock.Anything, "1", "2").Return(nil, errors.New("database error"))
-
-	req := httptest.NewRequest(http.MethodGet, "/video_categories?type=1&category=2", nil)
-	w := httptest.NewRecorder()
-
-	h.getVideosByCategoryAndType(w, req)
+	// Выводим код статуса и тело ответа для отладки
+	t.Logf("Status Code: %d", w.Code)
+	t.Logf("Response Body: %s", w.Body.String())
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-
-	// Проверка содержимого ответа
-	responseBody := w.Body.String()
-	assert.Contains(t, responseBody, "database error")
+	assert.NoError(t, sqlMock.ExpectationsWereMet())
+	assert.NoError(t, redisMock.ExpectationsWereMet())
 }

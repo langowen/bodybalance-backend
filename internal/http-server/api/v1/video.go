@@ -11,7 +11,6 @@ import (
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 // @Summary Get video by ID
@@ -26,57 +25,48 @@ import (
 // @Router /video [get]
 func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideo"
-	const cacheTTL = time.Hour * 24 // Время жизни кэша - 24 часа
 
-	videoID := r.URL.Query().Get("video_id")
+	videoStr := r.URL.Query().Get("video_id")
 
 	logger := h.logger.With(
 		"op", op,
 		"request_id", middleware.GetReqID(r.Context()),
-		"video_id", videoID,
+		"video_id", videoStr,
 	)
 
-	if videoID == "" {
+	if videoStr == "" {
 		logger.Error("Video id is empty")
 		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
 		return
 	}
 
-	// Специальные тестовые ID, которые могут не быть числами
-	testIDs := map[string]bool{
-		"err": true,
-	}
-
-	// Проверяем, что ID видео является числом, если это не тестовый ID
-	if _, err := strconv.Atoi(videoID); err != nil && !testIDs[videoID] {
+	videoID, err := strconv.ParseInt(videoStr, 10, 64)
+	if err != nil {
 		logger.Error("Invalid video ID", sl.Err(err))
 		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "invalid video ID",
-			fmt.Sprintf("Video ID '%s' is not a valid number", videoID))
+			fmt.Sprintf("Video ID '%s' is not a valid number", videoStr))
 		return
 	}
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	// Пытаемся получить данные из кэша
 	cachedVideo, err := h.redis.GetVideo(ctx, videoID)
 	if err != nil {
 		logger.Warn("redis get error", sl.Err(err))
 	}
 
-	// Если данные есть в кэше - возвращаем их
 	if cachedVideo != nil {
 		logger.Debug("serving from cache", "video_id", videoID)
 		response.RespondWithJSON(w, http.StatusOK, cachedVideo)
 		return
 	}
 
-	// Данных нет в кэше - запрашиваем из основного хранилища
 	video, err := h.storage.GetVideo(ctx, videoID)
 	switch {
 	case errors.Is(err, storage.ErrVideoNotFound):
 		logger.Warn("video not found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
-			fmt.Sprintf("Video '%s' does not exist", videoID))
+			fmt.Sprintf("Video '%d' does not exist", videoID))
 		return
 
 	case err != nil:
@@ -85,10 +75,9 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Сохраняем данные в кэш (в фоне, не блокируя ответ)
 	go func() {
-		ctx := context.Background() // используем новый контекст для фоновой операции
-		if err := h.redis.SetVideo(ctx, videoID, &video, cacheTTL); err != nil {
+		ctx := context.Background()
+		if err := h.redis.SetVideo(ctx, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
 			logger.Warn("failed to set video cache", sl.Err(err))
 		}
 	}()
@@ -109,7 +98,6 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 // @Router /video_categories [get]
 func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.api.getVideosByCategoryAndType"
-	const cacheTTL = time.Hour * 24
 
 	contentType := r.URL.Query().Get("type")
 	categoryName := r.URL.Query().Get("category")
@@ -133,58 +121,80 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Проверяем, что type и category являются числами
-	if _, err := strconv.Atoi(contentType); err != nil {
-		logger.Error("Invalid content type", sl.Err(err))
-		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid content type",
-			fmt.Sprintf("Content type '%s' is not a valid number", contentType))
+	typeID, err := strconv.ParseInt(contentType, 10, 64)
+	if err != nil {
+		logger.Error("Invalid type ID", sl.Err(err))
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "invalid type ID",
+			fmt.Sprintf("Video ID '%s' is not a valid number", contentType))
 		return
 	}
 
-	if _, err := strconv.Atoi(categoryName); err != nil {
-		logger.Error("Invalid category", sl.Err(err))
-		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid category",
-			fmt.Sprintf("Category '%s' is not a valid number", categoryName))
+	catID, err := strconv.ParseInt(categoryName, 10, 64)
+	if err != nil {
+		logger.Error("Invalid category ID", sl.Err(err))
+		response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "invalid category ID",
+			fmt.Sprintf("Video ID '%s' is not a valid number", categoryName))
 		return
 	}
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	// Пытаемся получить данные из кэша
-	cachedVideos, err := h.redis.GetVideosByCategoryAndType(ctx, contentType, categoryName)
+	// Проверка существования типа контента
+	typeErr := h.storage.CheckType(ctx, typeID)
+	if typeErr != nil {
+		if errors.Is(typeErr, storage.ErrContentTypeNotFound) {
+			logger.Warn("content type not found", sl.Err(typeErr))
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found", fmt.Sprintf("Content type '%d' does not exist", typeID))
+			return
+		}
+		logger.Error("Failed to check content type", sl.Err(typeErr))
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", typeErr.Error())
+		return
+	}
+
+	// Проверка существования категории
+	catErr := h.storage.CheckCategory(ctx, catID)
+	if catErr != nil {
+		if errors.Is(catErr, storage.ErrNoCategoriesFound) {
+			logger.Warn("category not found", sl.Err(catErr))
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found", fmt.Sprintf("Category '%d' does not exist", catID))
+			return
+		}
+		logger.Error("Failed to check category", sl.Err(catErr))
+		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", catErr.Error())
+		return
+	}
+
+	cachedVideos, err := h.redis.GetVideosByCategoryAndType(ctx, typeID, catID)
 	if err != nil {
 		logger.Warn("redis get error", sl.Err(err))
 	}
 
-	// Если данные есть в кэше - возвращаем их
 	if cachedVideos != nil {
-		logger.Debug("serving from cache",
-			"content_type", contentType,
-			"category", categoryName)
+		logger.Debug("send from cache")
 		response.RespondWithJSON(w, http.StatusOK, cachedVideos)
 		return
 	}
 
-	// Данных нет в кэше - запрашиваем из основного хранилища
-	videos, err := h.storage.GetVideosByCategoryAndType(ctx, contentType, categoryName)
+	videos, err := h.storage.GetVideosByCategoryAndType(ctx, typeID, catID)
 	switch {
 	case errors.Is(err, storage.ErrContentTypeNotFound):
 		logger.Warn("content type not found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found",
-			fmt.Sprintf("Content type '%s' does not exist", contentType))
+			fmt.Sprintf("Content type '%d' does not exist", typeID))
 		return
 
 	case errors.Is(err, storage.ErrNoCategoriesFound):
 		logger.Warn("no categories found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found",
-			fmt.Sprintf("Category '%s' does not exist", categoryName))
+			fmt.Sprintf("Category '%d' does not exist", catID))
 		return
 
 	case errors.Is(err, storage.ErrVideoNotFound):
 		logger.Warn("video not found", sl.Err(err))
 		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
-			fmt.Sprintf("no videos found for content type '%s' and category '%s'",
-				contentType, categoryName))
+			fmt.Sprintf("no videos found for content type '%d' and category '%d'",
+				typeID, catID))
 		return
 
 	case err != nil:
@@ -193,14 +203,10 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Сохраняем данные в кэш
 	go func() {
 		ctx := context.Background()
-		if err := h.redis.SetVideosByCategoryAndType(ctx, contentType, categoryName, videos, cacheTTL); err != nil {
-			logger.Warn("failed to set videos cache",
-				sl.Err(err),
-				"content_type", contentType,
-				"category", categoryName)
+		if err := h.redis.SetVideosByCategoryAndType(ctx, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
+			logger.Warn("failed to set videos cache", sl.Err(err))
 		}
 	}()
 

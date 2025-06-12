@@ -10,17 +10,17 @@ import (
 	"strings"
 )
 
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]response.VideoResponse, error) {
+func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID int64) (*[]response.VideoResponse, error) {
 	const op = "storage.postgres.GetVideosByCategoryAndType"
 
 	// Проверка существования типа контента
-	err := s.chekType(ctx, contentType, op)
+	err := s.chekType(ctx, TypeID, op)
 	if err != nil {
 		return nil, err
 	}
 
 	// Проверка существования категории
-	err = s.chekCategory(ctx, category, op)
+	err = s.chekCategory(ctx, CatID, op)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
         ORDER BY v.created_at DESC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, contentType, category)
+	rows, err := s.db.QueryContext(ctx, query, TypeID, CatID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
@@ -60,14 +60,14 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, contentType, c
 	// Проверка на отсутствие категорий для данного типа
 	if len(videos) == 0 {
 		return nil, fmt.Errorf("%s: %w: no videos found for content type '%s' and category '%s'",
-			op, storage.ErrVideoNotFound, contentType, category)
+			op, storage.ErrVideoNotFound, TypeID, CatID)
 	}
 
-	return videos, nil
+	return &videos, nil
 }
 
 // CheckAccount возвращает Type ID для указанного username
-func (s *Storage) CheckAccount(ctx context.Context, username string) (response.AccountResponse, error) {
+func (s *Storage) CheckAccount(ctx context.Context, username string) (*response.AccountResponse, error) {
 	const op = "storage.postgres.CheckAccount"
 
 	query := `
@@ -86,21 +86,21 @@ func (s *Storage) CheckAccount(ctx context.Context, username string) (response.A
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return response.AccountResponse{}, fmt.Errorf("%s: %w: video with id '%s' not found",
+			return nil, fmt.Errorf("%s: %w: video with id '%s' not found",
 				op, storage.ErrAccountNotFound, username)
 		}
-		return response.AccountResponse{}, fmt.Errorf("%s: query failed: %w", op, err)
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
 
-	return account, nil
+	return &account, nil
 }
 
 // GetCategories возвращает все категории для указанного типа контента
-func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]response.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context, TypeID int64) (*[]response.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Проверка существования типа контента
-	err := s.chekType(ctx, contentType, op)
+	err := s.chekType(ctx, TypeID, op)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
         ORDER BY c.created_at DESC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, contentType)
+	rows, err := s.db.QueryContext(ctx, query, TypeID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
@@ -140,13 +140,13 @@ func (s *Storage) GetCategories(ctx context.Context, contentType string) ([]resp
 	// Проверка на отсутствие категорий для данного типа
 	if len(categories) == 0 {
 		return nil, fmt.Errorf("%s: %w: no categories found for content type '%s'",
-			op, storage.ErrNoCategoriesFound, contentType)
+			op, storage.ErrNoCategoriesFound, TypeID)
 	}
 
-	return categories, nil
+	return &categories, nil
 }
 
-func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoResponse, error) {
+func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoResponse, error) {
 	const op = "storage.postgres.GetVideo"
 
 	query := `
@@ -170,24 +170,36 @@ func (s *Storage) GetVideo(ctx context.Context, videoID string) (response.VideoR
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return response.VideoResponse{}, fmt.Errorf("%s: %w: video with id '%s' not found",
+			return nil, fmt.Errorf("%s: %w: video with id '%s' not found",
 				op, storage.ErrVideoNotFound, videoID)
 		}
-		return response.VideoResponse{}, fmt.Errorf("%s: query failed: %w", op, err)
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
 
 	video.URL = s.constructFullMediaURL(video.URL)
 
 	video.ImgURL = s.constructFullImgURL(video.ImgURL)
 
-	return video, nil
+	return &video, nil
 }
 
-func (s *Storage) chekType(ctx context.Context, contentType, op string) error {
+// CheckType проверяет существование типа контента
+func (s *Storage) CheckType(ctx context.Context, TypeID int64) error {
+	const op = "storage.postgres.GetVideosByCategoryAndType"
+	return s.chekType(ctx, TypeID, op)
+}
+
+// CheckCategory проверяет существование категории
+func (s *Storage) CheckCategory(ctx context.Context, CatID int64) error {
+	const op = "storage.postgres.GetVideosByCategoryAndType"
+	return s.chekCategory(ctx, CatID, op)
+}
+
+func (s *Storage) chekType(ctx context.Context, TypeID int64, op string) error {
 	var contentTypeExists bool
 	err := s.db.QueryRowContext(ctx,
 		`SELECT EXISTS(SELECT 1 FROM content_types WHERE id = $1 AND deleted IS NOT TRUE)`,
-		contentType,
+		TypeID,
 	).Scan(&contentTypeExists)
 
 	if err != nil {
@@ -195,19 +207,19 @@ func (s *Storage) chekType(ctx context.Context, contentType, op string) error {
 	}
 
 	if !contentTypeExists {
-		return fmt.Errorf("%s: %w: content type '%s' not found",
-			op, storage.ErrContentTypeNotFound, contentType)
+		return fmt.Errorf("%s: %w: content type '%d' not found",
+			op, storage.ErrContentTypeNotFound, TypeID)
 	}
 
 	return nil
 }
 
-func (s *Storage) chekCategory(ctx context.Context, category, op string) error {
+func (s *Storage) chekCategory(ctx context.Context, CatID int64, op string) error {
 	var categoryNameExists bool
 
 	err := s.db.QueryRowContext(ctx,
 		`SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1 AND deleted IS NOT TRUE)`,
-		category,
+		CatID,
 	).Scan(&categoryNameExists)
 
 	if err != nil {
@@ -216,7 +228,7 @@ func (s *Storage) chekCategory(ctx context.Context, category, op string) error {
 
 	if !categoryNameExists {
 		return fmt.Errorf("%s: %w: category name '%s' not found",
-			op, storage.ErrNoCategoriesFound, category)
+			op, storage.ErrNoCategoriesFound, CatID)
 	}
 
 	return nil

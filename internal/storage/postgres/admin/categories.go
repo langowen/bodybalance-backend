@@ -10,12 +10,12 @@ import (
 )
 
 // AddCategory добавляет новую категорию
-func (s *Storage) AddCategory(ctx context.Context, req admResponse.CategoryRequest) (admResponse.CategoryResponse, error) {
+func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequest) (*admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.AddCategory"
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
@@ -39,7 +39,7 @@ func (s *Storage) AddCategory(ctx context.Context, req admResponse.CategoryReque
 	)
 
 	if err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	category.DateCreated = createdAt.Format("02.01.2006")
@@ -52,7 +52,7 @@ func (s *Storage) AddCategory(ctx context.Context, req admResponse.CategoryReque
 			ON CONFLICT DO NOTHING
 		`, category.ID, typeID)
 		if err != nil {
-			return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
@@ -64,37 +64,36 @@ func (s *Storage) AddCategory(ctx context.Context, req admResponse.CategoryReque
 		WHERE cct.category_id = $1
 	`, category.ID)
 	if err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var t admResponse.TypeResponse
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
-			return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 		category.Types = append(category.Types, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return category, nil
+	return &category, nil
 }
 
 // GetCategory возвращает категорию по ID
-func (s *Storage) GetCategory(ctx context.Context, id int64) (admResponse.CategoryResponse, error) {
+func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategory"
 
 	var category admResponse.CategoryResponse
 	var createdAt time.Time
 
-	// Получаем основную информацию о категории
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, name, img_url, created_at
 		FROM categories
@@ -108,15 +107,14 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (admResponse.Catego
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return admResponse.CategoryResponse{}, sql.ErrNoRows
+			return nil, sql.ErrNoRows
 		}
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	category.DateCreated = createdAt.Format("02.01.2006")
 	category.Types = []admResponse.TypeResponse{}
 
-	// Получаем связанные типы
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT ct.id, ct.name
 		FROM content_types ct
@@ -124,7 +122,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (admResponse.Catego
 		WHERE cct.category_id = $1
 	`, id)
 	if err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer rows.Close()
 
@@ -132,20 +130,20 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (admResponse.Catego
 		var t admResponse.TypeResponse
 
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
-			return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 		category.Types = append(category.Types, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return admResponse.CategoryResponse{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return category, nil
+	return &category, nil
 }
 
 // GetCategories возвращает все категории
-func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context) (*[]admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Сначала получаем все категории
@@ -214,11 +212,11 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 		}
 	}
 
-	return categories, nil
+	return &categories, nil
 }
 
 // UpdateCategory обновляет данные категории
-func (s *Storage) UpdateCategory(ctx context.Context, id int64, req admResponse.CategoryRequest) error {
+func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse.CategoryRequest) error {
 	const op = "storage.postgres.UpdateCategory"
 
 	tx, err := s.db.BeginTx(ctx, nil)

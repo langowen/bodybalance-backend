@@ -5,10 +5,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin"
-	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
+	v1 "github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/img"
 	"github.com/langowen/bodybalance-backend/internal/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/http-server/middleware/logger"
+	mwMetrics "github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 )
 
@@ -39,20 +41,22 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Use(mwLogger.New(s.app.Logger))
 	r.Use(middleware.Recoverer)
 
-	// API v1
-	r.Mount("/v1", v1.New(s.app.Logger, s.app.Storage.Api, s.app.Redis).Router())
+	// API v1 с метриками
+	apiRouter := chi.NewRouter()
+	apiRouter.Use(mwMetrics.Middleware("api"))
+	r.Mount("/v1", v1.New(s.app).Router(apiRouter))
 
-	// Админ интерфейс управления БД
-	r.Mount("/admin", admin.New(
-		s.app.Logger,
-		s.app.Storage.Admin,
-		s.app.Cfg,
-		s.app.Redis,
-	).Router())
+	// Админ интерфейс управления БД с метриками
+	adminRouter := chi.NewRouter()
+	adminRouter.Use(mwMetrics.Middleware("admin"))
+	r.Mount("/admin", admin.New(s.app).Router(adminRouter))
 
-	// Статические файлы
-	r.Get("/video/{filename}", video.ServeVideoFile(s.app.Cfg, s.app.Logger))
-	r.Get("/img/{filename}", img.ServeImgFile(s.app.Cfg, s.app.Logger))
+	// Статические файлы с метриками
+	r.Get("/video/{filename}", mwMetrics.WrapVideoHandler(video.ServeVideoFile(s.app.Cfg, s.app.Logger)))
+	r.Get("/img/{filename}", mwMetrics.WrapImgHandler(img.ServeImgFile(s.app.Cfg, s.app.Logger)))
+
+	// Prometheus metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
 
 	return r
 }
