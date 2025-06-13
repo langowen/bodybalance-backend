@@ -192,7 +192,9 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.removeUserCache(req.Username)
+	if h.cfg.Redis.Enable == true {
+		go h.removeUserCache(req.Username)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -247,7 +249,9 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.storage.GetUser(ctx, id)
 	if err == nil {
-		go h.removeUserCache(user.Username)
+		if h.cfg.Redis.Enable == true {
+			go h.removeUserCache(user.Username)
+		}
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		logger.Warn("failed to get user data for cache invalidation", sl.Err(err), "user_id", id)
 

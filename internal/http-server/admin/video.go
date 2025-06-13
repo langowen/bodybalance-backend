@@ -239,8 +239,9 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	go h.removeVideoCache(id)
+	if h.cfg.Redis.Enable == true {
+		go h.removeVideoCache(id)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -289,7 +290,9 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.removeVideoCache(id)
+	if h.cfg.Redis.Enable == true {
+		go h.removeVideoCache(id)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,

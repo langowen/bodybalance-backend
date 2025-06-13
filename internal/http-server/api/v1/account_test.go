@@ -35,6 +35,7 @@ func newTestHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redismock
 	cfg := &config.Config{
 		Redis: config.Redis{
 			CacheTTL: time.Hour,
+			Enable:   true,
 		},
 		Env: "test",
 	}

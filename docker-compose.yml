@@ -37,6 +37,7 @@ services:
       - DOCS_USER=${DOCS_USER}
       - DOCS_PASSWORD=${DOCS_PASSWORD}
       - ENV=prod
+      - REDIS_ENABLED=${REDIS_ENABLED:-true}
     volumes:
       - /srv/docker/bodybalance/video/:/app/data/video/
       - /srv/docker/bodybalance/config/:/app/config/

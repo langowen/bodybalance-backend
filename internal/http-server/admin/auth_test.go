@@ -42,6 +42,9 @@ func newTestAuthHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redis
 			TokenTTL:   time.Hour,
 			SigningKey: "test-signing-key",
 		},
+		Redis: config.Redis{
+			Enable: true,
+		},
 		Env: "test",
 	}
 

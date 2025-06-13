@@ -59,6 +59,7 @@ type Redis struct {
 	Password string        `yaml:"password" env:"REDIS_PASSWORD" env-default:""`
 	DB       int           `yaml:"db" env:"REDIS_DB" env-default:"1"`
 	CacheTTL time.Duration `yaml:"ttl" env:"REDIS_TTL" env-default:"24h"`
+	Enable   bool          `yaml:"enabled" env:"REDIS_ENABLED" env-default:"true"`
 }
 
 var (
@@ -127,6 +128,8 @@ func (c *Config) LogValue() logging.Value {
 		logging.StringAttr("redis_host", c.Redis.Host),
 		logging.StringAttr("redis_password", "REDACTED"),
 		logging.IntAttr("redis_db", c.Redis.DB),
+		logging.StringAttr("redis_ttl", formatDuration(c.Redis.CacheTTL)),
+		logging.BoolAttr("redis_enabled", c.Redis.Enable),
 
 		// General
 		logging.StringAttr("log_level", c.LogLevel),

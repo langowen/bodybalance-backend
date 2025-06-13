@@ -1669,6 +1669,8 @@
       },
       "id": 104,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1865,6 +1867,8 @@
       },
       "id": 106,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -2138,6 +2142,8 @@
       },
       "id": 109,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -2319,18 +2325,21 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.0.1",
       "targets": [
         {
           "datasource": {
             "type": "loki",
             "uid": "${L1}"
           },
+          "direction": "backward",
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", level=\"error\"}[1m])) by (level)",
+          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"error\"}[10m])) by (detected_level)",
           "legendFormat": "{{service_name}}|{{level}}",
           "queryType": "range",
           "refId": "A"
@@ -2340,8 +2349,9 @@
             "type": "loki",
             "uid": "${L1}"
           },
+          "direction": "backward",
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", level=\"warn\"}[1m])) by (level)",
+          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"warn\"}[10m])) by (detected_level)",
           "hide": false,
           "legendFormat": "{{service_name}}|{{level}}",
           "queryType": "range",
@@ -2352,8 +2362,9 @@
             "type": "loki",
             "uid": "${L1}"
           },
+          "direction": "backward",
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", level=\"info\"}[1m])) by (level)",
+          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"info\"}[10m])) by (detected_level)",
           "hide": false,
           "legendFormat": "{{service_name}}|{{level}}",
           "queryType": "range",
@@ -2364,8 +2375,9 @@
             "type": "loki",
             "uid": "${L1}"
           },
+          "direction": "backward",
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", level=\"debug\"}[1m])) by (level)",
+          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"debug\"}[10m])) by (detected_level)",
           "hide": false,
           "legendFormat": "{{service_name}}|{{level}}",
           "queryType": "range",
@@ -2465,16 +2477,18 @@
           }
         ]
       },
+      "pluginVersion": "12.0.1",
       "targets": [
         {
           "datasource": {
             "type": "loki",
             "uid": "${L1}"
           },
-          "editorMode": "code",
-          "expr": "topk(10, count by (message) ({service_name=\"bodybalance\", level=\"error\"}))",
+          "direction": "backward",
+          "editorMode": "builder",
+          "expr": "{service_name=\"$service\", detected_level=\"error\"}",
           "legendFormat": "{{message}}",
-          "queryType": "instant",
+          "queryType": "range",
           "refId": "A"
         }
       ],
@@ -2495,10 +2509,215 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Визуализация объема логов по времени с разбивкой по уровням",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "warn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "info"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "debug"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "id": 204,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "builder",
+          "expr": "sum by(level) (count_over_time({service_name=~\"$service\"} | label_format level=detected_level [$__interval]))",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Logs Volume",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Просмотр логов приложения",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 89
+      },
+      "id": 205,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "{service_name=~\"$service\"} | label_format level=detected_level",
+          "maxLines": 100,
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Логи приложения",
+      "type": "logs"
     }
   ],
   "preload": false,
-  "refresh": "auto",
+  "refresh": "15m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
@@ -2506,56 +2725,43 @@
       {
         "current": {
           "text": "prometheus_body",
-          "value": "prometheus_body"
+          "value": "feoq8yzurcjcwc"
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Источник данных Prometheus",
-        "multi": false,
         "name": "P1",
         "options": [],
         "query": "prometheus",
-        "queryValue": "",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "current": {
-          "selected": true,
-          "text": "loki_body",
-          "value": "loki_body"
+          "text": "loki",
+          "value": "beoka9gjzzncwc"
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Источник данных Loki",
-        "multi": false,
         "name": "L1",
         "options": [],
         "query": "loki",
-        "queryValue": "",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       },
       {
-        "allValue": "",
         "current": {
-          "selected": true,
-          "text": "bodybalance",
-          "value": "bodybalance"
+          "text": "body_balance",
+          "value": "body_balance"
         },
         "datasource": {
           "type": "loki",
           "uid": "${L1}"
         },
         "definition": "label_values(service_name)",
-        "hide": 0,
         "includeAll": false,
         "label": "Выберите сервис",
-        "multi": false,
         "name": "service",
         "options": [],
         "query": {
@@ -2566,19 +2772,19 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
+
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "BodyBalance Dashboard",
   "uid": "bodybalance",
-  "version": 12
+  "version": 45
 }

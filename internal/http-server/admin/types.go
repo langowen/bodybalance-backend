@@ -230,7 +230,9 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.removeTypeCache(id)
+	if h.cfg.Redis.Enable == true {
+		go h.removeTypeCache(id)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,

@@ -87,9 +87,13 @@ func main() {
 		}
 	}(pgStorage)
 
-	redisStorage, err := redis.New(cfg)
-	if err != nil {
-		log.Fatalln("Failed to initialize RedisSQL storage", sl.Err(err))
+	var redisStorage *redis.Storage
+
+	if cfg.Redis.Enable == true {
+		redisStorage, err = redis.New(cfg)
+		if err != nil {
+			log.Fatalln("Failed to initialize RedisSQL storage", sl.Err(err))
+		}
 	}
 
 	logger.With(

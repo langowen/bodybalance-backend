@@ -50,15 +50,18 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	cachedVideo, err := h.redis.GetVideo(ctx, videoID)
-	if err != nil {
-		logger.Warn("redis get error", sl.Err(err))
-	}
+	if h.cfg.Redis.Enable == true {
 
-	if cachedVideo != nil {
-		logger.Debug("serving from cache", "video_id", videoID)
-		response.RespondWithJSON(w, http.StatusOK, cachedVideo)
-		return
+		cachedVideo, err := h.redis.GetVideo(ctx, videoID)
+		if err != nil {
+			logger.Warn("redis get error", sl.Err(err))
+		}
+
+		if cachedVideo != nil {
+			logger.Debug("serving from cache", "video_id", videoID)
+			response.RespondWithJSON(w, http.StatusOK, cachedVideo)
+			return
+		}
 	}
 
 	video, err := h.storage.GetVideo(ctx, videoID)
@@ -75,12 +78,14 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		ctx := context.Background()
-		if err := h.redis.SetVideo(ctx, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
-			logger.Warn("failed to set video cache", sl.Err(err))
-		}
-	}()
+	if h.cfg.Redis.Enable == true {
+		go func() {
+			ctx := context.Background()
+			if err := h.redis.SetVideo(ctx, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
+				logger.Warn("failed to set video cache", sl.Err(err))
+			}
+		}()
+	}
 
 	response.RespondWithJSON(w, http.StatusOK, video)
 }
@@ -165,15 +170,18 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	cachedVideos, err := h.redis.GetVideosByCategoryAndType(ctx, typeID, catID)
-	if err != nil {
-		logger.Warn("redis get error", sl.Err(err))
-	}
+	if h.cfg.Redis.Enable == true {
 
-	if cachedVideos != nil {
-		logger.Debug("send from cache")
-		response.RespondWithJSON(w, http.StatusOK, cachedVideos)
-		return
+		cachedVideos, err := h.redis.GetVideosByCategoryAndType(ctx, typeID, catID)
+		if err != nil {
+			logger.Warn("redis get error", sl.Err(err))
+		}
+
+		if cachedVideos != nil {
+			logger.Debug("send from cache")
+			response.RespondWithJSON(w, http.StatusOK, cachedVideos)
+			return
+		}
 	}
 
 	videos, err := h.storage.GetVideosByCategoryAndType(ctx, typeID, catID)
@@ -203,12 +211,15 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	go func() {
-		ctx := context.Background()
-		if err := h.redis.SetVideosByCategoryAndType(ctx, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
-			logger.Warn("failed to set videos cache", sl.Err(err))
-		}
-	}()
+	if h.cfg.Redis.Enable == true {
+
+		go func() {
+			ctx := context.Background()
+			if err := h.redis.SetVideosByCategoryAndType(ctx, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
+				logger.Warn("failed to set videos cache", sl.Err(err))
+			}
+		}()
+	}
 
 	response.RespondWithJSON(w, http.StatusOK, videos)
 }

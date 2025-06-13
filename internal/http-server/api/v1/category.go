@@ -49,15 +49,17 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	cachedCategories, err := h.redis.GetCategories(ctx, typeID)
-	if err != nil {
-		logger.Warn("redis get error", sl.Err(err))
-	}
+	if h.cfg.Redis.Enable == true {
+		cachedCategories, err := h.redis.GetCategories(ctx, typeID)
+		if err != nil {
+			logger.Warn("redis get error", sl.Err(err))
+		}
 
-	if cachedCategories != nil {
-		logger.Debug("serving from cache")
-		response.RespondWithJSON(w, http.StatusOK, cachedCategories)
-		return
+		if cachedCategories != nil {
+			logger.Debug("serving from cache")
+			response.RespondWithJSON(w, http.StatusOK, cachedCategories)
+			return
+		}
 	}
 
 	categories, err := h.storage.GetCategories(ctx, typeID)
@@ -80,12 +82,14 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		ctx := context.Background()
-		if err := h.redis.SetCategories(ctx, typeID, categories, h.cfg.Redis.CacheTTL); err != nil {
-			logger.Warn("failed to set cache", sl.Err(err))
-		}
-	}()
+	if h.cfg.Redis.Enable == true {
+		go func() {
+			ctx := context.Background()
+			if err := h.redis.SetCategories(ctx, typeID, categories, h.cfg.Redis.CacheTTL); err != nil {
+				logger.Warn("failed to set cache", sl.Err(err))
+			}
+		}()
+	}
 
 	response.RespondWithJSON(w, http.StatusOK, categories)
 }
