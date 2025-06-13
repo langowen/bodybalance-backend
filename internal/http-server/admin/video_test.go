@@ -23,7 +23,7 @@ func TestHandler_AddVideo_Success(t *testing.T) {
 
 	// Настраиваем ожидание запроса к БД для добавления видео
 	sqlMock.ExpectQuery(`INSERT INTO videos \(url, name, description, img_url, deleted\) VALUES \(\$1, \$2, \$3, \$4, FALSE\) RETURNING id`).
-		WithArgs("http://example.com/test.mp4", "Test Video", "Test Description", "http://example.com/test.jpg").
+		WithArgs("test.mp4", "Test Video", "Test Description", "test.jpg").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	// Настраиваем ожидания для транзакции
@@ -37,9 +37,9 @@ func TestHandler_AddVideo_Success(t *testing.T) {
 	// Создаем тестовый запрос
 	req := admResponse.VideoRequest{
 		Name:        "Test Video",
-		URL:         "http://example.com/test.mp4",
+		URL:         "test.mp4", // Используем только имя файла без URL
 		Description: "Test Description",
-		ImgURL:      "http://example.com/test.jpg",
+		ImgURL:      "test.jpg", // Используем только имя файла без URL
 		CategoryIDs: []int64{1},
 	}
 	body, _ := json.Marshal(req)
@@ -271,7 +271,7 @@ func TestHandler_UpdateVideo_Success(t *testing.T) {
 	// Настраиваем ожидание запроса к БД для обновления видео
 	// Исправляем порядок параметров, чтобы он соответствовал реальной реализации
 	sqlMock.ExpectExec(`UPDATE videos SET url = \$1, name = \$2, description = \$3, img_url = \$4 WHERE id = \$5 AND deleted IS NOT TRUE`).
-		WithArgs("http://example.com/updated.mp4", "Updated Video", "Updated Description", "http://example.com/updated.jpg", int64(1)).
+		WithArgs("updated.mp4", "Updated Video", "Updated Description", "updated.jpg", int64(1)).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Настраиваем ожидание запросов для обновления категорий
@@ -294,9 +294,9 @@ func TestHandler_UpdateVideo_Success(t *testing.T) {
 	// Создаем тестовый запрос
 	req := admResponse.VideoRequest{
 		Name:        "Updated Video",
-		URL:         "http://example.com/updated.mp4",
+		URL:         "updated.mp4", // Используем только имя файла без URL
 		Description: "Updated Description",
-		ImgURL:      "http://example.com/updated.jpg",
+		ImgURL:      "updated.jpg", // Используем только имя файла без URL
 		CategoryIDs: []int64{2},
 	}
 	body, _ := json.Marshal(req)
@@ -322,7 +322,7 @@ func TestHandler_UpdateVideo_NotFound(t *testing.T) {
 	// Настраиваем ожидание запроса к БД с ошибкой
 	// Исправляем порядок параметров
 	sqlMock.ExpectExec(`UPDATE videos SET url = \$1, name = \$2, description = \$3, img_url = \$4 WHERE id = \$5 AND deleted IS NOT TRUE`).
-		WithArgs("http://example.com/updated.mp4", "Updated Video", "Updated Description", "http://example.com/updated.jpg", int64(999)).
+		WithArgs("updated.mp4", "Updated Video", "Updated Description", "updated.jpg", int64(999)).
 		WillReturnError(sql.ErrNoRows)
 
 	// Создаем роутер с параметром id
@@ -332,9 +332,10 @@ func TestHandler_UpdateVideo_NotFound(t *testing.T) {
 	// Создаем тестовый запрос
 	req := admResponse.VideoRequest{
 		Name:        "Updated Video",
-		URL:         "http://example.com/updated.mp4",
+		URL:         "updated.mp4", // Используем только имя файла без URL
 		Description: "Updated Description",
-		ImgURL:      "http://example.com/updated.jpg",
+		ImgURL:      "updated.jpg", // Используем только имя файла без URL
+		CategoryIDs: []int64{1},    // Добавляем категорию, так как теперь она обязательна
 	}
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest(http.MethodPut, "/admin/video/999", bytes.NewBuffer(body))
@@ -353,10 +354,21 @@ func TestHandler_DeleteVideo_Success(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей видео с категориями
+	sqlMock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 2)) // Предполагаем, что было удалено 2 связи
+
 	// Настраиваем ожидание запроса к БД для удаления видео
 	sqlMock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 		WithArgs(int64(1)).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Ожидаем завершение транзакции
+	sqlMock.ExpectCommit()
 
 	// Создаем роутер с параметром id
 	r := chi.NewRouter()
@@ -386,10 +398,21 @@ func TestHandler_DeleteVideo_NotFound(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание запроса к БД с ошибкой
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей видео с категориями
+	sqlMock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
+		WithArgs(int64(999)).
+		WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
+	// Настраиваем ожидание запроса к БД для удаления видео, которое не существует
 	sqlMock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 		WithArgs(int64(999)).
-		WillReturnError(sql.ErrNoRows)
+		WillReturnResult(sqlmock.NewResult(0, 0)) // 0 затронутых строк
+
+	// Ожидаем откат транзакции из-за ошибки ErrNoRows
+	sqlMock.ExpectRollback()
 
 	// Создаем роутер с параметром id
 	r := chi.NewRouter()

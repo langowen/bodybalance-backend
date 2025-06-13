@@ -9,9 +9,18 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 )
+
+// validFilePattern паттерны для проверки правильности названия файлов
+var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9]+$`)
+
+// suspiciousPatterns паттерны для проверки нет ли лишних символов и ссылок в данных
+var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=", "%"}
 
 // @Summary Добавить новое видео
 // @Description Создает новую запись видео в системе
@@ -39,9 +48,7 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.URL == "" || req.Name == "" {
-		logger.Error("empty required fields")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "URL and Name are required")
+	if !h.validVideo(&req, w, logger) {
 		return
 	}
 
@@ -196,16 +203,16 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.redis.DeleteVideo(r.Context(), id); err != nil {
-		logger.Warn("failed to invalidate video cache", sl.Err(err))
-	}
-
 	ctx := r.Context()
 
 	var req admResponse.VideoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	if !h.validVideo(&req, w, logger) {
 		return
 	}
 
@@ -300,6 +307,7 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// removeVideoCache удаляет данные из кэша
 func (h *Handler) removeVideoCache(id int64) {
 	const op = "admin.removeVideoCache"
 
@@ -357,4 +365,58 @@ func (h *Handler) removeVideoCache(id int64) {
 			}
 		}
 	}
+}
+
+// validUser проверят входящие данные на валидность
+func (h *Handler) validVideo(req *admResponse.VideoRequest, w http.ResponseWriter, logger *logging.Logger) bool {
+	switch {
+	case req.Name == "":
+		logger.Warn("empty required Name")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Введите название видео")
+		return false
+	case req.URL == "":
+		logger.Warn("empty required video")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберете видео")
+		return false
+	case req.ImgURL == "":
+		logger.Warn("empty required img")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите превью для видео")
+		return false
+	case len(req.CategoryIDs) == 0:
+		logger.Warn("empty required CategoryIDs")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы одну категорию для видео")
+		return false
+	}
+
+	// Проверка URL
+	if !validFilePattern.MatchString(req.URL) {
+		logger.Warn("invalid file format in URL", "url", req.URL)
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени видео-файла")
+		return false
+	}
+
+	for _, pattern := range suspiciousPatterns {
+		if strings.Contains(req.URL, pattern) {
+			logger.Warn("suspicious pattern in URL", "url", req.URL, "pattern", pattern)
+			admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени видео-файла")
+			return false
+		}
+	}
+
+	// Проверка ImgURL
+	if !validFilePattern.MatchString(req.ImgURL) {
+		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
+		return false
+	}
+
+	for _, pattern := range suspiciousPatterns {
+		if strings.Contains(req.ImgURL, pattern) {
+			logger.Warn("suspicious pattern in ImgURL", "imgurl", req.ImgURL, "pattern", pattern)
+			admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
+			return false
+		}
+	}
+
+	return true
 }

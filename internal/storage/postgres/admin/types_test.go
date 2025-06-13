@@ -398,10 +398,21 @@ func TestDeleteType(t *testing.T) {
 		ctx := context.Background()
 		typeID := int64(1)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с категориями
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE content_type_id = \$1`).
+			WithArgs(typeID).
+			WillReturnResult(sqlmock.NewResult(0, 2)) // Предполагаем, что было удалено 2 связи
+
 		// Ожидаем UPDATE запрос для пометки типа как удаленного
-		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
+		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(typeID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		// Ожидаем завершение транзакции
+		mock.ExpectCommit()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteType(ctx, typeID)
@@ -421,10 +432,21 @@ func TestDeleteType(t *testing.T) {
 		ctx := context.Background()
 		typeID := int64(999)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с категориями
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE content_type_id = \$1`).
+			WithArgs(typeID).
+			WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
 		// Ожидаем UPDATE запрос, который не затрагивает ни одной строки
-		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
+		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(typeID).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// Ожидаем откат транзакции из-за ошибки sql.ErrNoRows
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteType(ctx, typeID)
@@ -445,23 +467,29 @@ func TestDeleteType(t *testing.T) {
 		ctx := context.Background()
 		typeID := int64(1)
 
-		// Ожидаем ошибку при выполнении UPDATE запроса
-		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем ошибку при удалении связей с категориями
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE content_type_id = \$1`).
 			WithArgs(typeID).
 			WillReturnError(errors.New("database error"))
+
+		// Ожидаем откат транзакции из-за ошибки
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteType(ctx, typeID)
 
 		// Проверка результатов
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "database error")
+		assert.Contains(t, err.Error(), "database error")
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("rows affected error", func(t *testing.T) {
+	t.Run("transaction error", func(t *testing.T) {
 		// Подготовка тестового окружения
 		_, mock, storage := setupTypesTestDB(t)
 		defer mock.ExpectClose()
@@ -469,18 +497,15 @@ func TestDeleteType(t *testing.T) {
 		ctx := context.Background()
 		typeID := int64(1)
 
-		// Ожидаем UPDATE запрос с ошибкой при проверке затронутых строк
-		result := sqlmock.NewErrorResult(errors.New("rows affected error"))
-		mock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
-			WithArgs(typeID).
-			WillReturnResult(result)
+		// Ожидаем ошибку при начале транзакции
+		mock.ExpectBegin().WillReturnError(errors.New("transaction error"))
 
 		// Вызов тестируемого метода
 		err := storage.DeleteType(ctx, typeID)
 
 		// Проверка результатов
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "rows affected error")
+		assert.Contains(t, err.Error(), "transaction error")
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

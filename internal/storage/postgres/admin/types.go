@@ -139,28 +139,49 @@ func (s *Storage) UpdateType(ctx context.Context, id int64, req *admResponse.Typ
 	return nil
 }
 
-// DeleteType помечает тип как удаленный
+// DeleteType помечает тип как удаленный и удаляет все его связи с категориями
 func (s *Storage) DeleteType(ctx context.Context, id int64) error {
 	const op = "storage.postgres.DeleteType"
 
-	query := `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM category_content_types
+		WHERE content_type_id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("%s: failed to delete category relations: %w", op, err)
+	}
+
+	result, err := tx.ExecContext(ctx, `
 		UPDATE content_types
 		SET deleted = TRUE
 		WHERE id = $1 AND deleted IS NOT TRUE
-	`
-
-	result, err := s.db.ExecContext(ctx, query, id)
+	`, id)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: failed to mark type as deleted: %w", op, err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: rows affected error: %w", op, err)
 	}
 
 	if rowsAffected == 0 {
+		err = sql.ErrNoRows
 		return sql.ErrNoRows
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
 	}
 
 	return nil

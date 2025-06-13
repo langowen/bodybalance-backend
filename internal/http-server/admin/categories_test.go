@@ -27,9 +27,9 @@ func TestHandler_AddCategory_Success(t *testing.T) {
 
 	// Имитируем вставку категории
 	sqlMock.ExpectQuery(`INSERT INTO categories \(name, img_url, deleted\) VALUES \(\$1, \$2, FALSE\) RETURNING id, name, img_url, created_at`).
-		WithArgs("Test Category", "https://example.com/image.jpg").
+		WithArgs("Test Category", "image.jpg").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "img_url", "created_at"}).
-			AddRow(1, "Test Category", "https://example.com/image.jpg", time.Now()))
+			AddRow(1, "Test Category", "image.jpg", time.Now()))
 
 	// Настраиваем ожидание для добавления связей с типами
 	sqlMock.ExpectExec(`INSERT INTO category_content_types \(category_id, content_type_id\) VALUES \(\$1, \$2\) ON CONFLICT DO NOTHING`).
@@ -47,7 +47,7 @@ func TestHandler_AddCategory_Success(t *testing.T) {
 	// Создаем тестовый запрос на добавление категории
 	req := admResponse.CategoryRequest{
 		Name:    "Test Category",
-		ImgURL:  "https://example.com/image.jpg",
+		ImgURL:  "image.jpg", // Используем только имя файла без URL
 		TypeIDs: []int64{1},
 	}
 	body, _ := json.Marshal(req)
@@ -67,7 +67,7 @@ func TestHandler_AddCategory_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
 	assert.Equal(t, "Test Category", response.Name)
-	assert.Equal(t, "https://example.com/image.jpg", response.ImgURL)
+	assert.Equal(t, "image.jpg", response.ImgURL)
 }
 
 // Тест на получение категории по ID
@@ -160,7 +160,7 @@ func TestHandler_UpdateCategory_Success(t *testing.T) {
 	// Настраиваем ожидание запроса к БД для обновления категории
 	sqlMock.ExpectBegin()
 	sqlMock.ExpectExec(`UPDATE categories SET name = \$1, img_url = \$2 WHERE id = \$3 AND deleted IS NOT TRUE`).
-		WithArgs("Updated Category", "https://example.com/updated.jpg", 1).
+		WithArgs("Updated Category", "updated.jpg", 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Настраиваем ожидание для удаления существующих связей
@@ -182,7 +182,7 @@ func TestHandler_UpdateCategory_Success(t *testing.T) {
 	// Создаем тестовый запрос
 	req := admResponse.CategoryRequest{
 		Name:    "Updated Category",
-		ImgURL:  "https://example.com/updated.jpg",
+		ImgURL:  "updated.jpg", // Используем только имя файла без URL
 		TypeIDs: []int64{2},
 	}
 	body, _ := json.Marshal(req)
@@ -201,10 +201,26 @@ func TestHandler_DeleteCategory_Success(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание запроса к БД для удаления категории
-	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей с типами контента
+	sqlMock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Ожидаем удаление связей с видео
+	sqlMock.ExpectExec(`DELETE FROM video_categories WHERE category_id = \$1`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 2))
+
+	// Настраиваем ожидание запроса к БД для удаления категории
+	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Ожидаем завершение транзакции
+	sqlMock.ExpectCommit()
 
 	// Создаем роутер с параметром id
 	r := chi.NewRouter()
@@ -337,10 +353,26 @@ func TestHandler_DeleteCategory_NotFound(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание запроса к БД для удаления категории
-	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей с типами контента
+	sqlMock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
 		WithArgs(999).
-		WillReturnError(sql.ErrNoRows)
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	// Ожидаем удаление связей с видео
+	sqlMock.ExpectExec(`DELETE FROM video_categories WHERE category_id = \$1`).
+		WithArgs(999).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	// Настраиваем ожидание запроса к БД для удаления категории
+	sqlMock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(999).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	// Ожидаем откат транзакции из-за ошибки ErrNoRows
+	sqlMock.ExpectRollback()
 
 	// Создаем роутер с параметром id
 	r := chi.NewRouter()

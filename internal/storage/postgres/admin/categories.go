@@ -274,28 +274,57 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse
 	return nil
 }
 
-// DeleteCategory помечает категорию как удаленную
+// DeleteCategory помечает категорию как удаленную и удаляет её связи с типами контента и видео
 func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 	const op = "storage.postgres.DeleteCategory"
 
-	query := `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM category_content_types
+		WHERE category_id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("%s: failed to delete content type relations: %w", op, err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM video_categories
+		WHERE category_id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("%s: failed to delete video relations: %w", op, err)
+	}
+
+	result, err := tx.ExecContext(ctx, `
 		UPDATE categories
 		SET deleted = TRUE
 		WHERE id = $1 AND deleted IS NOT TRUE
-	`
-
-	result, err := s.db.ExecContext(ctx, query, id)
+	`, id)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: failed to mark category as deleted: %w", op, err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: rows affected error: %w", op, err)
 	}
 
 	if rowsAffected == 0 {
+		err = sql.ErrNoRows
 		return sql.ErrNoRows
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
 	}
 
 	return nil

@@ -241,6 +241,54 @@ func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *admResponse.
 	return nil
 }
 
+// DeleteVideo помечает видео как удаленное и удаляет все его связи с категориями
+func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
+	const op = "storage.postgres.DeleteVideo"
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM video_categories
+		WHERE video_id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("%s: failed to delete category relations: %w", op, err)
+	}
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE videos
+		SET deleted = TRUE
+		WHERE id = $1 AND deleted IS NOT TRUE
+	`, id)
+	if err != nil {
+		return fmt.Errorf("%s: failed to mark video as deleted: %w", op, err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: rows affected error: %w", op, err)
+	}
+
+	if rowsAffected == 0 {
+		err = sql.ErrNoRows
+		return sql.ErrNoRows
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
+	}
+
+	return nil
+}
+
 // DeleteVideoCategories удаляет все связи видео с категориями
 func (s *Storage) DeleteVideoCategories(ctx context.Context, videoID int64) error {
 	const op = "storage.postgres.DeleteVideoCategories"
@@ -253,33 +301,6 @@ func (s *Storage) DeleteVideoCategories(ctx context.Context, videoID int64) erro
 	_, err := s.db.ExecContext(ctx, query, videoID)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	return nil
-}
-
-// DeleteVideo помечает видео как удаленное
-func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
-	const op = "storage.postgres.DeleteVideo"
-
-	query := `
-		UPDATE videos
-		SET deleted = TRUE
-		WHERE id = $1 AND deleted IS NOT TRUE
-	`
-
-	result, err := s.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
 	}
 
 	return nil

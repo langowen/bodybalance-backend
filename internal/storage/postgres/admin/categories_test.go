@@ -838,10 +838,26 @@ func TestDeleteCategory(t *testing.T) {
 		ctx := context.Background()
 		categoryID := int64(1)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с типами контента
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnResult(sqlmock.NewResult(0, 2)) // Предполагаем, что было удалено 2 связи
+
+		// Ожидаем запрос на удаление связей с видео
+		mock.ExpectExec(`DELETE FROM video_categories WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnResult(sqlmock.NewResult(0, 3)) // Предполагаем, что было удалено 3 связи
+
 		// Ожидаем UPDATE запрос для пометки категории как удаленной
-		mock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+		mock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(categoryID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		// Ожидаем завершение транзакции
+		mock.ExpectCommit()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteCategory(ctx, categoryID)
@@ -861,10 +877,26 @@ func TestDeleteCategory(t *testing.T) {
 		ctx := context.Background()
 		categoryID := int64(999)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с типами контента
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
+		// Ожидаем запрос на удаление связей с видео
+		mock.ExpectExec(`DELETE FROM video_categories WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
 		// Ожидаем UPDATE запрос, который не затрагивает ни одной строки
-		mock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+		mock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(categoryID).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// Ожидаем откат транзакции из-за ошибки sql.ErrNoRows
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteCategory(ctx, categoryID)
@@ -877,7 +909,7 @@ func TestDeleteCategory(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("database error", func(t *testing.T) {
+	t.Run("database error on content types deletion", func(t *testing.T) {
 		// Подготовка тестового окружения
 		_, mock, storage := setupCategoriesTestDB(t)
 		defer mock.ExpectClose()
@@ -885,17 +917,80 @@ func TestDeleteCategory(t *testing.T) {
 		ctx := context.Background()
 		categoryID := int64(1)
 
-		// Ожидаем ошибку при выполнении UPDATE запроса
-		mock.ExpectExec(`UPDATE categories SET deleted = TRUE WHERE id = \$1`).
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем ошибку при удалении связей с типами контента
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
 			WithArgs(categoryID).
 			WillReturnError(errors.New("database error"))
+
+		// Ожидаем откат транзакции из-за ошибки
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteCategory(ctx, categoryID)
 
 		// Проверка результатов
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "database error")
+		assert.Contains(t, err.Error(), "content type relations")
+
+		// Проверка, что все ожидания были выполнены
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("database error on video relations deletion", func(t *testing.T) {
+		// Подготовка тестового окружения
+		_, mock, storage := setupCategoriesTestDB(t)
+		defer mock.ExpectClose()
+
+		ctx := context.Background()
+		categoryID := int64(1)
+
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с типами контента
+		mock.ExpectExec(`DELETE FROM category_content_types WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnResult(sqlmock.NewResult(0, 2))
+
+		// Ожидаем ошибку при удалении связей с видео
+		mock.ExpectExec(`DELETE FROM video_categories WHERE category_id = \$1`).
+			WithArgs(categoryID).
+			WillReturnError(errors.New("database error"))
+
+		// Ожидаем откат транзакции из-за ошибки
+		mock.ExpectRollback()
+
+		// Вызов тестируемого метода
+		err := storage.DeleteCategory(ctx, categoryID)
+
+		// Проверка результатов
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "video relations")
+
+		// Проверка, что все ожидания были выполнены
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("transaction error", func(t *testing.T) {
+		// Подготовка тестового окружения
+		_, mock, storage := setupCategoriesTestDB(t)
+		defer mock.ExpectClose()
+
+		ctx := context.Background()
+		categoryID := int64(1)
+
+		// Ожидаем ошибку при начале транзакции
+		mock.ExpectBegin().WillReturnError(errors.New("transaction error"))
+
+		// Вызов тестируемого метода
+		err := storage.DeleteCategory(ctx, categoryID)
+
+		// Проверка результатов
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "transaction error")
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

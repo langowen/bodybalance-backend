@@ -349,10 +349,21 @@ func TestHandler_DeleteType_Success(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, redisMock := newTestAuthHandlerWithMocks(t)
 
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей с категориями
+	sqlMock.ExpectExec(`DELETE FROM category_content_types WHERE content_type_id = \$1`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 2)) // Удаляем 2 связи
+
 	// Настраиваем ожидание запроса к БД
-	sqlMock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
+	sqlMock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Ожидаем завершение транзакции
+	sqlMock.ExpectCommit()
 
 	// Настраиваем ожидания для Redis (вызывается в горутине, но мы все равно можем проверить)
 	redisMock.ExpectDel("categories:1").SetVal(1)
@@ -385,10 +396,21 @@ func TestHandler_DeleteType_NotFound(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, _ := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание запроса к БД
-	sqlMock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1`).
+	// Настраиваем ожидания для новой логики с транзакцией
+	sqlMock.ExpectBegin()
+
+	// Ожидаем удаление связей с категориями
+	sqlMock.ExpectExec(`DELETE FROM category_content_types WHERE content_type_id = \$1`).
 		WithArgs(999).
-		WillReturnError(sql.ErrNoRows)
+		WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
+	// Настраиваем ожидание запроса к БД для удаления типа, который не существует
+	sqlMock.ExpectExec(`UPDATE content_types SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		WithArgs(999).
+		WillReturnResult(sqlmock.NewResult(0, 0)) // 0 затронутых строк
+
+	// Ожидаем откат транзакции из-за ошибки ErrNoRows
+	sqlMock.ExpectRollback()
 
 	// Создаем роутер с параметром id
 	r := chi.NewRouter()

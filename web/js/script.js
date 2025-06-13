@@ -266,7 +266,10 @@ function sortCategories(categories) {
 
 // Функция для открытия модального окна категории
 function openCategoryModal(categoryId = null) {
-   // console.log('Opening category modal for ID:', categoryId); // Добавьте эту строку
+    // Удаляем предыдущие сообщения об ошибках
+    $('#category-error-message').remove();
+
+    // console.log('Opening category modal for ID:', categoryId); // Добавьте эту строку
     if (categoryId) {
         // Проверка, что категория с таким ID существует
         const category = categoriesList.find(c => c.id === categoryId);
@@ -675,6 +678,8 @@ function playVideo(filename) {
 
 // Открытие модального окна редактирования
 function openVideoModal(videoId = null) {
+    $('#video-error-message').remove();
+
     if (videoId) {
         $('#modal-title').text('Редактировать видео');
         $('#delete-btn').removeClass('d-none');
@@ -1504,6 +1509,9 @@ $(document).ready(function() {
         const method = videoId ? 'PUT' : 'POST';
         const endpoint = videoId ? `/video/${videoId}` : '/video';
 
+        // Очищаем предыдущие ошибки
+        $('#error-message').addClass('d-none').empty();
+
         makeRequest({
             endpoint,
             method,
@@ -1512,7 +1520,21 @@ $(document).ready(function() {
                 editModal.hide();
                 loadVideos();
             },
-            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения видео')
+            error: (err) => {
+                // Создаем элемент для ошибки в модальном окне, если его нет
+                if (!$('#video-error-message').length) {
+                    $('#video-form').append(`
+                    <div id="video-error-message" class="alert alert-danger mt-3"></div>
+                `);
+                }
+
+                let errorMessage = 'Ошибка сохранения видео';
+                if (err.responseJSON?.error) {
+                    errorMessage = err.responseJSON.error;
+                }
+
+                $('#video-error-message').text(errorMessage).removeClass('d-none');
+            }
         });
     });
 
@@ -1583,7 +1605,7 @@ $(document).ready(function() {
 
         const userData = {
             username: username,
-            content_type_id: $('#user-content-type-id').val() || null,
+            content_type_id: $('#user-content-type-id').val() ? parseInt($('#user-content-type-id').val()) : null,
             content_type_name: $('#user-content-type-name').val() || null,
             admin: $('#user-admin').is(':checked'),
             password: $('#user-password').val()
@@ -1769,6 +1791,9 @@ $(document).ready(function() {
         const method = categoryId ? 'PUT' : 'POST';
         const endpoint = categoryId ? `/category/${categoryId}` : '/category';
 
+        // Очищаем предыдущие ошибки
+        $('#error-message').addClass('d-none').empty();
+
         makeRequest({
             endpoint,
             method,
@@ -1777,7 +1802,21 @@ $(document).ready(function() {
                 categoryModal.hide();
                 loadCategories();
             },
-            error: (err) => showError(err.responseJSON?.error || 'Ошибка сохранения категории')
+            error: (err) => {
+                // Создаем элемент для ошибки в модальном окне, если его нет
+                if (!$('#category-error-message').length) {
+                    $('#category-form').append(`
+                    <div id="category-error-message" class="alert alert-danger mt-3"></div>
+                `);
+                }
+
+                let errorMessage = 'Ошибка сохранения категории';
+                if (err.responseJSON?.error) {
+                    errorMessage = err.responseJSON.error;
+                }
+
+                $('#category-error-message').text(errorMessage).removeClass('d-none');
+            }
         });
     });
 

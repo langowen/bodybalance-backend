@@ -805,10 +805,21 @@ func TestDeleteVideo(t *testing.T) {
 		ctx := context.Background()
 		videoID := int64(1)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с категориями
+		mock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
+			WithArgs(videoID).
+			WillReturnResult(sqlmock.NewResult(0, 2)) // Предполагаем, что было удалено 2 связи
+
 		// Ожидаем запрос на пометку видео как удаленного
 		mock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(videoID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		// Ожидаем завершение транзакции
+		mock.ExpectCommit()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteVideo(ctx, videoID)
@@ -828,10 +839,21 @@ func TestDeleteVideo(t *testing.T) {
 		ctx := context.Background()
 		videoID := int64(999)
 
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с категориями
+		mock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
+			WithArgs(videoID).
+			WillReturnResult(sqlmock.NewResult(0, 0)) // Нет связей для удаления
+
 		// Ожидаем запрос, который не затрагивает ни одной строки
 		mock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
 			WithArgs(videoID).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// Ожидаем откат транзакции из-за ошибки sql.ErrNoRows
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteVideo(ctx, videoID)
@@ -852,10 +874,16 @@ func TestDeleteVideo(t *testing.T) {
 		ctx := context.Background()
 		videoID := int64(1)
 
-		// Ожидаем ошибку при выполнении запроса
-		mock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
+		// Ожидаем начало транзакции
+		mock.ExpectBegin()
+
+		// Ожидаем запрос на удаление связей с категориями с ошибкой
+		mock.ExpectExec(`DELETE FROM video_categories WHERE video_id = \$1`).
 			WithArgs(videoID).
 			WillReturnError(errors.New("database error"))
+
+		// Ожидаем откат транзакции из-за ошибки
+		mock.ExpectRollback()
 
 		// Вызов тестируемого метода
 		err := storage.DeleteVideo(ctx, videoID)
@@ -868,7 +896,7 @@ func TestDeleteVideo(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("rows affected error", func(t *testing.T) {
+	t.Run("transaction error", func(t *testing.T) {
 		// Подготовка тестового окружения
 		_, mock, storage := setupVideoTestDB(t)
 		defer mock.ExpectClose()
@@ -876,18 +904,15 @@ func TestDeleteVideo(t *testing.T) {
 		ctx := context.Background()
 		videoID := int64(1)
 
-		// Ожидаем ошибку при получении информации о затронутых строках
-		result := sqlmock.NewErrorResult(errors.New("rows affected error"))
-		mock.ExpectExec(`UPDATE videos SET deleted = TRUE WHERE id = \$1 AND deleted IS NOT TRUE`).
-			WithArgs(videoID).
-			WillReturnResult(result)
+		// Ожидаем ошибку при начале транзакции
+		mock.ExpectBegin().WillReturnError(errors.New("transaction error"))
 
 		// Вызов тестируемого метода
 		err := storage.DeleteVideo(ctx, videoID)
 
 		// Проверка результатов
 		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(), "rows affected error"))
+		assert.True(t, strings.Contains(err.Error(), "transaction error"))
 
 		// Проверка, что все ожидания были выполнены
 		assert.NoError(t, mock.ExpectationsWereMet())

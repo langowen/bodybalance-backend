@@ -9,8 +9,10 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // @Summary Создать новую категорию
@@ -39,9 +41,7 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || len(req.TypeIDs) == 0 {
-		logger.Error("empty required fields")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Name and at least one type_id are required")
+	if !h.validCat(&req, w, logger) {
 		return
 	}
 
@@ -162,9 +162,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || len(req.TypeIDs) == 0 {
-		logger.Error("empty required fields")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Name and at least one type_id are required")
+	if !h.validCat(&req, w, logger) {
 		return
 	}
 
@@ -182,7 +180,9 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.removeCategoryCache(id)
+	if h.cfg.Redis.Enable == true {
+		go h.removeCategoryCache(id)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -231,7 +231,9 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.removeCategoryCache(id)
+	if h.cfg.Redis.Enable == true {
+		go h.removeCategoryCache(id)
+	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -239,6 +241,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// removeCategoryCache удаляет записи из кэша при обновлении категорий
 func (h *Handler) removeCategoryCache(id int64) {
 	const op = "admin.removeCategoryCache"
 
@@ -274,4 +277,39 @@ func (h *Handler) removeCategoryCache(id int64) {
 			h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
 		}
 	}
+}
+
+// validCat проверят данные входящего запроса на их валидность
+func (h *Handler) validCat(req *admResponse.CategoryRequest, w http.ResponseWriter, logger *logging.Logger) bool {
+	switch {
+	case req.Name == "":
+		logger.Warn("empty required Name")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
+		return false
+	case req.ImgURL == "":
+		logger.Warn("empty required ImgURL")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
+		return false
+	case len(req.TypeIDs) == 0:
+		logger.Warn("empty required TypeIDs")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
+		return false
+	}
+
+	// Проверка ImgURL
+	if !validFilePattern.MatchString(req.ImgURL) {
+		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
+		return false
+	}
+
+	for _, pattern := range suspiciousPatterns {
+		if strings.Contains(req.ImgURL, pattern) {
+			logger.Warn("suspicious pattern in ImgURL", "imgurl", req.ImgURL, "pattern", pattern)
+			admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
+			return false
+		}
+	}
+
+	return true
 }

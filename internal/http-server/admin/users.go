@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,26 +37,31 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 
 	var req admResponse.UserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Error("failed to decode request body", sl.Err(err))
+		logger.Warn("failed to decode request body", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
-	if req.Username == "" || req.Password == "" {
-		logger.Error("empty required fields")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Username and password are required")
+	if !h.validUser(&req, w, logger) {
+		return
+	}
+
+	if req.Password == "" && req.Admin == true {
+		logger.Warn("empty required password")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Пароль обязателен для администратора")
 		return
 	}
 
 	ctx := r.Context()
 	user, err := h.storage.AddUser(ctx, &req)
 	if err != nil {
-		logger.Error("failed to add user", sl.Err(err))
 
 		if strings.Contains(err.Error(), "user already exists") {
+			logger.Warn("fuser already exists", sl.Err(err))
 			admResponse.RespondWithError(w, http.StatusConflict, "duplicate key")
 			return
 		}
+		logger.Warn("failed to add user", sl.Err(err))
 
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add user")
 		return
@@ -178,6 +184,10 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.validUser(&req, w, logger) {
+		return
+	}
+
 	ctx := r.Context()
 
 	err = h.storage.UpdateUser(ctx, id, &req)
@@ -263,6 +273,7 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// removeUserCache удаляет данные из кэша
 func (h *Handler) removeUserCache(Username string) {
 	const op = "admin.removeUserCache"
 
@@ -277,4 +288,20 @@ func (h *Handler) removeUserCache(Username string) {
 	if err != nil {
 		logger.Warn("failed to invalidate user cache", sl.Err(err), "username", Username)
 	}
+}
+
+// validUser проверят входящие данные на валидность
+func (h *Handler) validUser(req *admResponse.UserRequest, w http.ResponseWriter, logger *logging.Logger) bool {
+	switch {
+	case req.Username == "":
+		logger.Warn("empty required name")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Введите имя пользователя")
+		return false
+	case req.ContentTypeID == 0:
+		logger.Warn("empty required type ID")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите тип контента")
+		return false
+	}
+
+	return true
 }
