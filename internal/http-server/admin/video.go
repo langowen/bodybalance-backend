@@ -17,7 +17,7 @@ import (
 )
 
 // validFilePattern паттерны для проверки правильности названия файлов
-var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9]+$`)
+var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9а-яА-ЯёЁ_\-.]+\.[a-zA-Z0-9]+$`)
 
 // suspiciousPatterns паттерны для проверки нет ли лишних символов и ссылок в данных
 var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=", "%"}
