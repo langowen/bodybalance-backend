@@ -298,15 +298,393 @@
             "type": "prometheus",
             "uid": "${P1}"
           },
-          "editorMode": "code",
-          "expr": "topk(5, histogram_quantile(0.95, sum(rate(bodybalance_request_duration_seconds_bucket[5m])) by (endpoint, le)))",
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "topk(5, histogram_quantile(0.95, sum by(endpoint, le) (rate(bodybalance_request_duration_seconds_bucket[10m]))))",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "{{endpoint}}",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
       "title": "Топ-5 самых медленных эндпоинтов",
       "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 400
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "sum(increase(bodybalance_admin_requests_total[5m]))",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "Admin API",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "sum(increase(bodybalance_api_requests_total[5m]))",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "legendFormat": "Mobile API",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
+        }
+      ],
+      "timeFrom": "10m",
+      "title": "Запросы за последние 5 минут",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Статистика запросов по уникальным User-Agent за последние 30 дней",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": false
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "User-Agent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Средний duration (мс)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Всего данных (МБ)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "mbytes"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 303,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Количество запросов"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "editorMode": "code",
+          "expr": "topk(50, sum by(user_agent) (count_over_time({service_name=\"$service\"} | json | user_agent != \"\" [$__interval])))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(user_agent) (count_over_time({service_name=\"$service\"} | json | user_agent != \"\" [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(user_agent) (count_over_time({service_name=\"$service\", user_agent=~\"chrome|firefox|safari|curl\"} | json [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "Анализ запросов по User-Agent (30 дней)",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "user_agent",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "Количество запросов",
+              "Value #B": "Средний duration (мс)",
+              "Value #C": "Всего данных (МБ)",
+              "user_agent": "User-Agent"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0.1,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "topk(5, sum(rate(bodybalance_static_file_requests_total[5m])) by (filename))",
+          "legendFormat": "{{filename}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Топ-5 наиболее популярных файлов",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -372,115 +750,20 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 27
       },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(bodybalance_request_duration_seconds_bucket[5m])) by (handler, le))",
-          "legendFormat": "{{handler}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Время обработки запросов (p95)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0.1,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 17
-      },
-      "id": 7,
+      "id": 8,
       "options": {
         "legend": {
           "calcs": [
-            "sum",
+            "mean",
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Max",
+          "sortDesc": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -495,100 +778,19 @@
             "type": "prometheus",
             "uid": "${P1}"
           },
-          "editorMode": "code",
-          "expr": "topk(5, sum(rate(bodybalance_static_file_requests_total[5m])) by (filename))",
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "topk(5, avg by(filename) (bodybalance_static_file_load_time_seconds_bucket))",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "{{filename}}",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "Топ-5 наиболее популярных файлов",
+      "title": "Топ-5 самых медленных для загрузки файлов",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 20
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 17
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(bodybalance_admin_requests_total[1m]))",
-          "legendFormat": "Admin API",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(bodybalance_api_requests_total[1m]))",
-          "hide": false,
-          "legendFormat": "Mobile API",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Запросы за последнюю минуту",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -654,7 +856,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 35
       },
       "id": 3,
       "options": {
@@ -763,23 +965,20 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 35
       },
-      "id": 8,
+      "id": 4,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "pluginVersion": "12.0.1",
@@ -790,13 +989,13 @@
             "uid": "${P1}"
           },
           "editorMode": "code",
-          "expr": "topk(5, avg(bodybalance_static_file_load_time_seconds) by (filename))",
-          "legendFormat": "{{filename}}",
+          "expr": "histogram_quantile(0.95, sum(rate(bodybalance_request_duration_seconds_bucket[5m])) by (handler, le))",
+          "legendFormat": "{{handler}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Топ-5 самых медленных для загрузки файлов",
+      "title": "Время обработки запросов (p95)",
       "type": "timeseries"
     },
     {
@@ -918,10 +1117,10 @@
         ]
       },
       "gridPos": {
-        "h": 11,
+        "h": 16,
         "w": 6,
         "x": 0,
-        "y": 33
+        "y": 43
       },
       "id": 13,
       "options": {
@@ -1072,7 +1271,7 @@
         "h": 11,
         "w": 6,
         "x": 6,
-        "y": 33
+        "y": 43
       },
       "id": 12,
       "options": {
@@ -1097,11 +1296,15 @@
             "type": "prometheus",
             "uid": "${P1}"
           },
+          "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "avg(bodybalance_static_file_load_time_seconds{file_type=\"video\"})",
+          "expr": "avg(bodybalance_static_file_load_time_seconds_bucket{file_type=\"video\"})",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "Видео",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         },
         {
           "datasource": {
@@ -1109,7 +1312,7 @@
             "uid": "${P1}"
           },
           "editorMode": "code",
-          "expr": "avg(bodybalance_static_file_load_time_seconds{file_type=\"image\"})",
+          "expr": "avg(bodybalance_static_file_load_time_seconds_bucket{file_type=\"image\"})",
           "hide": false,
           "legendFormat": "Изображения",
           "range": true,
@@ -1152,7 +1355,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1162,6 +1365,7 @@
               "mode": "off"
             }
           },
+          "fieldMinMax": false,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1174,7 +1378,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "KBs"
         },
         "overrides": []
       },
@@ -1182,7 +1387,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 43
       },
       "id": 9,
       "options": {
@@ -1208,11 +1413,18 @@
             "type": "prometheus",
             "uid": "${P1}"
           },
+          "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(bodybalance_static_file_size_bytes[1m]))",
+          "exemplar": false,
+          "expr": "sum(rate(bodybalance_static_file_transfer_rate_bytes_per_second_bucket[1m])) * 60 / 1024",
+          "format": "time_series",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
           "legendFormat": "Общий трафик",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         },
         {
           "datasource": {
@@ -1220,7 +1432,7 @@
             "uid": "${P1}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(bodybalance_static_file_size_bytes{file_type=\"video\"}[1m]))",
+          "expr": "sum(rate(bodybalance_static_file_transfer_rate_bytes_per_second_bucket{file_type=\"video\"}[1m])) * 60 / 1024",
           "hide": false,
           "legendFormat": "Видео",
           "range": true,
@@ -1232,7 +1444,7 @@
             "uid": "${P1}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(bodybalance_static_file_size_bytes{file_type=\"image\"}[1m]))",
+          "expr": "sum(rate(bodybalance_static_file_transfer_rate_bytes_per_second_bucket{file_type=\"image\"}[1m])) * 60 / 1024",
           "hide": false,
           "legendFormat": "Изображения",
           "range": true,
@@ -1267,7 +1479,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 51
       },
       "id": 11,
       "options": {
@@ -1333,7 +1545,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 59
       },
       "id": 100,
       "panels": [],
@@ -1367,7 +1579,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 50
+        "y": 60
       },
       "id": 101,
       "options": {
@@ -1404,301 +1616,6 @@
       ],
       "title": "Версия Go",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
-      "description": "Время, затрачиваемое на сборку мусора (GC)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0.1,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 10,
-        "x": 4,
-        "y": 50
-      },
-      "id": 102,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum(rate(go_gc_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "GC p50",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.9, sum(rate(go_gc_duration_seconds_bucket[5m])) by (le))",
-          "hide": false,
-          "legendFormat": "GC p90",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(go_gc_duration_seconds_bucket[5m])) by (le))",
-          "hide": false,
-          "legendFormat": "GC p99",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "Время сборки мусора (GC)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
-      "description": "Частота запуска сборки мусора",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0.1,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 10,
-        "x": 14,
-        "y": 50
-      },
-      "id": 103,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "rate(go_gc_duration_seconds_count[1m])",
-          "legendFormat": "GC/сек",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Частота GC (раз/сек)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
-      "description": "Количество активных горутин в приложении",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "yellow",
-                "value": 500
-              },
-              {
-                "color": "red",
-                "value": 1000
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 0,
-        "y": 54
-      },
-      "id": 104,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "go_goroutines",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Количество горутин",
-      "type": "gauge"
     },
     {
       "datasource": {
@@ -1765,7 +1682,7 @@
         "h": 8,
         "w": 10,
         "x": 4,
-        "y": 58
+        "y": 60
       },
       "id": 105,
       "options": {
@@ -1830,80 +1747,6 @@
         "type": "prometheus",
         "uid": "${P1}"
       },
-      "description": "Фрагментация памяти = (heap_inuse_bytes - alloc_bytes) / heap_inuse_bytes",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 1,
-          "min": 0,
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "yellow",
-                "value": 30
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 10,
-        "x": 14,
-        "y": 58
-      },
-      "id": 106,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${P1}"
-          },
-          "editorMode": "code",
-          "expr": "(go_memstats_heap_inuse_bytes - go_memstats_alloc_bytes) / go_memstats_heap_inuse_bytes",
-          "hide": false,
-          "legendFormat": "Фрагментация",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Фрагментация памяти",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${P1}"
-      },
       "description": "Использование процессора приложением в процентах",
       "fieldConfig": {
         "defaults": {
@@ -1962,9 +1805,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 66
+        "w": 10,
+        "x": 14,
+        "y": 60
       },
       "id": 107,
       "options": {
@@ -1998,6 +1841,378 @@
         }
       ],
       "title": "Нагрузка на CPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "description": "Количество активных горутин в приложении",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 64
+      },
+      "id": 104,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "go_goroutines",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Количество горутин",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "description": "Время, затрачиваемое на сборку мусора (GC)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 0,
+        "y": 68
+      },
+      "id": 102,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "go_gc_duration_seconds{quantile=\"0.5\"}",
+          "legendFormat": "GC Медиана (p50)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "go_gc_duration_seconds{quantile=\"0.75\"}",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "GC p75",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "go_gc_duration_seconds{quantile=\"1\"}",
+          "hide": false,
+          "legendFormat": "GC Максимум (p100)",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Время сборки мусора (GC)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "description": "Фрагментация памяти = (heap_inuse_bytes - alloc_bytes) / heap_inuse_bytes",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 68
+      },
+      "id": 106,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "(go_memstats_heap_inuse_bytes - go_memstats_alloc_bytes) / go_memstats_heap_inuse_bytes",
+          "hide": false,
+          "legendFormat": "Фрагментация",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Фрагментация памяти",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${P1}"
+      },
+      "description": "Частота запуска сборки мусора",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0.1,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 76
+      },
+      "id": 103,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${P1}"
+          },
+          "editorMode": "code",
+          "expr": "rate(go_gc_duration_seconds_count[1m])",
+          "legendFormat": "GC/сек",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Частота GC (раз/сек)",
       "type": "timeseries"
     },
     {
@@ -2064,7 +2279,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 66
+        "y": 76
       },
       "id": 108,
       "options": {
@@ -2138,7 +2353,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 66
+        "y": 76
       },
       "id": 109,
       "options": {
@@ -2179,7 +2394,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 84
       },
       "id": 200,
       "panels": [],
@@ -2191,208 +2406,7 @@
         "type": "loki",
         "uid": "${L1}"
       },
-      "description": "Количество логов по уровням (error, warn, info, debug) и сервисам",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0.1,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "bodybalance|error"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "bodybalance|warn"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "postgres|error"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "postgres|warn"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 75
-      },
-      "id": 201,
-      "options": {
-        "legend": {
-          "calcs": [
-            "sum",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${L1}"
-          },
-          "direction": "backward",
-          "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"error\"}[10m])) by (detected_level)",
-          "legendFormat": "{{service_name}}|{{level}}",
-          "queryType": "range",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${L1}"
-          },
-          "direction": "backward",
-          "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"warn\"}[10m])) by (detected_level)",
-          "hide": false,
-          "legendFormat": "{{service_name}}|{{level}}",
-          "queryType": "range",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${L1}"
-          },
-          "direction": "backward",
-          "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"info\"}[10m])) by (detected_level)",
-          "hide": false,
-          "legendFormat": "{{service_name}}|{{level}}",
-          "queryType": "range",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${L1}"
-          },
-          "direction": "backward",
-          "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=~\"$service\", detected_level=\"debug\"}[10m])) by (detected_level)",
-          "hide": false,
-          "legendFormat": "{{service_name}}|{{level}}",
-          "queryType": "range",
-          "refId": "D"
-        }
-      ],
-      "title": "Количество логов по уровням и сервисам",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${L1}"
-      },
-      "description": "Топ ошибок в приложении bodybalance",
+      "description": "Статистика запросов по уникальным IP",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2401,8 +2415,10 @@
           "custom": {
             "align": "auto",
             "cellOptions": {
-              "type": "auto"
+              "type": "auto",
+              "wrapText": false
             },
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -2414,51 +2430,66 @@
               },
               {
                 "color": "red",
-                "value": 10
+                "value": 10000
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Количество"
+              "options": "User-Agent"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 100
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "thresholds"
-                }
+                "value": 300
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Сообщение ошибки"
+              "options": "Средний duration (мс)"
             },
             "properties": [
               {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
                 "id": "custom.width",
-                "value": 600
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Всего данных (МБ)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "mbytes"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
-        "x": 12,
-        "y": 75
+        "x": 0,
+        "y": 85
       },
-      "id": 202,
+      "id": 300,
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -2473,7 +2504,7 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "Количество"
+            "displayName": "Количество запросов"
           }
         ]
       },
@@ -2485,15 +2516,57 @@
             "uid": "${L1}"
           },
           "direction": "backward",
-          "editorMode": "builder",
-          "expr": "{service_name=\"$service\", detected_level=\"error\"}",
-          "legendFormat": "{{message}}",
+          "editorMode": "code",
+          "expr": "topk(50, sum by(remote_addr) (count_over_time({service_name=\"$service\"} | json | remote_addr != \"\" [$__interval])))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{remote_addr}}",
           "queryType": "range",
+          "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(remote_addr) (count_over_time({service_name=\"$service\"} | json | remote_addr != \"\" [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{remote_addr}}",
+          "queryType": "range",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(remote_addr) (count_over_time({service_name=\"$service\", remote_addr=~\"chrome|firefox|safari|curl\"} | json [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{remote_addr}}",
+          "queryType": "range",
+          "range": false,
+          "refId": "C"
         }
       ],
-      "title": "Топ ошибок bodybalance",
+      "title": "Анализ запросов по IP ",
       "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "remote_addr",
+            "mode": "outer"
+          }
+        },
         {
           "id": "organize",
           "options": {
@@ -2502,8 +2575,194 @@
             },
             "indexByName": {},
             "renameByName": {
-              "Value": "Количество",
-              "message": "Сообщение ошибки"
+              "Value #A": "Количество запросов",
+              "Value #B": "Средний duration (мс)",
+              "Value #C": "Всего данных (МБ)",
+              "user_agent": "User-Agent"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Статистика запросов по уникальным User-Agent за последние 30 дней",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": false
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "User-Agent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Средний duration (мс)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Всего данных (МБ)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "mbytes"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "id": 304,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Количество запросов"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "topk(50, sum by(user_agent) (count_over_time({service_name=\"$service\"} | json | user_agent != \"\" [$__interval])))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "queryType": "range",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(user_agent) (count_over_time({service_name=\"$service\"} | json | user_agent != \"\" [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "queryType": "range",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(user_agent) (count_over_time({service_name=\"$service\", user_agent=~\"chrome|firefox|safari|curl\"} | json [$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{user_agent}}",
+          "queryType": "range",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "Анализ запросов по User-Agent",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "user_agent",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "Количество запросов",
+              "Value #B": "Средний duration (мс)",
+              "Value #C": "Всего данных (МБ)",
+              "user_agent": "User-Agent"
             }
           }
         }
@@ -2636,7 +2895,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 95
       },
       "id": 204,
       "options": {
@@ -2661,7 +2920,8 @@
           },
           "direction": "backward",
           "editorMode": "builder",
-          "expr": "sum by(level) (count_over_time({service_name=~\"$service\"} | label_format level=detected_level [$__interval]))",
+          "expr": "sum by(level) (count_over_time({service_name=~\"$service\"} | json | label_format level=detected_level | user_agent != `Prometheus/3.4.1` [$__interval]))",
+          "legendFormat": "{{level}}",
           "queryType": "range",
           "refId": "A"
         }
@@ -2683,7 +2943,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 89
+        "y": 101
       },
       "id": 205,
       "options": {
@@ -2705,8 +2965,8 @@
             "uid": "${L1}"
           },
           "direction": "backward",
-          "editorMode": "code",
-          "expr": "{service_name=~\"$service\"} | label_format level=detected_level",
+          "editorMode": "builder",
+          "expr": "{service_name=~\"$service\"} | json | label_format level=detected_level | user_agent != `Prometheus/3.4.1`",
           "maxLines": 100,
           "queryType": "range",
           "refId": "A"
@@ -2714,18 +2974,570 @@
       ],
       "title": "Логи приложения",
       "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Количество логов по уровням (error, warn, info, debug) и сервисам",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0.1,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bodybalance|error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bodybalance|warn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "postgres|error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "postgres|warn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 113
+      },
+      "id": 201,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(service_name, level) (count_over_time({service_name=\"$service\"} | json | label_format level=detected_level | level = `error` | user_agent != `Prometheus/3.4.1` [1m]))",
+          "legendFormat": "{{service_name}}|{{level}}",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(service_name, level) (count_over_time({service_name=\"$service\"} | json | label_format level=detected_level | level = `warn` | user_agent != `Prometheus/3.4.1` [1m]))",
+          "hide": false,
+          "legendFormat": "{{service_name}}|{{level}}",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(service_name, level) (count_over_time({service_name=\"$service\"} | json | label_format level=detected_level | level = `info` | user_agent != `Prometheus/3.4.1` [1m]))",
+          "hide": false,
+          "legendFormat": "{{service_name}}|{{level}}",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "sum by(service_name, level) (count_over_time({service_name=\"$service\"} | json | label_format level=detected_level | level = `debug` | user_agent != `Prometheus/3.4.1` [1m]))",
+          "legendFormat": "{{service_name}}|{{level}}",
+          "queryType": "range",
+          "refId": "D"
+        }
+      ],
+      "title": "Количество логов по уровням и сервисам",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${L1}"
+      },
+      "description": "Топ ошибок в приложении ",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": false
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "#EAB839",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ошибка"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Количество"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "color"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Время последней ошибки"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.hidden",
+                "value": false
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 113
+      },
+      "hideTimeOverride": false,
+      "id": 202,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Количество"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${L1}"
+          },
+          "direction": "forward",
+          "editorMode": "builder",
+          "expr": "{service_name=\"$service\"} | label_format level=detected_level | level != `info`",
+          "hide": false,
+          "legendFormat": "{{error}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "24h",
+      "title": "Топ ошибок за 24 часа",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Line": false,
+              "Time": true,
+              "id": true,
+              "labelTypes": true,
+              "labels": true,
+              "tsNs": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Time": "",
+              "Value": "Количество",
+              "message": "Сообщение ошибки"
+            }
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "delimiter": ",",
+            "format": "auto",
+            "keepTime": true,
+            "replace": true,
+            "source": "Line"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": false,
+              "categories_count": true,
+              "category": true,
+              "category_id": true,
+              "error": false,
+              "filename": true,
+              "imgurl": true,
+              "level": false,
+              "msg": false,
+              "op": true,
+              "program_info": true,
+              "request_id": true,
+              "source": true,
+              "time": false,
+              "type": true,
+              "type_id": true,
+              "username": true,
+              "video_id": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Time": 3,
+              "categories_count": 17,
+              "category": 10,
+              "category_id": 14,
+              "error": 2,
+              "filename": 12,
+              "imgurl": 13,
+              "level": 0,
+              "msg": 1,
+              "op": 7,
+              "program_info": 6,
+              "request_id": 8,
+              "source": 5,
+              "time": 4,
+              "type": 9,
+              "type_id": 16,
+              "username": 11,
+              "video_id": 15
+            },
+            "renameByName": {
+              "error": "Детализация ошибки (при наличии)",
+              "msg": "",
+              "username": ""
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "ERROR"
+                  }
+                },
+                "fieldName": "level"
+              },
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "WARN"
+                  }
+                },
+                "fieldName": "level"
+              },
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "DEBUG"
+                  }
+                },
+                "fieldName": "level"
+              }
+            ],
+            "match": "any",
+            "type": "include"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Nested frames": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Time": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              },
+              "error": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "level": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "msg": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "time": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              },
+              "Детализация ошибки": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Детализация ошибки (при наличии)": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "groupToNestedTable",
+          "options": {
+            "fields": {
+              "Time (last)": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              },
+              "level (count)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "msg": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "time (last)": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              },
+              "time (lastNotNull)": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              }
+            },
+            "showSubframeHeaders": true
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Nested frames": "",
+              "level (count)": "Количество ошибок",
+              "level (count) (sum)": "Количество",
+              "msg": "Ошибка",
+              "time (last) (last)": "Время последней ошибки"
+            }
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "preload": false,
-  "refresh": "15m",
+  "refresh": "5m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "text": "prometheus_body",
-          "value": "feoq8yzurcjcwc"
+          "text": "body_prod_prom",
+          "value": "feoqppeu42qrkf"
         },
         "includeAll": false,
         "label": "Источник данных Prometheus",
@@ -2775,16 +3587,15 @@
         "sort": 1,
         "type": "query"
       }
-
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "BodyBalance Dashboard",
   "uid": "bodybalance",
-  "version": 45
+  "version": 92
 }

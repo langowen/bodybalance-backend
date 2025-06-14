@@ -137,7 +137,14 @@ func newLogger(cfg *config.Config) *logging.Logger {
 	switch cfg.Env {
 	case "local":
 		logger = setupPrettySlog()
-	case "prod", "dev", "test":
+	case "prod":
+		logger = logging.NewLogger(
+			logging.WithLevel(cfg.LogLevel),
+			logging.WithIsJSON(true),
+			logging.WithSetDefault(true),
+			logging.WithLogFilePath(""),
+		)
+	case "dev", "test":
 		logger = logging.NewLogger(
 			logging.WithLevel(cfg.LogLevel),
 			logging.WithIsJSON(true),
