@@ -18,6 +18,10 @@ func New(logger *logging.Logger) func(next http.Handler) http.Handler {
 		logger.Info("logger middleware enabled")
 
 		fn := func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/metrics" {
+				next.ServeHTTP(w, r)
+				return
+			}
 			entry := log.With(
 				slog.String("method", r.Method),
 				slog.String("protocol", r.URL.Scheme),
