@@ -130,7 +130,7 @@ func TestGetSetCategories(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 		require.NotNil(t, categories)
-		require.Equal(t, expectedCategories, *categories) // Сравниваем сам слайс, а не указатель
+		require.Equal(t, expectedCategories, categories) // Сравниваем сам слайс, а не указатель
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -179,7 +179,7 @@ func TestGetSetCategories(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetVal("OK")
 
 		// Act
-		err := storage.SetCategories(ctx, contentType, &categories, ttl)
+		err := storage.SetCategories(ctx, contentType, categories, ttl)
 
 		// Assert
 		require.NoError(t, err)
@@ -208,7 +208,7 @@ func TestGetSetCategories(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetErr(errors.New("redis error"))
 
 		// Act
-		err := storage.SetCategories(ctx, contentType, &categories, ttl)
+		err := storage.SetCategories(ctx, contentType, categories, ttl)
 
 		// Assert
 		require.Error(t, err)
@@ -216,54 +216,7 @@ func TestGetSetCategories(t *testing.T) {
 	})
 }
 
-// TestDeleteCategories тестирует удаление категорий
-func TestDeleteCategories(t *testing.T) {
-	t.Run("delete categories success", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		contentType := int64(1)
-		cacheKey := "categories:1"
-
-		mock.ExpectDel(cacheKey).SetVal(1)
-
-		// Act
-		err := storage.DeleteCategories(ctx, contentType)
-
-		// Assert
-		require.NoError(t, err)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("delete categories fails", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		contentType := int64(1)
-		cacheKey := "categories:1"
-
-		mock.ExpectDel(cacheKey).SetErr(errors.New("redis error"))
-
-		// Act
-		err := storage.DeleteCategories(ctx, contentType)
-
-		// Assert
-		require.Error(t, err)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-}
-
-// TestAccountOperations тестирует операции с аккаунтами
+// TestGetAccount и TestSetAccount тестируют операции с аккаунтами
 func TestAccountOperations(t *testing.T) {
 	t.Run("get non-existent account", func(t *testing.T) {
 		// Arrange
@@ -342,28 +295,6 @@ func TestAccountOperations(t *testing.T) {
 
 		// Act
 		err := storage.SetAccount(ctx, username, account, ttl)
-
-		// Assert
-		require.NoError(t, err)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("delete account success", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		username := "testuser"
-		cacheKey := "account:testuser"
-
-		mock.ExpectDel(cacheKey).SetVal(1)
-
-		// Act
-		err := storage.DeleteAccount(ctx, username)
 
 		// Assert
 		require.NoError(t, err)
@@ -457,28 +388,6 @@ func TestVideoOperations(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
-
-	t.Run("delete video success", func(t *testing.T) {
-		// Arrange
-		db, mock := redismock.NewClientMock()
-		storage := &Storage{
-			redis: db,
-			cfg:   &config.Config{},
-		}
-
-		ctx := context.Background()
-		videoID := int64(123)
-		cacheKey := "video:123"
-
-		mock.ExpectDel(cacheKey).SetVal(1)
-
-		// Act
-		err := storage.DeleteVideo(ctx, videoID)
-
-		// Assert
-		require.NoError(t, err)
-		require.NoError(t, mock.ExpectationsWereMet())
-	})
 }
 
 // TestVideosByCategoryAndTypeOperations тестирует операции с видео по категории и типу
@@ -563,14 +472,17 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		mock.ExpectSet(cacheKey, data, ttl).SetVal("OK")
 
 		// Act
-		err := storage.SetVideosByCategoryAndType(ctx, contentType, category, &videos, ttl)
+		err := storage.SetVideosByCategoryAndType(ctx, contentType, category, videos, ttl)
 
 		// Assert
 		require.NoError(t, err)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
+}
 
-	t.Run("delete videos by category and type success", func(t *testing.T) {
+// TestInvalidateCacheByPattern тестирует удаление кэша по шаблону
+func TestInvalidateCacheByPattern(t *testing.T) {
+	t.Run("successfully invalidate cache by pattern", func(t *testing.T) {
 		// Arrange
 		db, mock := redismock.NewClientMock()
 		storage := &Storage{
@@ -579,17 +491,168 @@ func TestVideosByCategoryAndTypeOperations(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		contentType := int64(123)
-		category := int64(1234)
-		cacheKey := "videos:123:1234"
+		pattern := "videos:*"
 
-		mock.ExpectDel(cacheKey).SetVal(1)
+		// Первая итерация SCAN
+		mock.ExpectScan(0, pattern, 100).SetVal([]string{"videos:1:1", "videos:1:2"}, 1)
+		mock.ExpectDel("videos:1:1", "videos:1:2").SetVal(2)
+
+		// Вторая итерация SCAN
+		mock.ExpectScan(1, pattern, 100).SetVal([]string{"videos:2:1"}, 0)
+		mock.ExpectDel("videos:2:1").SetVal(1)
 
 		// Act
-		err := storage.DeleteVideosByCategoryAndType(ctx, contentType, category)
+		err := storage.InvalidateCacheByPattern(ctx, pattern)
 
 		// Assert
 		require.NoError(t, err)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
+
+	t.Run("error during scan", func(t *testing.T) {
+		// Arrange
+		db, mock := redismock.NewClientMock()
+		storage := &Storage{
+			redis: db,
+			cfg:   &config.Config{},
+		}
+
+		ctx := context.Background()
+		pattern := "videos:*"
+
+		mock.ExpectScan(0, pattern, 100).SetErr(errors.New("scan error"))
+
+		// Act
+		err := storage.InvalidateCacheByPattern(ctx, pattern)
+
+		// Assert
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to scan redis keys")
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("error during delete", func(t *testing.T) {
+		// Arrange
+		db, mock := redismock.NewClientMock()
+		storage := &Storage{
+			redis: db,
+			cfg:   &config.Config{},
+		}
+
+		ctx := context.Background()
+		pattern := "videos:*"
+
+		mock.ExpectScan(0, pattern, 100).SetVal([]string{"videos:1:1", "videos:1:2"}, 0)
+		mock.ExpectDel("videos:1:1", "videos:1:2").SetErr(errors.New("delete error"))
+
+		// Act
+		err := storage.InvalidateCacheByPattern(ctx, pattern)
+
+		// Assert
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to delete redis keys")
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("no keys found", func(t *testing.T) {
+		// Arrange
+		db, mock := redismock.NewClientMock()
+		storage := &Storage{
+			redis: db,
+			cfg:   &config.Config{},
+		}
+
+		ctx := context.Background()
+		pattern := "videos:*"
+
+		mock.ExpectScan(0, pattern, 100).SetVal([]string{}, 0)
+
+		// Act
+		err := storage.InvalidateCacheByPattern(ctx, pattern)
+
+		// Assert
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+// TestInvalidateAllCache тестирует удаление всего кэша
+func TestInvalidateAllCache(t *testing.T) {
+	t.Run("successfully invalidate all cache", func(t *testing.T) {
+		// Arrange
+		db, mock := redismock.NewClientMock()
+		storage := &Storage{
+			redis: db,
+			cfg:   &config.Config{},
+		}
+
+		ctx := context.Background()
+		pattern := "*"
+
+		mock.ExpectScan(0, pattern, 100).SetVal([]string{"videos:1:1", "account:user1"}, 0)
+		mock.ExpectDel("videos:1:1", "account:user1").SetVal(2)
+
+		// Act
+		err := storage.InvalidateAllCache(ctx)
+
+		// Assert
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+// TestInvalidateTypeSpecificCache тестирует удаление кэша определенного типа
+func TestInvalidateTypeSpecificCache(t *testing.T) {
+	testCases := []struct {
+		name    string
+		pattern string
+		keys    []string
+	}{
+		{
+			name:    "invalidate videos cache",
+			pattern: "videos:*",
+			keys:    []string{"videos:1:1", "videos:2:3"},
+		},
+		{
+			name:    "invalidate categories cache",
+			pattern: "categories:*",
+			keys:    []string{"categories:1", "categories:2"},
+		},
+		{
+			name:    "invalidate accounts cache",
+			pattern: "account:*",
+			keys:    []string{"account:user1", "account:user2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			db, mock := redismock.NewClientMock()
+			storage := &Storage{
+				redis: db,
+				cfg:   &config.Config{},
+			}
+
+			ctx := context.Background()
+
+			mock.ExpectScan(0, tc.pattern, 100).SetVal(tc.keys, 0)
+			mock.ExpectDel(tc.keys...).SetVal(int64(len(tc.keys)))
+
+			// Подменяем соответствующий метод на наш тестовый
+			var err error
+			switch tc.pattern {
+			case "videos:*":
+				err = storage.InvalidateVideosCache(ctx)
+			case "categories:*":
+				err = storage.InvalidateCategoriesCache(ctx)
+			case "account:*":
+				err = storage.InvalidateAccountsCache(ctx)
+			}
+
+			// Assert
+			require.NoError(t, err)
+			require.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }

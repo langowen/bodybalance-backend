@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	mwMetrics "github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
@@ -49,33 +50,34 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 		if cachedAccount != nil {
 			logger.Debug("serving from cache", "account_type", cachedAccount.TypeName)
+
+			mwMetrics.RecordDataSource(r, mwMetrics.SourceRedis)
+
 			response.RespondWithJSON(w, http.StatusOK, cachedAccount)
 			return
 		}
 	}
 
 	account, err := h.storage.CheckAccount(ctx, username)
-	switch {
-	case errors.Is(err, storage.ErrAccountNotFound):
-		logger.Warn("Username not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Username not found",
-			fmt.Sprintf("Username '%s' does not exist", username))
-		return
+	if err != nil {
+		if errors.Is(err, storage.ErrAccountNotFound) {
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Account with username %s not found", username))
+			return
+		}
 
-	case err != nil:
-		logger.Error("Failed to check account", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		logger.Error("storage get error", sl.Err(err))
+		response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to check account")
 		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go func() {
-			ctx := context.Background()
+	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
 
-			if err := h.redis.SetAccount(ctx, username, account, h.cfg.Redis.CacheTTL); err != nil {
-				logger.Warn("failed to set account cache", sl.Err(err))
+	if h.cfg.Redis.Enable {
+		go func(ctx context.Context, username string, acc *response.AccountResponse) {
+			if err := h.redis.SetAccount(ctx, username, acc, h.cfg.Redis.CacheTTL); err != nil {
+				logger.Warn("failed to cache account in redis", sl.Err(err))
 			}
-		}()
+		}(ctx, username, account)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, account)

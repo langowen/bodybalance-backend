@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -14,8 +15,32 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+// RedisMock - мок для Redis хранилища
+type RedisMock struct {
+	mock.Mock
+}
+
+// InvalidateVideosCache - мок метода инвалидации кэша видео
+func (m *RedisMock) InvalidateVideosCache(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+// InvalidateCategoriesCache - мок метода инвалидации кэша категорий
+func (m *RedisMock) InvalidateCategoriesCache(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+// InvalidateAccountsCache - мок метода инвалидации кэша аккаунтов
+func (m *RedisMock) InvalidateAccountsCache(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
 
 // Тест на успешное добавление категории
 func TestHandler_AddCategory_Success(t *testing.T) {
@@ -388,4 +413,34 @@ func TestHandler_DeleteCategory_NotFound(t *testing.T) {
 	// Проверяем результаты
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
+}
+
+// TestHandler_RemoveCache_Success проверяет правильность инвалидации кэша
+func TestHandler_RemoveCache_Success(t *testing.T) {
+	// Создаем моки и хендлер
+	h, _, redisMockClient := newTestAuthHandlerWithMocks(t)
+
+	// Настройка ожиданий Redis для каждого шаблона
+	// Для videos:*
+	redisMockClient.ExpectScan(uint64(0), "videos:*", int64(100)).SetVal([]string{"videos:1:1", "videos:2:1"}, 0)
+	redisMockClient.ExpectDel("videos:1:1", "videos:2:1").SetVal(2)
+
+	// Для categories:*
+	redisMockClient.ExpectScan(uint64(0), "categories:*", int64(100)).SetVal([]string{"categories:1", "categories:2"}, 0)
+	redisMockClient.ExpectDel("categories:1", "categories:2").SetVal(2)
+
+	// Для account:*
+	redisMockClient.ExpectScan(uint64(0), "account:*", int64(100)).SetVal([]string{"account:user1", "account:user2"}, 0)
+	redisMockClient.ExpectDel("account:user1", "account:user2").SetVal(2)
+
+	// Вызываем метод
+	h.removeCache("test.op")
+
+	// Даем время горутине завершиться
+	time.Sleep(50 * time.Millisecond)
+
+	// Проверяем, что все ожидания были выполнены
+	if err := redisMockClient.ExpectationsWereMet(); err != nil {
+		t.Errorf("есть невыполненные ожидания: %s", err)
+	}
 }

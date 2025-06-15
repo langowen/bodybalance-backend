@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -203,7 +202,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.cfg.Redis.Enable == true {
-		go h.removeUserCache(req.Username)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -257,37 +256,14 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.storage.GetUser(ctx, id)
-	if err == nil {
-		if h.cfg.Redis.Enable == true {
-			go h.removeUserCache(user.Username)
-		}
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		logger.Warn("failed to get user data for cache invalidation", sl.Err(err), "user_id", id)
-
+	if h.cfg.Redis.Enable == true {
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "User deleted successfully",
 	})
-}
-
-// removeUserCache удаляет данные из кэша
-func (h *Handler) removeUserCache(Username string) {
-	const op = "admin.removeUserCache"
-
-	logger := h.logger.With(
-		"op", op,
-		"user", Username,
-	)
-
-	ctx := context.Background()
-
-	err := h.redis.DeleteAccount(ctx, Username)
-	if err != nil {
-		logger.Warn("failed to invalidate user cache", sl.Err(err), "username", Username)
-	}
 }
 
 // validUser проверят входящие данные на валидность

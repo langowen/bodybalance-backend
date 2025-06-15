@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -184,6 +183,10 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.cfg.Redis.Enable == true {
+		go h.removeCache(op)
+	}
+
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Type updated successfully",
@@ -231,34 +234,11 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.cfg.Redis.Enable == true {
-		go h.removeTypeCache(id)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Type deleted successfully",
 	})
-}
-
-func (h *Handler) removeTypeCache(id int64) {
-	const op = "admin.removeTypeCache"
-
-	logger := h.logger.With(
-		"op", op,
-		"category_id", id)
-
-	ctx := context.Background()
-
-	err := h.redis.DeleteCategories(ctx, id)
-	if err != nil {
-		logger.Warn("failed to invalidate cache for type", sl.Err(err), "type_id", id)
-	}
-
-	//TODO реализация удаления кэша для видео по типу и категории, сейчас нет ID категории
-	//err = h.redis.DeleteVideosByCategoryAndType(
-	//	ctx, contentType.ID, category.ID)
-	//if err != nil {
-	//	h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
-	//}
-
 }

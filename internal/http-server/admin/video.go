@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -246,8 +245,9 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
 	if h.cfg.Redis.Enable == true {
-		go h.removeVideoCache(id)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -298,73 +298,13 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.cfg.Redis.Enable == true {
-		go h.removeVideoCache(id)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Video deleted successfully",
 	})
-}
-
-// removeVideoCache удаляет данные из кэша
-func (h *Handler) removeVideoCache(id int64) {
-	const op = "admin.removeVideoCache"
-
-	logger := h.logger.With(
-		"op", op,
-		"video_id", id,
-	)
-
-	ctx := context.Background()
-
-	err := h.redis.DeleteVideo(ctx, id)
-	if err != nil {
-		logger.Warn("failed to invalidate video cache", sl.Err(err))
-	}
-
-	categories, err := h.storage.GetVideoCategories(ctx, id)
-	if err != nil {
-		logger.Warn("failed to get video categories for cache invalidation", sl.Err(err))
-	}
-
-	if categories != nil && len(categories) > 0 {
-		logger.Debug("Invalidating category/type cache for video", "categories_count", len(categories))
-
-		for _, category := range categories {
-			if category.ID == 0 {
-				continue
-			}
-
-			if category.Types == nil || len(category.Types) == 0 {
-				continue
-			}
-
-			for _, catType := range category.Types {
-				if catType.ID == 0 {
-					continue
-				}
-
-				logger.Debug("Invalidating category/type cache",
-					"type_id", catType.ID,
-					"category_id", category.ID)
-
-				err := h.redis.DeleteVideosByCategoryAndType(ctx, catType.ID, category.ID)
-
-				if err != nil {
-					logger.Warn("failed to invalidate videos cache by category and type",
-						sl.Err(err),
-						"type_id", catType.ID,
-						"category_id", category.ID)
-				}
-
-				logger.Debug("Category/type cache invalidated successfully",
-					"type_id", catType.ID,
-					"category_id", category.ID)
-
-			}
-		}
-	}
 }
 
 // validUser проверят входящие данные на валидность
@@ -388,7 +328,6 @@ func (h *Handler) validVideo(req *admResponse.VideoRequest, w http.ResponseWrite
 		return false
 	}
 
-	// Проверка URL
 	if !validFilePattern.MatchString(req.URL) {
 		logger.Warn("invalid file format in URL", "url", req.URL)
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени видео-файла")
@@ -403,7 +342,6 @@ func (h *Handler) validVideo(req *admResponse.VideoRequest, w http.ResponseWrite
 		}
 	}
 
-	// Проверка ImgURL
 	if !validFilePattern.MatchString(req.ImgURL) {
 		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")

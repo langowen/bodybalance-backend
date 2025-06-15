@@ -6,7 +6,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"log"
-	"log/slog"
 	"sync"
 	"time"
 )
@@ -19,6 +18,7 @@ type Config struct {
 	Docs        Docs           `yaml:"docs"`
 	Redis       Redis          `yaml:"redis"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
+	PatchLog    string         `yaml:"patch_log" env:"PATCH_LOG" env-default:""`       // Путь к папке для логов, если не указано, то логи будут в stdout
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
 	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod
 }
@@ -74,22 +74,16 @@ func MustGetConfig() *Config {
 		instance = &Config{} // Инициализация instance
 
 		// Загружаем переменные окружения из .env файла
-		err := godotenv.Load(".env")
-		if err != nil {
-			slog.Info("Cant loading .env config file", sl.Err(err))
-		}
+		_ = godotenv.Load(".env")
 
 		//сначала загружаем переменные окружения
-		err = cleanenv.ReadEnv(instance)
+		err := cleanenv.ReadEnv(instance)
 		if err != nil {
 			log.Fatal("Error reading env", sl.Err(err))
 		}
 
 		// Затем загружаем переменные окружения из YAML файла
-		err = cleanenv.ReadConfig(instance.PatchConfig, instance)
-		if err != nil {
-			slog.Info("Cant loading .yaml config file", sl.Err(err))
-		}
+		_ = cleanenv.ReadConfig(instance.PatchConfig, instance)
 
 	})
 	return instance
@@ -133,6 +127,7 @@ func (c *Config) LogValue() logging.Value {
 
 		// General
 		logging.StringAttr("log_level", c.LogLevel),
+		logging.StringAttr("patch_log", c.PatchLog),
 		logging.StringAttr("config_path", c.PatchConfig),
 		logging.StringAttr("env", c.Env),
 	)

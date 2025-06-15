@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	mwMetrics "github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
@@ -50,41 +51,41 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	if h.cfg.Redis.Enable == true {
+	var video *response.VideoResponse
 
-		cachedVideo, err := h.redis.GetVideo(ctx, videoID)
+	if h.cfg.Redis.Enable {
+		video, err = h.redis.GetVideo(ctx, videoID)
 		if err != nil {
-			logger.Warn("redis get error", sl.Err(err))
-		}
+			logger.Warn("failed to get video from redis", sl.Err(err))
+		} else if video != nil {
+			mwMetrics.RecordDataSource(r, mwMetrics.SourceRedis)
 
-		if cachedVideo != nil {
-			logger.Debug("serving from cache", "video_id", videoID)
-			response.RespondWithJSON(w, http.StatusOK, cachedVideo)
+			logger.Debug("video fetched from redis cache")
+			response.RespondWithJSON(w, http.StatusOK, video)
 			return
 		}
 	}
 
-	video, err := h.storage.GetVideo(ctx, videoID)
-	switch {
-	case errors.Is(err, storage.ErrVideoNotFound):
-		logger.Warn("video not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Video not found",
-			fmt.Sprintf("Video '%d' does not exist", videoID))
-		return
+	video, err = h.storage.GetVideo(ctx, videoID)
+	if err != nil {
+		if errors.Is(err, storage.ErrVideoNotFound) {
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Video with id %d not found", videoID))
+			return
+		}
 
-	case err != nil:
-		logger.Error("Failed to get video", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		logger.Error("failed to get video", sl.Err(err))
+		response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to retrieve video")
 		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go func() {
-			ctx := context.Background()
+	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
+
+	if h.cfg.Redis.Enable && video != nil {
+		go func(ctx context.Context, videoID int64, video *response.VideoResponse) {
 			if err := h.redis.SetVideo(ctx, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
-				logger.Warn("failed to set video cache", sl.Err(err))
+				logger.Warn("failed to cache video in redis", sl.Err(err))
 			}
-		}()
+		}(ctx, videoID, video)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, video)
@@ -144,7 +145,6 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	// Проверка существования типа контента
 	typeErr := h.storage.CheckType(ctx, typeID)
 	if typeErr != nil {
 		if errors.Is(typeErr, storage.ErrContentTypeNotFound) {
@@ -157,7 +157,6 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Проверка существования категории
 	catErr := h.storage.CheckCategory(ctx, catID)
 	if catErr != nil {
 		if errors.Is(catErr, storage.ErrNoCategoriesFound) {
@@ -171,7 +170,6 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 	}
 
 	if h.cfg.Redis.Enable == true {
-
 		cachedVideos, err := h.redis.GetVideosByCategoryAndType(ctx, typeID, catID)
 		if err != nil {
 			logger.Warn("redis get error", sl.Err(err))
@@ -179,6 +177,9 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 		if cachedVideos != nil {
 			logger.Debug("send from cache")
+
+			mwMetrics.RecordDataSource(r, mwMetrics.SourceRedis)
+
 			response.RespondWithJSON(w, http.StatusOK, cachedVideos)
 			return
 		}
@@ -211,14 +212,14 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if h.cfg.Redis.Enable == true {
+	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
 
-		go func() {
-			ctx := context.Background()
+	if h.cfg.Redis.Enable == true {
+		go func(ctx context.Context, typeID, catID int64, videos []response.VideoResponse) {
 			if err := h.redis.SetVideosByCategoryAndType(ctx, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to set videos cache", sl.Err(err))
 			}
-		}()
+		}(ctx, typeID, catID, videos)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, videos)

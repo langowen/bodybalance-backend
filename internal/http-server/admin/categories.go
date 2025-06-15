@@ -181,7 +181,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.cfg.Redis.Enable == true {
-		go h.removeCategoryCache(id)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -232,7 +232,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.cfg.Redis.Enable == true {
-		go h.removeCategoryCache(id)
+		go h.removeCache(op)
 	}
 
 	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -241,42 +241,28 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// removeCategoryCache удаляет записи из кэша при обновлении категорий
-func (h *Handler) removeCategoryCache(id int64) {
-	const op = "admin.removeCategoryCache"
-
+// removeCache удаляет записи из кэша при обновлении удаления данных
+func (h *Handler) removeCache(op string) {
 	logger := h.logger.With(
-		"op", op,
-		"category_id", id)
+		"op", op)
 
 	ctx := context.Background()
 
-	category, err := h.storage.GetCategory(ctx, id)
+	err := h.redis.InvalidateVideosCache(ctx)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Debug("category not found", "category_id", id)
-		}
-		logger.Debug("failed to get category", sl.Err(err), "category_id", id)
-		return
+		logger.Warn("failed to invalidate videos cache", sl.Err(err))
 	}
 
-	if category == nil {
-		logger.Debug("category is nil", "category_id", id)
-		return
+	err = h.redis.InvalidateCategoriesCache(ctx)
+	if err != nil {
+		logger.Warn("failed to invalidate videos cache", sl.Err(err))
 	}
 
-	for _, contentType := range category.Types {
-		err := h.redis.DeleteCategories(ctx, contentType.ID)
-		if err != nil {
-			logger.Warn("failed to invalidate cache for type", sl.Err(err), "type_id", contentType.ID)
-		}
-
-		err = h.redis.DeleteVideosByCategoryAndType(
-			ctx, contentType.ID, category.ID)
-		if err != nil {
-			h.logger.Warn("failed to invalidate videos cache", sl.Err(err))
-		}
+	err = h.redis.InvalidateAccountsCache(ctx)
+	if err != nil {
+		logger.Warn("failed to invalidate videos cache", sl.Err(err))
 	}
+
 }
 
 // validCat проверят данные входящего запроса на их валидность

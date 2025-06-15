@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/http-server/api/v1/response"
+	mwMetrics "github.com/langowen/bodybalance-backend/internal/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
@@ -49,46 +50,47 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	if h.cfg.Redis.Enable == true {
-		cachedCategories, err := h.redis.GetCategories(ctx, typeID)
-		if err != nil {
-			logger.Warn("redis get error", sl.Err(err))
-		}
+	var categories []response.CategoryResponse
 
-		if cachedCategories != nil {
-			logger.Debug("serving from cache")
-			response.RespondWithJSON(w, http.StatusOK, cachedCategories)
+	if h.cfg.Redis.Enable {
+
+		categories, err = h.redis.GetCategories(ctx, typeID)
+		if err != nil {
+
+			logger.Warn("failed to get categories from redis", sl.Err(err))
+		} else if categories != nil {
+
+			mwMetrics.RecordDataSource(r, mwMetrics.SourceRedis)
+
+			logger.Debug("categories fetched from redis cache")
+
+			response.RespondWithJSON(w, http.StatusOK, categories)
+
 			return
 		}
 	}
 
-	categories, err := h.storage.GetCategories(ctx, typeID)
-	switch {
-	case errors.Is(err, storage.ErrContentTypeNotFound):
-		logger.Warn("content type not found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Content type not found",
-			fmt.Sprintf("Content type '%d' does not exist", typeID))
-		return
+	categories, err = h.storage.GetCategories(ctx, typeID)
+	if err != nil {
+		if errors.Is(err, storage.ErrContentTypeNotFound) {
+			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Content type %d not found", typeID))
+			return
+		}
 
-	case errors.Is(err, storage.ErrNoCategoriesFound):
-		logger.Warn("no categories found", sl.Err(err))
-		response.RespondWithError(w, http.StatusNotFound, "Not Found", "Category not found",
-			fmt.Sprintf("Category '%d' does not exist", typeID))
-		return
-
-	case err != nil:
-		logger.Error("Failed to get categories", sl.Err(err))
-		response.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		logger.Error("failed to get categories from DB", sl.Err(err))
+		response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get categories")
 		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go func() {
-			ctx := context.Background()
+	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
+
+	if h.cfg.Redis.Enable && categories != nil {
+		go func(ctx context.Context, typeID int64, categories []response.CategoryResponse) {
+
 			if err := h.redis.SetCategories(ctx, typeID, categories, h.cfg.Redis.CacheTTL); err != nil {
-				logger.Warn("failed to set cache", sl.Err(err))
+				logger.Warn("failed to cache categories in redis", sl.Err(err))
 			}
-		}()
+		}(ctx, typeID, categories)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, categories)

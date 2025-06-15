@@ -50,7 +50,7 @@ func NewStorage(client redis.UniversalClient) *Storage {
 }
 
 // GetCategories получает категории из кэша Redis
-func (s *Storage) GetCategories(ctx context.Context, typeID int64) (*[]response.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context, typeID int64) ([]response.CategoryResponse, error) {
 	const op = "storage.redis.GetCategories"
 
 	cacheKey := fmt.Sprintf("categories:%d", typeID)
@@ -71,11 +71,11 @@ func (s *Storage) GetCategories(ctx context.Context, typeID int64) (*[]response.
 		return nil, fmt.Errorf("%s: failed to unmarshal categories: %w", op, err)
 	}
 
-	return &categories, nil
+	return categories, nil
 }
 
 // SetCategories сохраняет категории в кэш Redis
-func (s *Storage) SetCategories(ctx context.Context, typeID int64, categories *[]response.CategoryResponse, ttl time.Duration) error {
+func (s *Storage) SetCategories(ctx context.Context, typeID int64, categories []response.CategoryResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetCategories"
 
 	cacheKey := fmt.Sprintf("categories:%d", typeID)
@@ -89,19 +89,6 @@ func (s *Storage) SetCategories(ctx context.Context, typeID int64, categories *[
 	// Сохраняем в Redis с указанным TTL
 	if err := s.redis.Set(ctx, cacheKey, data, ttl).Err(); err != nil {
 		return fmt.Errorf("%s: failed to set redis key: %w", op, err)
-	}
-
-	return nil
-}
-
-// DeleteCategories удаляет категории из кэша Redis
-func (s *Storage) DeleteCategories(ctx context.Context, typeID int64) error {
-	const op = "storage.redis.DeleteCategories"
-
-	cacheKey := fmt.Sprintf("categories:%d", typeID)
-
-	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
-		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
 	}
 
 	return nil
@@ -145,18 +132,6 @@ func (s *Storage) SetAccount(ctx context.Context, username string, account *resp
 	return nil
 }
 
-// DeleteAccount удаляет данные аккаунта из кэша Redis
-func (s *Storage) DeleteAccount(ctx context.Context, username string) error {
-	const op = "storage.redis.DeleteAccount"
-
-	cacheKey := fmt.Sprintf("account:%s", username)
-	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
-		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
-	}
-
-	return nil
-}
-
 // GetVideo получает данные видео из кэша Redis
 func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoResponse, error) {
 	const op = "storage.redis.GetVideo"
@@ -195,18 +170,6 @@ func (s *Storage) SetVideo(ctx context.Context, videoID int64, video *response.V
 	return nil
 }
 
-// DeleteVideo удаляет данные видео из кэша Redis
-func (s *Storage) DeleteVideo(ctx context.Context, videoID int64) error {
-	const op = "storage.redis.DeleteVideo"
-
-	cacheKey := fmt.Sprintf("video:%d", videoID)
-	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
-		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
-	}
-
-	return nil
-}
-
 // GetVideosByCategoryAndType получает видео из кэша Redis
 func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID int64) (*[]response.VideoResponse, error) {
 	const op = "storage.redis.GetVideosByCategoryAndType"
@@ -229,7 +192,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 }
 
 // SetVideosByCategoryAndType сохраняет видео в кэш Redis
-func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos *[]response.VideoResponse, ttl time.Duration) error {
+func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos []response.VideoResponse, ttl time.Duration) error {
 	const op = "storage.redis.SetVideosByCategoryAndType"
 
 	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
@@ -245,14 +208,57 @@ func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 	return nil
 }
 
-// DeleteVideosByCategoryAndType удаляет видео из кэша Redis
-func (s *Storage) DeleteVideosByCategoryAndType(ctx context.Context, typeID, catID int64) error {
-	const op = "storage.redis.DeleteVideosByCategoryAndType"
+// InvalidateCacheByPattern удаляет все ключи из кэша Redis, соответствующие указанному шаблону
+func (s *Storage) InvalidateCacheByPattern(ctx context.Context, pattern string) error {
+	const op = "storage.redis.InvalidateCacheByPattern"
 
-	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
-	if err := s.redis.Del(ctx, cacheKey).Err(); err != nil {
-		return fmt.Errorf("%s: failed to delete redis key: %w", op, err)
+	var cursor uint64
+	var totalDeleted int64
+
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = s.redis.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return fmt.Errorf("%s: failed to scan redis keys: %w", op, err)
+		}
+
+		if len(keys) > 0 {
+			deleted, err := s.redis.Del(ctx, keys...).Result()
+			if err != nil {
+				return fmt.Errorf("%s: failed to delete redis keys: %w", op, err)
+			}
+			totalDeleted += deleted
+		}
+
+		if cursor == 0 {
+			break
+		}
 	}
 
 	return nil
+}
+
+// InvalidateAllCache удаляет весь кэш из Redis
+func (s *Storage) InvalidateAllCache(ctx context.Context) error {
+
+	return s.InvalidateCacheByPattern(ctx, "*")
+}
+
+// InvalidateVideosCache удаляет весь кэш видео
+func (s *Storage) InvalidateVideosCache(ctx context.Context) error {
+
+	return s.InvalidateCacheByPattern(ctx, "videos:*")
+}
+
+// InvalidateCategoriesCache удаляет весь кэш категорий
+func (s *Storage) InvalidateCategoriesCache(ctx context.Context) error {
+
+	return s.InvalidateCacheByPattern(ctx, "categories:*")
+}
+
+// InvalidateAccountsCache удаляет весь кэш аккаунтов
+func (s *Storage) InvalidateAccountsCache(ctx context.Context) error {
+
+	return s.InvalidateCacheByPattern(ctx, "account:*")
 }

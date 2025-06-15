@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID int64) (*[]response.VideoResponse, error) {
+func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID int64) ([]response.VideoResponse, error) {
 	const op = "storage.postgres.GetVideosByCategoryAndType"
 
 	// Проверка существования типа контента
@@ -63,7 +63,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID 
 			op, storage.ErrVideoNotFound, TypeID, CatID)
 	}
 
-	return &videos, nil
+	return videos, nil
 }
 
 // CheckAccount возвращает Type ID для указанного username
@@ -96,7 +96,7 @@ func (s *Storage) CheckAccount(ctx context.Context, username string) (*response.
 }
 
 // GetCategories возвращает все категории для указанного типа контента
-func (s *Storage) GetCategories(ctx context.Context, TypeID int64) (*[]response.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context, TypeID int64) ([]response.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Проверка существования типа контента
@@ -143,7 +143,7 @@ func (s *Storage) GetCategories(ctx context.Context, TypeID int64) (*[]response.
 			op, storage.ErrNoCategoriesFound, TypeID)
 	}
 
-	return &categories, nil
+	return categories, nil
 }
 
 func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoResponse, error) {

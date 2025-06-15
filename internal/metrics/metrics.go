@@ -49,7 +49,7 @@ var (
 			Name: "bodybalance_static_file_requests_total",
 			Help: "Общее количество запросов к статическим файлам",
 		},
-		[]string{"file_type", "filename", "status"},
+		[]string{"file_type", "path", "status"},
 	)
 
 	// StaticFileSize размер отданных статических файлов в байтах
@@ -89,5 +89,14 @@ var (
 			Help: "Количество запросов к файлам, обработанных из кэша (304 Not Modified)",
 		},
 		[]string{"file_type", "filename"},
+	)
+
+	// DataSourceRequests счетчик запросов к разным источникам данных
+	DataSourceRequests = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bodybalance_data_source_requests_total",
+			Help: "Общее количество запросов к разным источникам данных (Redis или SQL)",
+		},
+		[]string{"method", "endpoint", "source"},
 	)
 )

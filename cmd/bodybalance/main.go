@@ -142,21 +142,21 @@ func newLogger(cfg *config.Config) *logging.Logger {
 			logging.WithLevel(cfg.LogLevel),
 			logging.WithIsJSON(true),
 			logging.WithSetDefault(true),
-			logging.WithLogFilePath(""),
+			logging.WithLogFilePath(cfg.PatchLog),
 		)
 	case "dev", "test":
 		logger = logging.NewLogger(
 			logging.WithLevel(cfg.LogLevel),
 			logging.WithIsJSON(true),
 			logging.WithSetDefault(true),
-			logging.WithLogFilePath("logs/body_balance.log"),
+			logging.WithLogFilePath(cfg.PatchLog),
 		)
 	default:
 		logger = logging.NewLogger(
 			logging.WithLevel(cfg.LogLevel),
 			logging.WithIsJSON(true),
 			logging.WithSetDefault(true),
-			logging.WithLogFilePath(""),
+			logging.WithLogFilePath(cfg.PatchLog),
 		)
 	}
 
