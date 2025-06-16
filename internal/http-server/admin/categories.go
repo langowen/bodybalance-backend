@@ -96,6 +96,10 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.cfg.Redis.Enable == true {
+		go h.removeCache(op)
+	}
+
 	admResponse.RespondWithJSON(w, http.StatusOK, category)
 }
 
@@ -255,12 +259,12 @@ func (h *Handler) removeCache(op string) {
 
 	err = h.redis.InvalidateCategoriesCache(ctx)
 	if err != nil {
-		logger.Warn("failed to invalidate videos cache", sl.Err(err))
+		logger.Warn("failed to invalidate category cache", sl.Err(err))
 	}
 
 	err = h.redis.InvalidateAccountsCache(ctx)
 	if err != nil {
-		logger.Warn("failed to invalidate videos cache", sl.Err(err))
+		logger.Warn("failed to invalidate account cache", sl.Err(err))
 	}
 
 }

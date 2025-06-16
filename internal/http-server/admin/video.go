@@ -68,6 +68,10 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if h.cfg.Redis.Enable == true {
+		go h.removeCache(op)
+	}
+
 	admResponse.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":      videoID,
 		"message": "Video added successfully",
