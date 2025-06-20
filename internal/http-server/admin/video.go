@@ -125,7 +125,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if categories != nil {
+	if len(categories) != 0 {
 		video.Categories = categories
 	} else {
 		video.Categories = []admResponse.CategoryResponse{}
@@ -166,7 +166,7 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if videos[i].Categories == nil {
+		if len(videos[i].Categories) == 0 {
 			videos[i].Categories = make([]admResponse.CategoryResponse, 0, len(categories))
 		}
 

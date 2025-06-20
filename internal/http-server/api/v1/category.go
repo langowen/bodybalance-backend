@@ -13,6 +13,7 @@ import (
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // @Summary Get categories by type
@@ -86,6 +87,8 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 	if h.cfg.Redis.Enable && categories != nil {
 		go func(ctx context.Context, typeID int64, categories []response.CategoryResponse) {
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
 
 			if err := h.redis.SetCategories(ctx, typeID, categories, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to cache categories in redis", sl.Err(err))

@@ -11,6 +11,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/storage"
 	"github.com/theartofdevel/logging"
 	"net/http"
+	"time"
 )
 
 // @Summary Check account existence
@@ -74,6 +75,9 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 	if h.cfg.Redis.Enable {
 		go func(ctx context.Context, username string, acc *response.AccountResponse) {
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
 			if err := h.redis.SetAccount(ctx, username, acc, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to cache account in redis", sl.Err(err))
 			}
