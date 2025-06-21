@@ -13,4 +13,5 @@ type ApiStorage interface {
 	GetVideo(ctx context.Context, videoID int64) (*response.VideoResponse, error)
 	CheckType(ctx context.Context, TypeID int64) error
 	CheckCategory(ctx context.Context, CatID int64) error
+	Feedback(ctx context.Context, feedback *response.FeedbackResponse) error
 }

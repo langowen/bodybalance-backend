@@ -183,6 +183,29 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*response.VideoR
 	return &video, nil
 }
 
+func (s *Storage) Feedback(ctx context.Context, feedback *response.FeedbackResponse) error {
+	const op = "storage.postgres.Feedback"
+
+	query := `
+		INSERT INTO feedback (username, email, telegram, message)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
+	`
+
+	var id int
+	err := s.db.QueryRowContext(ctx, query,
+		feedback.Name,
+		feedback.Email,
+		feedback.Telegram,
+		feedback.Message,
+	).Scan(&id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
 // CheckType проверяет существование типа контента
 func (s *Storage) CheckType(ctx context.Context, TypeID int64) error {
 	const op = "storage.postgres.GetVideosByCategoryAndType"

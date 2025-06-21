@@ -33,6 +33,15 @@ type AccountResponse struct {
 	TypeName string `json:"type_name"` // Название type
 }
 
+// FeedbackResponse представляет информацию о фидбэке от пользователя
+// @description Информация о фидбэке, отправленном пользователем
+type FeedbackResponse struct {
+	Name     string `json:"name,omitempty"`     // Имя пользователя
+	Email    string `json:"email,omitempty"`    // Email пользователя
+	Telegram string `json:"telegram,omitempty"` // Telegram пользователя
+	Message  string `json:"message"`            // Сообщение от пользователя
+}
+
 // ErrorResponse представляет стандартный ответ об ошибке
 // @description Стандартная структура для возврата ошибок
 type ErrorResponse struct {

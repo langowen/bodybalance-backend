@@ -93,13 +93,13 @@ func (s *Storage) initSchema(ctx context.Context) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS content_types (
 			id SERIAL PRIMARY KEY,
-			name TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
     		deleted boolean,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS categories (
 			id SERIAL PRIMARY KEY,
-			name TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
 			img_url TEXT,
     		deleted BOOLEAN,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -130,6 +130,14 @@ func (s *Storage) initSchema(ctx context.Context) error {
     		admin BOOLEAN,
     		password TEXT,
     		deleted BOOLEAN,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE TABLE IF NOT EXISTS feedback (
+			id SERIAL PRIMARY KEY,
+			username TEXT,
+    		email TEXT,
+    		telegram TEXT,
+    		message TEXT NOT NULL,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		// Индексы для ускорения запросов по связям между таблицами и ID

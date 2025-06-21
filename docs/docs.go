@@ -1419,6 +1419,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/feedback": {
+            "post": {
+                "description": "Saves user feedback to the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API v1"
+                ],
+                "summary": "Submit feedback",
+                "parameters": [
+                    {
+                        "description": "Feedback data to submit",
+                        "name": "feedback",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feedback successfully saved\" (альтернативный вариант, если SuccessResponse не используется)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/img/{filename}": {
             "get": {
                 "description": "Send img file by filename",
@@ -1964,6 +2010,28 @@ const docTemplate = `{
                 },
                 "error": {
                     "description": "Наименование ошибки",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse": {
+            "description": "Информация о фидбэке, отправленном пользователем",
+            "type": "object",
+            "properties": {
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "Сообщение от пользователя",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Имя пользователя",
+                    "type": "string"
+                },
+                "telegram": {
+                    "description": "Telegram пользователя",
                     "type": "string"
                 }
             }

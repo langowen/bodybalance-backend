@@ -47,6 +47,7 @@ func (h *Handler) Router(r ...chi.Router) chi.Router {
 	router.Get("/video", h.getVideo)
 	router.Get("/category", h.getCategoriesByType)
 	router.Get("/login", h.checkAccount)
+	router.Post("/feedback", h.feedback)
 
 	return router
 }

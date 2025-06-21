@@ -74,14 +74,14 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
 
 	if h.cfg.Redis.Enable {
-		go func(ctx context.Context, username string, acc *response.AccountResponse) {
-			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		go func(username string, acc *response.AccountResponse) {
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			if err := h.redis.SetAccount(ctx, username, acc, h.cfg.Redis.CacheTTL); err != nil {
+			if err := h.redis.SetAccount(ctxRedis, username, acc, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to cache account in redis", sl.Err(err))
 			}
-		}(ctx, username, account)
+		}(username, account)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, account)

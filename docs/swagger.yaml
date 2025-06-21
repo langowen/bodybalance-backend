@@ -206,6 +206,22 @@ definitions:
         description: Наименование ошибки
         type: string
     type: object
+  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse:
+    description: Информация о фидбэке, отправленном пользователем
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      message:
+        description: Сообщение от пользователя
+        type: string
+      name:
+        description: Имя пользователя
+        type: string
+      telegram:
+        description: Telegram пользователя
+        type: string
+    type: object
   github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse:
     description: Информация о видео, включая URL, описание и категорию
     properties:
@@ -1127,6 +1143,37 @@ paths:
           schema:
             $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
       summary: Get categories by type
+      tags:
+      - API v1
+  /feedback:
+    post:
+      consumes:
+      - application/json
+      description: Saves user feedback to the system
+      parameters:
+      - description: Feedback data to submit
+        in: body
+        name: feedback
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Feedback successfully saved" (альтернативный вариант, если
+            SuccessResponse не используется)
+          schema:
+            type: string
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+        "500":
+          description: Server Error
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+      summary: Submit feedback
       tags:
       - API v1
   /img/{filename}:

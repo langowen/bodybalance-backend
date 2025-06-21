@@ -82,14 +82,14 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
 
 	if h.cfg.Redis.Enable && video != nil {
-		go func(ctx context.Context, videoID int64, video *response.VideoResponse) {
-			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		go func(videoID int64, video *response.VideoResponse) {
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			if err := h.redis.SetVideo(ctx, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
+			if err := h.redis.SetVideo(ctxRedis, videoID, video, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to cache video in redis", sl.Err(err))
 			}
-		}(ctx, videoID, video)
+		}(videoID, video)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, video)
@@ -219,14 +219,14 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 	mwMetrics.RecordDataSource(r, mwMetrics.SourceSQL)
 
 	if h.cfg.Redis.Enable == true {
-		go func(ctx context.Context, typeID, catID int64, videos []response.VideoResponse) {
-			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		go func(typeID, catID int64, videos []response.VideoResponse) {
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			if err := h.redis.SetVideosByCategoryAndType(ctx, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
+			if err := h.redis.SetVideosByCategoryAndType(ctxRedis, typeID, catID, videos, h.cfg.Redis.CacheTTL); err != nil {
 				logger.Warn("failed to set videos cache", sl.Err(err))
 			}
-		}(ctx, typeID, catID, videos)
+		}(typeID, catID, videos)
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, videos)
