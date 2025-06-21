@@ -25,6 +25,15 @@ type Storage struct {
 	Api   *api.Storage
 }
 
+func NewStorage(db *sql.DB, cfg *config.Config) *Storage {
+	return &Storage{
+		db:    db,
+		cfg:   cfg,
+		Admin: admin.New(db),
+		Api:   api.New(db, cfg),
+	}
+}
+
 func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	const op = "storage.postgres.New"
 
@@ -46,13 +55,11 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	dbConfig.ConnectTimeout = 5 * time.Second
 	db := stdlib.OpenDB(*dbConfig)
 
-	// Настройки пула соединений
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(10 * time.Minute)
 	db.SetConnMaxIdleTime(5 * time.Minute)
 
-	// Проверка соединения с таймаутом
 	pingCtx, cancel := context.WithTimeout(ctx, cfg.Database.Timeout)
 	defer cancel()
 
@@ -61,12 +68,7 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 		return nil, fmt.Errorf("%s: ping failed: %w", op, err)
 	}
 
-	storageBD := &Storage{
-		db:    db,
-		cfg:   cfg,
-		Admin: admin.New(db),
-		Api:   api.New(db, cfg),
-	}
+	storageBD := NewStorage(db, cfg)
 
 	if err := storageBD.initSchema(ctx); err != nil {
 		logging.L(ctx).Error("failed to init database schema", sl.Err(err))
@@ -186,7 +188,6 @@ func (s *Storage) initSchema(ctx context.Context) error {
 func (s *Storage) InitData(ctx context.Context) error {
 	const op = "storage.postgres.initData"
 
-	// Проверяем, есть ли уже тип 'admin'
 	var typeID int
 
 	err := s.db.QueryRowContext(ctx,
@@ -195,7 +196,6 @@ func (s *Storage) InitData(ctx context.Context) error {
 		return fmt.Errorf("%s: failed to check admin type: %w", op, err)
 	}
 
-	// Если запись не найдена, создаём новую
 	if errors.Is(err, sql.ErrNoRows) {
 		err = s.db.QueryRowContext(ctx,
 			"INSERT INTO content_types (name, deleted) VALUES ($1, $2) RETURNING id",
@@ -205,7 +205,6 @@ func (s *Storage) InitData(ctx context.Context) error {
 		}
 	}
 
-	// Проверяем, есть ли уже админ
 	var exists bool
 	err = s.db.QueryRowContext(ctx,
 		"SELECT EXISTS(SELECT 1 FROM accounts WHERE username = $1)",
@@ -216,7 +215,6 @@ func (s *Storage) InitData(ctx context.Context) error {
 		return fmt.Errorf("%s: failed to check admin existence: %w", op, err)
 	}
 
-	// Если администратора нет — создаём
 	if !exists {
 		hashedPassword := hashPassword(s.cfg.Docs.Password)
 
@@ -233,7 +231,7 @@ func (s *Storage) InitData(ctx context.Context) error {
 	return nil
 }
 
-// Пример функции хеширования пароля
+// hashPassword функция для хеширования пароля, аналогичный метод используется на фронтенде
 func hashPassword(password string) string {
 	hash := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(hash[:])

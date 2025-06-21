@@ -21,6 +21,14 @@ type Storage struct {
 	cfg   *config.Config
 }
 
+// NewStorage создает новый экземпляр хранилища Redis с предоставленным клиентом Redis
+func NewStorage(client redis.UniversalClient, cfg *config.Config) *Storage {
+	return &Storage{
+		redis: client.(*redis.Client),
+		cfg:   cfg,
+	}
+}
+
 func New(cfg *config.Config) (*Storage, error) {
 	redisClient := redisNewClient(&redis.Options{
 		Addr:     cfg.Redis.Host,
@@ -33,20 +41,9 @@ func New(cfg *config.Config) (*Storage, error) {
 		return nil, err
 	}
 
-	storage := &Storage{
-		redis: redisClient.(*redis.Client),
-		cfg:   cfg,
-	}
-	return storage, nil
-}
+	storage := NewStorage(redisClient, cfg)
 
-// NewStorage создает новый экземпляр хранилища Redis с предоставленным клиентом Redis
-// Используется для тестирования с помощью redismock.ClientMock
-func NewStorage(client redis.UniversalClient) *Storage {
-	return &Storage{
-		redis: client.(*redis.Client),
-		cfg:   &config.Config{}, // Пустой конфиг для тестирования
-	}
+	return storage, nil
 }
 
 // GetCategories получает категории из кэша Redis

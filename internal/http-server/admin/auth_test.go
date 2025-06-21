@@ -33,9 +33,6 @@ func newTestAuthHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redis
 	pgPool := postgres.NewMockPgxPool(db)
 	pgStorage := pgadmin.New(pgPool.DB())
 
-	// Создаем redis storage с моком
-	redisStorage := redis.NewStorage(redisCli)
-
 	// Создаем конфиг
 	cfg := &config.Config{
 		HTTPServer: config.HTTPServer{
@@ -47,6 +44,9 @@ func newTestAuthHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redis
 		},
 		Env: "test",
 	}
+
+	// Создаем redis storage с моком
+	redisStorage := redis.NewStorage(redisCli, cfg)
 
 	// Создаем логгер
 	logger := logdiscart.NewDiscardLogger()

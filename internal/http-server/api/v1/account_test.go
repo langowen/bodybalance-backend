@@ -28,9 +28,6 @@ func newTestHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redismock
 	// Создаем мок для Redis
 	redisCli, redisMock := redismock.NewClientMock()
 
-	// Создаем redis storage с моком
-	redisStorage := redis.NewStorage(redisCli)
-
 	// Создаем конфиг
 	cfg := &config.Config{
 		Redis: config.Redis{
@@ -39,6 +36,9 @@ func newTestHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redismock
 		},
 		Env: "test",
 	}
+
+	// Создаем redis storage с моком
+	redisStorage := redis.NewStorage(redisCli, cfg)
 
 	// Создаем postgres storage с моком
 	pgPool := postgres.NewMockPgxPool(db)
