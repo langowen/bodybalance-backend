@@ -1,6 +1,7 @@
 package img
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
@@ -63,6 +64,16 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 
 		if tempRecorder, ok := w.(*metrics.TempResponseRecorder); ok {
 			tempRecorder.SetFileSize(fileInfo.Size())
+			return
+		}
+
+		// Генерируем ETag на основе имени файла и времени последнего изменения
+		etag := fmt.Sprintf(`"%s-%d"`, filename, fileInfo.ModTime().UnixNano())
+		w.Header().Set("ETag", etag)
+
+		// Проверяем If-None-Match заголовок
+		if match := r.Header.Get("If-None-Match"); match != "" && match == etag {
+			w.WriteHeader(http.StatusNotModified)
 			return
 		}
 

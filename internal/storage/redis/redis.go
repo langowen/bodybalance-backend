@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+//TODO реализовать интерфейс для редиса
+
 // Обертка над функцией создания клиента Redis для возможности мокирования в тестах
 var redisNewClient = func(options *redis.Options) redis.UniversalClient {
 	return redis.NewClient(options)

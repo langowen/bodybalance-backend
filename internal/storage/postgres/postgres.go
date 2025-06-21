@@ -34,6 +34,8 @@ func NewStorage(db *sql.DB, cfg *config.Config) *Storage {
 	}
 }
 
+//TODO переписать на pgx
+
 func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	const op = "storage.postgres.New"
 
