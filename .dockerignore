@@ -19,6 +19,8 @@
 
 !/docs/*
 
+!/web/*
+
 # !Makefile
 
 # ...even if they are in subdirectories

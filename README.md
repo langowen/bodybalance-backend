@@ -27,6 +27,11 @@
 
 Документация API доступна по адресу `/admin/docs` после запуска сервиса, данные для входа: `DOCS_USER:DOCS_PASSWORD`.
 
+Для обновления документации после внесения изменений в коде необходимо запустить команду
+```bash
+go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/bodybalance/main.go --output ./docs --parseDependency --parseInternal
+```
+
 ## Запуск
 
 ### Локально
