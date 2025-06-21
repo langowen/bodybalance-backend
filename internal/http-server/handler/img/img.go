@@ -1,7 +1,6 @@
 package img
 
 import (
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/config"
@@ -13,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // ServeImgFile
@@ -33,14 +31,13 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.images.ServeImgFile"
 
-		start := time.Now()
-
 		logger = logger.With(
 			"op", op,
 			"request_id", middleware.GetReqID(r.Context()),
 		)
 
 		filename := chi.URLParam(r, "filename")
+
 		filePath := filepath.Join(cfg.Media.ImagesPatch, filename)
 
 		cleanPath := filepath.Clean(filePath)
@@ -57,7 +54,6 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 		}
 		defer file.Close()
 
-		// Получаем информацию о файле для метрик
 		fileInfo, err := file.Stat()
 		if err != nil {
 			logger.Error("Failed to get file info", "filename", filename, sl.Err(err))
@@ -65,21 +61,11 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 			return
 		}
 
-		// Если это TempResponseRecorder из нашего middleware, устанавливаем размер файла
-		// Используется только для сбора метрик
 		if tempRecorder, ok := w.(*metrics.TempResponseRecorder); ok {
 			tempRecorder.SetFileSize(fileInfo.Size())
 			return
 		}
 
 		http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
-
-		// Логируем информацию о запросе
-		duration := time.Since(start)
-		logger.Info(fmt.Sprintf("Image served in %v", duration),
-			"filename", filename,
-			"size", fileInfo.Size(),
-			"duration", duration,
-		)
 	}
 }

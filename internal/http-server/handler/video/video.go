@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // ServeVideoFile
@@ -33,8 +32,6 @@ import (
 func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.video.ServeVideoFile"
-
-		start := time.Now()
 
 		logger = logger.With(
 			"op", op,
@@ -58,7 +55,6 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		}
 		defer file.Close()
 
-		// Получаем информацию о файле для метрик
 		fileInfo, err := file.Stat()
 		if err != nil {
 			logger.Error("Failed to get file info", "filename", filename, sl.Err(err))
@@ -66,8 +62,6 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 			return
 		}
 
-		// Если это TempResponseRecorder из нашего middleware, устанавливаем размер файла
-		// Используется только для сбора метрик
 		if tempRecorder, ok := w.(*metrics.TempResponseRecorder); ok {
 			tempRecorder.SetFileSize(fileInfo.Size())
 			return
@@ -84,13 +78,6 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		}
 
 		http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
-
-		// Логируем информацию о запросе
-		duration := time.Since(start)
-		logger.Info(fmt.Sprintf("Video served in %v", duration),
-			"filename", filename,
-			"size", fileInfo.Size(),
-			"duration", duration.Nanoseconds())
 	}
 }
 
