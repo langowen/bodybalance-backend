@@ -22,7 +22,7 @@ const (
 	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp"
 )
 
-var validFile = regexp.MustCompile(`^[a-zA-Z0-9а-яА-ЯёЁ_\-.]+\.[a-zA-Z0-9]+$`)
+var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
 
 // @Summary Загрузить видеофайл
 // @Description Загружает видеофайл на сервер (макс. 500MB)
