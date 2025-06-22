@@ -67,6 +67,8 @@ func ServeImgFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc {
 			return
 		}
 
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+
 		etag := fmt.Sprintf(`"%x-%x"`, fileInfo.Size(), fileInfo.ModTime().UnixNano())
 		w.Header().Set("ETag", etag)
 
