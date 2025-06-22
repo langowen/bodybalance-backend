@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -20,6 +21,8 @@ const (
 	maxImageUploadSize = 20 << 20 // 20 MB
 	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp"
 )
+
+var validFile = regexp.MustCompile(`^[a-zA-Z0-9а-яА-ЯёЁ_\-.]+\.[a-zA-Z0-9]+$`)
 
 // @Summary Загрузить видеофайл
 // @Description Загружает видеофайл на сервер (макс. 500MB)
@@ -79,6 +82,12 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		logger.Error("Failed to reset file position", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to process file")
+		return
+	}
+
+	if !validFile.MatchString(header.Filename) {
+		logger.Warn("invalid file format in URL", "url", header.Filename)
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
 		return
 	}
 
@@ -235,6 +244,12 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		logger.Error("Failed to reset file position", sl.Err(err))
 		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to process image")
+		return
+	}
+
+	if !validFile.MatchString(header.Filename) {
+		logger.Warn("invalid file format in URL", "url", header.Filename)
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
 		return
 	}
 
