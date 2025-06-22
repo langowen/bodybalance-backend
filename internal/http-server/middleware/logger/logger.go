@@ -4,6 +4,7 @@ import (
 	"github.com/theartofdevel/logging"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -26,7 +27,7 @@ func New(logger *logging.Logger) func(next http.Handler) http.Handler {
 				slog.String("method", r.Method),
 				slog.String("protocol", r.URL.Scheme),
 				slog.String("host", r.Host),
-				slog.String("URL", r.RequestURI),
+				slog.String("URL", decodeURI(r.RequestURI)),
 				slog.String("remote_addr", r.RemoteAddr),
 				slog.String("user_agent", r.UserAgent()),
 				slog.String("request_id", middleware.GetReqID(r.Context())),
@@ -46,4 +47,12 @@ func New(logger *logging.Logger) func(next http.Handler) http.Handler {
 
 		return http.HandlerFunc(fn)
 	}
+}
+
+func decodeURI(uri string) string {
+	decoded, err := url.PathUnescape(uri)
+	if err != nil {
+		return uri
+	}
+	return decoded
 }
