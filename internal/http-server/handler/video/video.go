@@ -68,14 +68,7 @@ func ServeVideoFile(cfg *config.Config, logger *logging.Logger) http.HandlerFunc
 		}
 
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-
-		etag := fmt.Sprintf(`"%x-%x"`, fileInfo.Size(), fileInfo.ModTime().UnixNano())
-		w.Header().Set("ETag", etag)
-
-		if match := r.Header.Get("If-None-Match"); match != "" && match == etag {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
+		w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, fileInfo.Size(), fileInfo.ModTime().UnixNano()))
 
 		http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
 	}
