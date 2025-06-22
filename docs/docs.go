@@ -1421,7 +1421,7 @@ const docTemplate = `{
         },
         "/feedback": {
             "post": {
-                "description": "Saves user feedback to the system",
+                "description": "Saves user feedback to the system. Requires: message, at least one contact method (email or telegram), valid email format if provided, valid telegram handle (@ + 5-32 chars) if provided",
                 "consumes": [
                     "application/json"
                 ],
@@ -1434,7 +1434,7 @@ const docTemplate = `{
                 "summary": "Submit feedback",
                 "parameters": [
                     {
-                        "description": "Feedback data to submit",
+                        "description": "Feedback data to submit. Required fields: message. At least one of: email (valid format) or telegram (must start with @, 5-32 chars)",
                         "name": "feedback",
                         "in": "body",
                         "required": true,
@@ -1445,13 +1445,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Feedback successfully saved\" (альтернативный вариант, если SuccessResponse не используется)",
+                        "description": "Feedback successfully saved",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "400": {
-                        "description": "Invalid request format",
+                        "description": "Invalid request: possible reasons - missing required fields, invalid email/telegram format, no contact method provided",
                         "schema": {
                             "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
                         }
