@@ -19,7 +19,7 @@ const (
 	maxUploadSize      = 500 << 20 // 500 MB
 	videoMIMETypes     = "video/mp4,video/quicktime,video/webm,video/ogg"
 	maxImageUploadSize = 20 << 20 // 20 MB
-	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml,text/xml,text/plain; charset=utf-8"
 )
 
 var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
