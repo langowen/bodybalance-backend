@@ -960,8 +960,8 @@ function showUserModal(userId = null) {
 
 // Функция для загрузки изображений
 function handleImages(files) {
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
 
     $('#upload-image-errors').addClass('d-none').empty();
     $('#upload-image-status').empty();
@@ -1312,7 +1312,7 @@ function renderFilesList(fileType = 'video') {
 
     const allowedExtensions = fileType === 'video'
         ? ['.mp4', '.mov', '.webm', '.ogg']
-        : ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+        : ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
 
     filteredFiles = filteredFiles.filter(file => {
         const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();

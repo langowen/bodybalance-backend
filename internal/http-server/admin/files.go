@@ -19,7 +19,7 @@ const (
 	maxUploadSize      = 500 << 20 // 500 MB
 	videoMIMETypes     = "video/mp4,video/quicktime,video/webm,video/ogg"
 	maxImageUploadSize = 20 << 20 // 20 MB
-	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp"
+	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
 )
 
 var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
@@ -236,7 +236,7 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !strings.Contains(imageMIMETypes, http.DetectContentType(buff)) {
 		logger.Error("Invalid image type", "content_type", http.DetectContentType(buff))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed")
+		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid image type. Only JPEG, PNG, GIF, SVG and WEBP are allowed")
 		return
 	}
 
@@ -354,7 +354,7 @@ func (h *Handler) getImageFilesList() ([]admResponse.FileInfo, error) {
 
 func isImageExtension(ext string) bool {
 	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp":
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg":
 		return true
 	}
 	return false
