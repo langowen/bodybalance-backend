@@ -3,6 +3,7 @@ package admin
 import (
 	"errors"
 	"fmt"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
@@ -19,7 +20,7 @@ const (
 	maxUploadSize      = 500 << 20 // 500 MB
 	videoMIMETypes     = "video/mp4,video/quicktime,video/webm,video/ogg"
 	maxImageUploadSize = 20 << 20 // 20 MB
-	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml,text/xml,text/plain; charset=utf-8"
+	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
 )
 
 var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
@@ -234,8 +235,10 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.Contains(imageMIMETypes, http.DetectContentType(buff)) {
-		logger.Error("Invalid image type", "content_type", http.DetectContentType(buff))
+	mimeType := mimetype.Detect(buff)
+
+	if !strings.Contains(imageMIMETypes, mimeType.String()) {
+		logger.Error("Invalid image type", "content_type", mimeType.String())
 		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid image type. Only JPEG, PNG, GIF, SVG and WEBP are allowed")
 		return
 	}
