@@ -3,13 +3,13 @@ package main
 
 import (
 	"context"
+	"github.com/langowen/bodybalance-backend/deploy/config"
+	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
+	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
 	"github.com/langowen/bodybalance-backend/internal/app"
-	"github.com/langowen/bodybalance-backend/internal/config"
-	"github.com/langowen/bodybalance-backend/internal/http-server/server"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/logpretty"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
-	"github.com/langowen/bodybalance-backend/internal/storage/redis"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server"
 	"github.com/theartofdevel/logging"
 	"log"
 	"log/slog"
@@ -17,10 +17,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-
-	_ "github.com/langowen/bodybalance-backend/docs"
-	_ "github.com/langowen/bodybalance-backend/internal/http-server/admin"
-	_ "github.com/langowen/bodybalance-backend/internal/http-server/api/v1"
 )
 
 var (
@@ -108,7 +104,7 @@ func main() {
 
 	apps := app.New(cfg, logger, pgStorage, redisStorage)
 
-	srv := server.Init(apps)
+	srv := http_server.Init(apps)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

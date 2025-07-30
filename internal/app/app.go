@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/langowen/bodybalance-backend/internal/config"
-	"github.com/langowen/bodybalance-backend/internal/storage/postgres"
-	"github.com/langowen/bodybalance-backend/internal/storage/redis"
+	"github.com/langowen/bodybalance-backend/deploy/config"
+	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
+	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
 	"github.com/theartofdevel/logging"
 )
 
