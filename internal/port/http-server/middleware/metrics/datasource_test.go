@@ -25,18 +25,18 @@ func TestDataSourceMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Тест для Redis источника данных
-	t.Run("Redis Data Source", func(t *testing.T) {
+	// Тест для redis источника данных
+	t.Run("redis Data Source", func(t *testing.T) {
 		metrics.RecordDataSource(req, metrics.SourceRedis)
 
-		// Проверяем, что метрика для Redis увеличилась
+		// Проверяем, что метрика для redis увеличилась
 		count, err := getSingleMetricValue(projectMetrics.DataSourceRequests, map[string]string{
 			"method":   "GET",
 			"endpoint": "/api/v1/video",
 			"source":   metrics.SourceRedis,
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1), count, "Redis metric should be incremented")
+		assert.Equal(t, float64(1), count, "redis metric should be incremented")
 	})
 
 	// Тест для SQL источника данных
@@ -52,14 +52,14 @@ func TestDataSourceMetrics(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, float64(1), count, "SQL metric should be incremented")
 
-		// Проверяем, что метрика для Redis не изменилась
+		// Проверяем, что метрика для redis не изменилась
 		redisCount, err := getSingleMetricValue(projectMetrics.DataSourceRequests, map[string]string{
 			"method":   "GET",
 			"endpoint": "/api/v1/video",
 			"source":   metrics.SourceRedis,
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1), redisCount, "Redis metric should not change")
+		assert.Equal(t, float64(1), redisCount, "redis metric should not change")
 	})
 }
 
@@ -68,11 +68,11 @@ func TestContextFunctions(t *testing.T) {
 	t.Run("Context Data Source", func(t *testing.T) {
 		ctx := context.Background()
 
-		// Добавляем информацию о Redis источнике в контекст
+		// Добавляем информацию о redis источнике в контекст
 		ctxWithRedis := metrics.WithDataSource(ctx, metrics.SourceRedis)
 		source, ok := metrics.GetDataSource(ctxWithRedis)
 		assert.True(t, ok, "Should find data source in context")
-		assert.Equal(t, metrics.SourceRedis, source, "Source should be Redis")
+		assert.Equal(t, metrics.SourceRedis, source, "Source should be redis")
 
 		// Добавляем информацию о SQL источнике в контекст
 		ctxWithSQL := metrics.WithDataSource(ctx, metrics.SourceSQL)
@@ -95,7 +95,7 @@ func TestDataSourceMiddleware(t *testing.T) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Имитируем обработчик API, который записывает метрики
 
-		// Симулируем случай, когда данные из Redis
+		// Симулируем случай, когда данные из redis
 		if r.URL.Path == "/with-redis" {
 			metrics.RecordDataSource(r, metrics.SourceRedis)
 		} else {
@@ -106,8 +106,8 @@ func TestDataSourceMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Тест для запроса с данными из Redis
-	t.Run("Request with Redis source", func(t *testing.T) {
+	// Тест для запроса с данными из redis
+	t.Run("Request with redis source", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/with-redis", nil)
 		rr := httptest.NewRecorder()
 
@@ -122,7 +122,7 @@ func TestDataSourceMiddleware(t *testing.T) {
 			"source":   metrics.SourceRedis,
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1), count, "Redis metric should be incremented")
+		assert.Equal(t, float64(1), count, "redis metric should be incremented")
 	})
 
 	// Тест для запроса с данными из SQL

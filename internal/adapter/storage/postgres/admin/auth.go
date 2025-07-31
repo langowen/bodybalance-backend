@@ -2,9 +2,9 @@ package admin
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 )
 
 type AdmUser struct {
@@ -23,15 +23,15 @@ func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) 
     `
 
 	var user AdmUser
-	err := s.db.QueryRowContext(ctx, query, login, passwordHash).Scan(
+	err := s.db.QueryRow(ctx, query, login, passwordHash).Scan(
 		&user.Username,
 		&user.Password,
 		&user.IsAdmin,
 	)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}

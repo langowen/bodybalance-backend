@@ -264,7 +264,7 @@ func TestHandler_UpdateUser_Success(t *testing.T) {
 		WithArgs("updateduser", int64(2), true, "newpassword", int64(1)).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// Настраиваем ожидания для Redis (вызывается в горутине)
+	// Настраиваем ожидания для redis (вызывается в горутине)
 	redisMock.ExpectDel("account:updateduser").SetVal(1)
 
 	// Создаем роутер с параметром id
@@ -366,7 +366,7 @@ func TestHandler_DeleteUser_Success(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "content_type_id", "content_type_name", "admin", "created_at"}).
 			AddRow(1, "testuser", "1", "Йога", false, time.Now()))
 
-	// Настраиваем ожидания для Redis (вызывается в горутине)
+	// Настраиваем ожидания для redis (вызывается в горутине)
 	redisMock.ExpectDel("account:testuser").SetVal(1)
 
 	// Создаем роутер с параметром id

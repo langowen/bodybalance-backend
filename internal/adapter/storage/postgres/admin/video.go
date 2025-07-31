@@ -2,9 +2,9 @@ package admin
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
 	"time"
 )
@@ -20,7 +20,7 @@ func (s *Storage) AddVideo(ctx context.Context, video *admResponse.VideoRequest)
 	`
 
 	var id int64
-	err := s.db.QueryRowContext(ctx, query,
+	err := s.db.QueryRow(ctx, query,
 		video.URL,
 		video.Name,
 		video.Description,
@@ -38,30 +38,25 @@ func (s *Storage) AddVideo(ctx context.Context, video *admResponse.VideoRequest)
 func (s *Storage) AddVideoCategories(ctx context.Context, videoID int64, categoryIDs []int64) error {
 	const op = "storage.postgres.AddVideoCategories"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO video_categories (video_id, category_id)
-		VALUES ($1, $2)
-		ON CONFLICT (video_id, category_id) DO NOTHING
-	`)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-	defer stmt.Close()
-
+	// В pgx нет PrepareContext, поэтому просто выполняем запросы в цикле
 	for _, catID := range categoryIDs {
-		_, err := stmt.ExecContext(ctx, videoID, catID)
+		_, err := tx.Exec(ctx, `
+			INSERT INTO video_categories (video_id, category_id)
+			VALUES ($1, $2)
+			ON CONFLICT (video_id, category_id) DO NOTHING
+		`, videoID, catID)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 // GetVideo возвращает видео по ID (только не удаленные)
@@ -77,7 +72,7 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (*admResponse.VideoRes
 	var video admResponse.VideoResponse
 	var createdAt time.Time
 
-	err := s.db.QueryRowContext(ctx, query, id).Scan(
+	err := s.db.QueryRow(ctx, query, id).Scan(
 		&video.ID,
 		&video.URL,
 		&video.Name,
@@ -87,8 +82,8 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (*admResponse.VideoRes
 	)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -109,7 +104,7 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admR
 		WHERE vc.video_id = $1
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, videoID)
+	rows, err := s.db.Query(ctx, query, videoID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -130,7 +125,7 @@ func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]admR
 			WHERE cct.category_id = $1
 		`
 
-		typesRows, err := s.db.QueryContext(ctx, typesQuery, cat.ID)
+		typesRows, err := s.db.Query(ctx, typesQuery, cat.ID)
 		if err != nil {
 			return nil, fmt.Errorf("%s: failed to get content types for category %d: %w", op, cat.ID, err)
 		}
@@ -175,7 +170,7 @@ func (s *Storage) GetVideos(ctx context.Context) ([]admResponse.VideoResponse, e
 		ORDER BY id
 	`
 
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -217,7 +212,7 @@ func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *admResponse.
 		WHERE id = $5 AND deleted IS NOT TRUE
 	`
 
-	result, err := s.db.ExecContext(ctx, query,
+	commandTag, err := s.db.Exec(ctx, query,
 		video.URL,
 		video.Name,
 		video.Description,
@@ -229,13 +224,8 @@ func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *admResponse.
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
 	return nil
@@ -245,17 +235,17 @@ func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *admResponse.
 func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
 	const op = "storage.postgres.DeleteVideo"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 		}
 	}()
 
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM video_categories
 		WHERE video_id = $1
 	`, id)
@@ -263,7 +253,7 @@ func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to delete category relations: %w", op, err)
 	}
 
-	result, err := tx.ExecContext(ctx, `
+	commandTag, err := tx.Exec(ctx, `
 		UPDATE videos
 		SET deleted = TRUE
 		WHERE id = $1 AND deleted IS NOT TRUE
@@ -272,17 +262,11 @@ func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to mark video as deleted: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: rows affected error: %w", op, err)
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
-	if rowsAffected == 0 {
-		err = sql.ErrNoRows
-		return sql.ErrNoRows
-	}
-
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
 	}
 
@@ -298,7 +282,7 @@ func (s *Storage) DeleteVideoCategories(ctx context.Context, videoID int64) erro
 		WHERE video_id = $1
 	`
 
-	_, err := s.db.ExecContext(ctx, query, videoID)
+	_, err := s.db.Exec(ctx, query, videoID)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

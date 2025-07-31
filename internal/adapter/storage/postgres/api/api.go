@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
@@ -12,11 +13,11 @@ import (
 )
 
 type Storage struct {
-	db  *sql.DB
+	db  *pgxpool.Pool
 	cfg *config.Config
 }
 
-func New(db *sql.DB, cfg *config.Config) *Storage {
+func New(db *pgxpool.Pool, cfg *config.Config) *Storage {
 	return &Storage{
 		db:  db,
 		cfg: cfg,
@@ -34,13 +35,11 @@ func (s *Storage) CheckAccount(ctx context.Context, account *api.Account) (*api.
         WHERE a.username = $1 AND a.deleted IS NOT TRUE
     `
 
-	err := s.db.QueryRowContext(ctx, query, account.Username).Scan(
-		&account.ContentType.ID,
-		&account.ContentType.Name,
-	)
+	row := s.db.QueryRow(ctx, query, account.Username)
+	err := row.Scan(&account.ContentType.ID, &account.ContentType.Name)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w: video with id '%s' not found",
 				op, storage.ErrAccountNotFound, account.Username)
 		}
@@ -68,7 +67,7 @@ func (s *Storage) GetCategories(ctx context.Context, TypeID int64) ([]api.Catego
         ORDER BY c.created_at DESC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, TypeID)
+	rows, err := s.db.Query(ctx, query, TypeID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
@@ -111,7 +110,8 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*api.Video, erro
 
 	var video api.Video
 
-	err := s.db.QueryRowContext(ctx, query, videoID).Scan(
+	row := s.db.QueryRow(ctx, query, videoID)
+	err := row.Scan(
 		&video.ID,
 		&video.URL,
 		&video.Name,
@@ -121,7 +121,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*api.Video, erro
 	)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w: video with id '%d' not found",
 				op, storage.ErrVideoNotFound, videoID)
 		}
@@ -159,7 +159,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, TypeID, CatID 
         ORDER BY v.created_at DESC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, TypeID, CatID)
+	rows, err := s.db.Query(ctx, query, TypeID, CatID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
@@ -198,7 +198,7 @@ func (s *Storage) Feedback(ctx context.Context, feedback *api.Feedback) error {
 	`
 
 	var id int
-	err := s.db.QueryRowContext(ctx, query,
+	err := s.db.QueryRow(ctx, query,
 		feedback.Name,
 		feedback.Email,
 		feedback.Telegram,
@@ -213,7 +213,7 @@ func (s *Storage) Feedback(ctx context.Context, feedback *api.Feedback) error {
 
 func (s *Storage) chekType(ctx context.Context, TypeID int64, op string) error {
 	var contentTypeExists bool
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRow(ctx,
 		`SELECT EXISTS(SELECT 1 FROM content_types WHERE id = $1 AND deleted IS NOT TRUE)`,
 		TypeID,
 	).Scan(&contentTypeExists)
@@ -233,7 +233,7 @@ func (s *Storage) chekType(ctx context.Context, TypeID int64, op string) error {
 func (s *Storage) chekCategory(ctx context.Context, CatID int64, op string) error {
 	var categoryNameExists bool
 
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRow(ctx,
 		`SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1 AND deleted IS NOT TRUE)`,
 		CatID,
 	).Scan(&categoryNameExists)

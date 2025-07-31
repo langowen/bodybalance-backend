@@ -10,5 +10,3 @@ var (
 	ErrVideoNotFound       = errors.New("no video found")
 	ErrAccountNotFound     = errors.New("account not found")
 )
-
-//TODO вынести структуры для логики работы с БД сюда в отдельные пакеты

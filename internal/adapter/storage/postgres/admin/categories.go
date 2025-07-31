@@ -2,9 +2,9 @@ package admin
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
 	"time"
 )
@@ -13,13 +13,13 @@ import (
 func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequest) (*admResponse.CategoryResponse, error) {
 	const op = "storage.postgres.AddCategory"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 		}
 	}()
 
@@ -27,7 +27,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 	var category admResponse.CategoryResponse
 	var createdAt time.Time
 
-	err = tx.QueryRowContext(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO categories (name, img_url, deleted)
 		VALUES ($1, $2, FALSE)
 		RETURNING id, name, img_url, created_at
@@ -46,7 +46,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 
 	// Добавляем связи с типами
 	for _, typeID := range req.TypeIDs {
-		_, err = tx.ExecContext(ctx, `
+		_, err = tx.Exec(ctx, `
 			INSERT INTO category_content_types (category_id, content_type_id)
 			VALUES ($1, $2)
 			ON CONFLICT DO NOTHING
@@ -57,7 +57,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 	}
 
 	// Получаем информацию о связанных типах
-	rows, err := tx.QueryContext(ctx, `
+	rows, err := tx.Query(ctx, `
 		SELECT ct.id, ct.name
 		FROM content_types ct
 		JOIN category_content_types cct ON ct.id = cct.content_type_id
@@ -80,7 +80,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -94,7 +94,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 	var category admResponse.CategoryResponse
 	var createdAt time.Time
 
-	err := s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRow(ctx, `
 		SELECT id, name, img_url, created_at
 		FROM categories
 		WHERE id = $1 AND deleted IS NOT TRUE
@@ -106,8 +106,8 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 	)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -115,7 +115,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 	category.DateCreated = createdAt.Format("02.01.2006")
 	category.Types = []admResponse.TypeResponse{}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		SELECT ct.id, ct.name
 		FROM content_types ct
 		JOIN category_content_types cct ON ct.id = cct.content_type_id
@@ -147,7 +147,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 	const op = "storage.postgres.GetCategories"
 
 	// Сначала получаем все категории
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		SELECT id, name, img_url, created_at
 		FROM categories
 		WHERE deleted IS NOT TRUE
@@ -183,7 +183,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 
 	// Для каждой категории получаем связанные типы
 	for i := range categories {
-		rows, err := s.db.QueryContext(ctx, `
+		rows, err := s.db.Query(ctx, `
 			SELECT ct.id, ct.name
 			FROM content_types ct
 			JOIN category_content_types cct ON ct.id = cct.content_type_id
@@ -216,18 +216,18 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse.CategoryRequest) error {
 	const op = "storage.postgres.UpdateCategory"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 		}
 	}()
 
 	// Обновляем основную информацию о категории
-	result, err := tx.ExecContext(ctx, `
+	commandTag, err := tx.Exec(ctx, `
 		UPDATE categories
 		SET name = $1, img_url = $2
 		WHERE id = $3 AND deleted IS NOT TRUE
@@ -237,18 +237,12 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	if rowsAffected == 0 {
-		err = sql.ErrNoRows
-		return fmt.Errorf("%s: %w", op, err)
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
 	// Удаляем старые связи с типами
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM category_content_types
 		WHERE category_id = $1
 	`, id)
@@ -258,7 +252,7 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse
 
 	// Добавляем новые связи с типами
 	for _, typeID := range req.TypeIDs {
-		_, err = tx.ExecContext(ctx, `
+		_, err = tx.Exec(ctx, `
 			INSERT INTO category_content_types (category_id, content_type_id)
 			VALUES ($1, $2)
 		`, id, typeID)
@@ -267,7 +261,7 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -278,17 +272,17 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse
 func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 	const op = "storage.postgres.DeleteCategory"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 		}
 	}()
 
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM category_content_types
 		WHERE category_id = $1
 	`, id)
@@ -296,7 +290,7 @@ func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to delete content type relations: %w", op, err)
 	}
 
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM video_categories
 		WHERE category_id = $1
 	`, id)
@@ -304,7 +298,7 @@ func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to delete video relations: %w", op, err)
 	}
 
-	result, err := tx.ExecContext(ctx, `
+	commandTag, err := tx.Exec(ctx, `
 		UPDATE categories
 		SET deleted = TRUE
 		WHERE id = $1 AND deleted IS NOT TRUE
@@ -313,17 +307,11 @@ func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to mark category as deleted: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: rows affected error: %w", op, err)
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
-	if rowsAffected == 0 {
-		err = sql.ErrNoRows
-		return sql.ErrNoRows
-	}
-
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
 	}
 

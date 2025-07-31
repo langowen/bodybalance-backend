@@ -10,60 +10,48 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-//TODO реализовать интерфейс для редиса
-
-// Обертка над функцией создания клиента Redis для возможности мокирования в тестах
-var redisNewClient = func(options *redis.Options) redis.UniversalClient {
-	return redis.NewClient(options)
-}
-
 type Storage struct {
-	redis *redis.Client
-	cfg   *config.Config
+	rdb *redis.Client
+	cfg *config.Config
 }
 
-// NewStorage создает новый экземпляр хранилища Redis с предоставленным клиентом Redis
-func NewStorage(client redis.UniversalClient, cfg *config.Config) *Storage {
+// NewStorage создает новый экземпляр хранилища redis с предоставленным клиентом redis
+func NewStorage(client *redis.Client, cfg *config.Config) *Storage {
 	return &Storage{
-		redis: client.(*redis.Client),
-		cfg:   cfg,
+		rdb: client,
+		cfg: cfg,
 	}
 }
 
-func New(cfg *config.Config) (*Storage, error) {
-	redisClient := redisNewClient(&redis.Options{
+func InitRedis(ctx context.Context, cfg *config.Config) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.Host,
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
 
-	// Проверка подключения
-	if _, err := redisClient.Ping(context.Background()).Result(); err != nil {
+	if _, err := rdb.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
 
-	storage := NewStorage(redisClient, cfg)
-
-	return storage, nil
+	return rdb, nil
 }
 
-// GetCategories получает категории из кэша Redis
+// GetCategories получает категории из кэша redis
 func (s *Storage) GetCategories(ctx context.Context, typeID int64) ([]api.Category, error) {
 	const op = "storage.redis.GetCategories"
 
 	cacheKey := fmt.Sprintf("categories:%d", typeID)
 
-	// Пытаемся получить данные из Redis
-	data, err := s.redis.Get(ctx, cacheKey).Bytes()
+	data, err := s.rdb.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			// Ключ не найден - это нормально, не считаем ошибкой
-			return nil, nil
+			return nil, err
 		}
 		return nil, fmt.Errorf("%s: failed to get from redis: %w", op, err)
 	}
 
-	// Декодируем JSON данные
 	var categories []api.Category
 	if err = json.Unmarshal(data, &categories); err != nil {
 		return nil, fmt.Errorf("%s: failed to unmarshal categories: %w", op, err)
@@ -72,35 +60,33 @@ func (s *Storage) GetCategories(ctx context.Context, typeID int64) ([]api.Catego
 	return categories, nil
 }
 
-// SetCategories сохраняет категории в кэш Redis
+// SetCategories сохраняет категории в кэш redis
 func (s *Storage) SetCategories(ctx context.Context, typeID int64, categories []api.Category) error {
 	const op = "storage.redis.SetCategories"
 
 	cacheKey := fmt.Sprintf("categories:%d", typeID)
 
-	// Сериализуем категории в JSON
 	data, err := json.Marshal(categories)
 	if err != nil {
 		return fmt.Errorf("%s: failed to marshal categories: %w", op, err)
 	}
 
-	// Сохраняем в Redis с указанным TTL
-	if err = s.redis.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
+	if err = s.rdb.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
 		return fmt.Errorf("%s: failed to set redis key: %w", op, err)
 	}
 
 	return nil
 }
 
-// GetAccount получает данные аккаунта из кэша Redis
+// GetAccount получает данные аккаунта из кэша redis
 func (s *Storage) GetAccount(ctx context.Context, account *api.Account) (*api.Account, error) {
 	const op = "storage.redis.GetAccount"
 
 	cacheKey := fmt.Sprintf("account:%s", account.Username)
-	data, err := s.redis.Get(ctx, cacheKey).Bytes()
+	data, err := s.rdb.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil, nil
+			return nil, err
 		}
 		return nil, fmt.Errorf("%s: failed to get from redis: %w", op, err)
 	}
@@ -112,7 +98,7 @@ func (s *Storage) GetAccount(ctx context.Context, account *api.Account) (*api.Ac
 	return account, nil
 }
 
-// SetAccount сохраняет данные аккаунта в кэш Redis
+// SetAccount сохраняет данные аккаунта в кэш redis
 func (s *Storage) SetAccount(ctx context.Context, account *api.Account) error {
 	const op = "storage.redis.SetAccount"
 
@@ -122,22 +108,22 @@ func (s *Storage) SetAccount(ctx context.Context, account *api.Account) error {
 		return fmt.Errorf("%s: failed to marshal account: %w", op, err)
 	}
 
-	if err = s.redis.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
+	if err = s.rdb.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
 		return fmt.Errorf("%s: failed to set redis key: %w", op, err)
 	}
 
 	return nil
 }
 
-// GetVideo получает данные видео из кэша Redis
+// GetVideo получает данные видео из кэша redis
 func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*api.Video, error) {
 	const op = "storage.redis.GetVideo"
 
 	cacheKey := fmt.Sprintf("video:%d", videoID)
-	data, err := s.redis.Get(ctx, cacheKey).Bytes()
+	data, err := s.rdb.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil, nil
+			return nil, err
 		}
 		return nil, fmt.Errorf("%s: failed to get from redis: %w", op, err)
 	}
@@ -150,7 +136,7 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*api.Video, erro
 	return &video, nil
 }
 
-// SetVideo сохраняет данные видео в кэш Redis
+// SetVideo сохраняет данные видео в кэш redis
 func (s *Storage) SetVideo(ctx context.Context, videoID int64, video *api.Video) error {
 	const op = "storage.redis.SetVideo"
 
@@ -160,22 +146,22 @@ func (s *Storage) SetVideo(ctx context.Context, videoID int64, video *api.Video)
 		return fmt.Errorf("%s: failed to marshal video: %w", op, err)
 	}
 
-	if err = s.redis.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
+	if err = s.rdb.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
 		return fmt.Errorf("%s: failed to set redis key: %w", op, err)
 	}
 
 	return nil
 }
 
-// GetVideosByCategoryAndType получает видео из кэша Redis
+// GetVideosByCategoryAndType получает видео из кэша redis
 func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID int64) ([]api.Video, error) {
 	const op = "storage.redis.GetVideosByCategoryAndType"
 
 	cacheKey := fmt.Sprintf("videos:%d:%d", typeID, catID)
-	data, err := s.redis.Get(ctx, cacheKey).Bytes()
+	data, err := s.rdb.Get(ctx, cacheKey).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil, nil
+			return nil, err
 		}
 		return nil, fmt.Errorf("%s: failed to get from redis: %w", op, err)
 	}
@@ -188,7 +174,7 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 	return videos, nil
 }
 
-// SetVideosByCategoryAndType сохраняет видео в кэш Redis
+// SetVideosByCategoryAndType сохраняет видео в кэш redis
 func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos []api.Video) error {
 	const op = "storage.redis.SetVideosByCategoryAndType"
 
@@ -198,14 +184,14 @@ func (s *Storage) SetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 		return fmt.Errorf("%s: failed to marshal videos: %w", op, err)
 	}
 
-	if err := s.redis.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
+	if err := s.rdb.Set(ctx, cacheKey, data, s.cfg.Redis.CacheTTL).Err(); err != nil {
 		return fmt.Errorf("%s: failed to set redis key: %w", op, err)
 	}
 
 	return nil
 }
 
-// InvalidateCacheByPattern удаляет все ключи из кэша Redis, соответствующие указанному шаблону
+// InvalidateCacheByPattern удаляет все ключи из кэша redis, соответствующие указанному шаблону
 func (s *Storage) InvalidateCacheByPattern(ctx context.Context, pattern string) error {
 	const op = "storage.redis.InvalidateCacheByPattern"
 
@@ -215,13 +201,13 @@ func (s *Storage) InvalidateCacheByPattern(ctx context.Context, pattern string) 
 	for {
 		var keys []string
 		var err error
-		keys, cursor, err = s.redis.Scan(ctx, cursor, pattern, 100).Result()
+		keys, cursor, err = s.rdb.Scan(ctx, cursor, pattern, 100).Result()
 		if err != nil {
 			return fmt.Errorf("%s: failed to scan redis keys: %w", op, err)
 		}
 
 		if len(keys) > 0 {
-			deleted, err := s.redis.Del(ctx, keys...).Result()
+			deleted, err := s.rdb.Del(ctx, keys...).Result()
 			if err != nil {
 				return fmt.Errorf("%s: failed to delete redis keys: %w", op, err)
 			}
@@ -236,26 +222,22 @@ func (s *Storage) InvalidateCacheByPattern(ctx context.Context, pattern string) 
 	return nil
 }
 
-// InvalidateAllCache удаляет весь кэш из Redis
+// InvalidateAllCache удаляет весь кэш из redis
 func (s *Storage) InvalidateAllCache(ctx context.Context) error {
-
 	return s.InvalidateCacheByPattern(ctx, "*")
 }
 
 // InvalidateVideosCache удаляет весь кэш видео
 func (s *Storage) InvalidateVideosCache(ctx context.Context) error {
-
 	return s.InvalidateCacheByPattern(ctx, "videos:*")
 }
 
 // InvalidateCategoriesCache удаляет весь кэш категорий
 func (s *Storage) InvalidateCategoriesCache(ctx context.Context) error {
-
 	return s.InvalidateCacheByPattern(ctx, "categories:*")
 }
 
 // InvalidateAccountsCache удаляет весь кэш аккаунтов
 func (s *Storage) InvalidateAccountsCache(ctx context.Context) error {
-
 	return s.InvalidateCacheByPattern(ctx, "account:*")
 }

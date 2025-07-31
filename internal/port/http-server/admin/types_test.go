@@ -365,7 +365,7 @@ func TestHandler_DeleteType_Success(t *testing.T) {
 	// Ожидаем завершение транзакции
 	sqlMock.ExpectCommit()
 
-	// Настраиваем ожидания для Redis (вызывается в горутине, но мы все равно можем проверить)
+	// Настраиваем ожидания для redis (вызывается в горутине, но мы все равно можем проверить)
 	redisMock.ExpectDel("categories:1").SetVal(1)
 
 	// Создаем роутер с параметром id

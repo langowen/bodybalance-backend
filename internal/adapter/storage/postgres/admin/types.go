@@ -2,9 +2,9 @@ package admin
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
 	"time"
 )
@@ -22,7 +22,7 @@ func (s *Storage) AddType(ctx context.Context, req *admResponse.TypeRequest) (*a
 	var response admResponse.TypeResponse
 	var createdAt time.Time
 
-	err := s.db.QueryRowContext(ctx, query, req.Name).Scan(
+	err := s.db.QueryRow(ctx, query, req.Name).Scan(
 		&response.ID,
 		&response.Name,
 		&createdAt,
@@ -51,15 +51,15 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeRespo
 	var contentType admResponse.TypeResponse
 	var createdAt time.Time
 
-	err := s.db.QueryRowContext(ctx, query, id).Scan(
+	err := s.db.QueryRow(ctx, query, id).Scan(
 		&contentType.ID,
 		&contentType.Name,
 		&createdAt,
 	)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -81,7 +81,7 @@ func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, err
         ORDER BY id
     `
 
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -122,18 +122,13 @@ func (s *Storage) UpdateType(ctx context.Context, id int64, req *admResponse.Typ
 		WHERE id = $2 AND deleted IS NOT TRUE
 	`
 
-	result, err := s.db.ExecContext(ctx, query, req.Name, id)
+	commandTag, err := s.db.Exec(ctx, query, req.Name, id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
 	return nil
@@ -143,17 +138,17 @@ func (s *Storage) UpdateType(ctx context.Context, id int64, req *admResponse.Typ
 func (s *Storage) DeleteType(ctx context.Context, id int64) error {
 	const op = "storage.postgres.DeleteType"
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: begin transaction failed: %w", op, err)
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 		}
 	}()
 
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM category_content_types
 		WHERE content_type_id = $1
 	`, id)
@@ -161,7 +156,7 @@ func (s *Storage) DeleteType(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to delete category relations: %w", op, err)
 	}
 
-	result, err := tx.ExecContext(ctx, `
+	commandTag, err := tx.Exec(ctx, `
 		UPDATE content_types
 		SET deleted = TRUE
 		WHERE id = $1 AND deleted IS NOT TRUE
@@ -170,17 +165,11 @@ func (s *Storage) DeleteType(ctx context.Context, id int64) error {
 		return fmt.Errorf("%s: failed to mark type as deleted: %w", op, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: rows affected error: %w", op, err)
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
-	if rowsAffected == 0 {
-		err = sql.ErrNoRows
-		return sql.ErrNoRows
-	}
-
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
 	}
 

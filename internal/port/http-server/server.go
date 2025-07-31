@@ -1,8 +1,11 @@
 package http_server
 
 import (
+	"context"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/api/v1"
@@ -10,27 +13,63 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/logger"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
+	"github.com/langowen/bodybalance-backend/internal/service/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/theartofdevel/logging"
 	"net/http"
+	"time"
 )
 
 type Server struct {
-	app *app.App
+	app     *app.App
+	service *api.ServiceApi
+	logger  *logging.Logger
+	cfg     *config.Config
 }
 
-func Init(app *app.App) *http.Server {
-	s := &Server{app: app}
+func NewServer(app *app.App) *Server {
+	return &Server{
+		app:     app,
+		service: app.Service,
+		logger:  app.Logger,
+		cfg:     app.Cfg,
+	}
+}
+
+func (s *Server) StartServer(ctx context.Context) <-chan struct{} {
 	router := s.setupRouter()
 
-	serverConfig := &http.Server{
-		Addr:         ":" + app.Cfg.HTTPServer.Port,
+	srv := &http.Server{
+		Addr:         ":" + s.cfg.HTTPServer.Port,
 		Handler:      router,
-		ReadTimeout:  app.Cfg.HTTPServer.Timeout,
-		WriteTimeout: app.Cfg.HTTPServer.Timeout,
-		IdleTimeout:  app.Cfg.HTTPServer.IdleTimeout,
+		ReadTimeout:  s.cfg.HTTPServer.Timeout,
+		WriteTimeout: s.cfg.HTTPServer.Timeout,
+		IdleTimeout:  s.cfg.HTTPServer.IdleTimeout,
 	}
 
-	return serverConfig
+	doneChan := make(chan struct{})
+
+	go func() {
+		s.logger.Info("starting server", "port", s.cfg.HTTPServer.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("failed to start server")
+		}
+	}()
+
+	go func() {
+		<-ctx.Done()
+
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			s.logger.Error("Failed to stop server", "error", err)
+		}
+
+		close(doneChan)
+	}()
+
+	return doneChan
 }
 
 func (s *Server) setupRouter() *chi.Mux {
@@ -38,7 +77,7 @@ func (s *Server) setupRouter() *chi.Mux {
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(mwLogger.New(s.app.Logger))
+	r.Use(mwLogger.New(s.logger))
 	r.Use(middleware.Recoverer)
 
 	// API v1 с метриками
@@ -52,8 +91,8 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Mount("/admin", admin.New(s.app).Router(adminRouter))
 
 	// Статические файлы с метриками
-	r.Get("/video/{filename}", metrics.WrapVideoHandler(video.ServeVideoFile(s.app.Cfg, s.app.Logger)))
-	r.Get("/img/{filename}", metrics.WrapImgHandler(img.ServeImgFile(s.app.Cfg, s.app.Logger)))
+	r.Get("/video/{filename}", metrics.WrapVideoHandler(video.ServeVideoFile(s.cfg, s.logger)))
+	r.Get("/img/{filename}", metrics.WrapImgHandler(img.ServeImgFile(s.cfg, s.logger)))
 
 	// Prometheus metrics endpoint
 	r.Handle("/metrics", promhttp.Handler())

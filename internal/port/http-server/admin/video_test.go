@@ -265,7 +265,7 @@ func TestHandler_UpdateVideo_Success(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, redisMock := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание для удаления из Redis
+	// Настраиваем ожидание для удаления из redis
 	redisMock.ExpectDel("video:1").SetVal(1)
 
 	// Настраиваем ожидание запроса к БД для обновления видео
@@ -316,7 +316,7 @@ func TestHandler_UpdateVideo_NotFound(t *testing.T) {
 	// Создаем моки и хендлер
 	h, sqlMock, redisMock := newTestAuthHandlerWithMocks(t)
 
-	// Настраиваем ожидание для удаления из Redis
+	// Настраиваем ожидание для удаления из redis
 	redisMock.ExpectDel("video:999").SetVal(0)
 
 	// Настраиваем ожидание запроса к БД с ошибкой

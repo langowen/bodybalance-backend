@@ -4,15 +4,9 @@ package main
 import (
 	"context"
 	"github.com/langowen/bodybalance-backend/deploy/config"
-	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
-	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
 	"github.com/langowen/bodybalance-backend/internal/app"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/logpretty"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server"
 	"github.com/theartofdevel/logging"
-	"log"
-	"log/slog"
 	"os"
 	"os/signal"
 	"runtime"
@@ -60,119 +54,51 @@ func main() {
 	// Инициализируем конфиг
 	cfg := config.MustGetConfig()
 
+	// Инициализируем app
+	apps := app.NewApp(cfg)
+
 	// Инициализируем лог
-	logger := newLogger(cfg)
-
-	if os.Getenv("GENERATE_SWAGGER") == "true" {
-		return
-	}
-
-	// Добавляем логер в контекст
-	ctx, cancel := context.WithCancel(logging.ContextWithLogger(context.Background(), logger))
-	defer cancel()
-
-	// Инициализируем хранилище PostgresSQL
-	pgStorage, err := postgres.New(ctx, cfg)
-	if err != nil {
-		log.Fatalln("Failed to initialize PostgresSQL storage", sl.Err(err))
-	}
-	defer func(pgStorage *postgres.Storage) {
-		err = pgStorage.Close()
-		if err != nil {
-			logger.Error("can't close pgStorage", sl.Err(err))
-		}
-	}(pgStorage)
-
-	var redisStorage *redis.Storage
-
-	if cfg.Redis.Enable == true {
-		redisStorage, err = redis.New(cfg)
-		if err != nil {
-			log.Fatalln("Failed to initialize RedisSQL storage", sl.Err(err))
-		}
-	}
+	apps.GetLogger()
+	logger := apps.Logger
 
 	logger.With(
 		"Config params", cfg,
 		"go_version", runtime.Version(),
 		"git_commit", GitCommit,
 		"version", Version,
-	).Info("starting server")
+	).Info("starting application")
 
+	// Добавляем логер в контекст
+	ctx, cancel := context.WithCancel(logging.ContextWithLogger(context.Background(), logger))
+
+	// Обработчик сигналов для graceful shutdown
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	apps := app.New(cfg, logger, pgStorage, redisStorage)
+	// Инициализируем хранилище PostgresSQL
+	apps.GetStorage(ctx)
 
-	srv := http_server.Init(apps)
+	// Инициализируем хранилище Redis
+	apps.GetRedis(ctx)
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			logger.Error("failed to start server")
-		}
-	}()
+	// Инициализируем сервис API
+	apps.GetService()
 
+	// Инициализируем HTTP сервер
+	srv := http_server.NewServer(apps)
+	serverDone := srv.StartServer(ctx)
 	logger.Info("server started")
 
+	// Ждем сигнала для graceful shutdown
 	<-done
+	logger.Info("Gracefully shutting down")
+
+	// Отменяем контекст
+	cancel()
 	logger.Info("stopping server")
 
-	ctxServer, cancelServer := context.WithTimeout(ctx, cfg.HTTPServer.Timeout)
-	defer cancelServer()
-
-	if err := srv.Shutdown(ctxServer); err != nil {
-		logger.Error("failed to stop server", sl.Err(err))
-	}
+	// Ждем завершения работы сервера
+	<-serverDone
 
 	logger.Info("server stopped")
-}
-
-func newLogger(cfg *config.Config) *logging.Logger {
-	var logger *logging.Logger
-
-	switch cfg.Env {
-	case "local":
-		logger = setupPrettySlog()
-	case "prod":
-		logger = logging.NewLogger(
-			logging.WithLevel(cfg.LogLevel),
-			logging.WithIsJSON(true),
-			logging.WithSetDefault(true),
-			logging.WithLogFilePath(cfg.PatchLog),
-		)
-	case "dev", "test":
-		logger = logging.NewLogger(
-			logging.WithLevel(cfg.LogLevel),
-			logging.WithIsJSON(true),
-			logging.WithSetDefault(true),
-			logging.WithLogFilePath(cfg.PatchLog),
-		)
-	default:
-		logger = logging.NewLogger(
-			logging.WithLevel(cfg.LogLevel),
-			logging.WithIsJSON(true),
-			logging.WithSetDefault(true),
-			logging.WithLogFilePath(cfg.PatchLog),
-		)
-	}
-
-	logger = logger.With(
-		slog.Group("program_info",
-			slog.Int("num_goroutines", runtime.NumGoroutine()),
-			slog.Int("pid", os.Getpid()),
-		))
-
-	return logger
-}
-
-func setupPrettySlog() *logging.Logger {
-	opts := logpretty.PrettyHandlerOptions{
-		SlogOpts: &logging.HandlerOptions{
-			Level: logging.LevelDebug,
-		},
-	}
-
-	handler := opts.NewPrettyHandler(os.Stdout)
-
-	return logging.New(handler)
 }

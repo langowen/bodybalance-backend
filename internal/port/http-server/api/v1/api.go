@@ -25,7 +25,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/api/v1/response"
 	mwMetrics "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
-	"github.com/langowen/bodybalance-backend/internal/service/api"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -33,13 +32,14 @@ import (
 type Handler struct {
 	logger  *logging.Logger
 	cfg     *config.Config
-	service *api.ServiceApi
+	service Service
 }
 
 func New(app *app.App) *Handler {
 	return &Handler{
-		logger: app.Logger,
-		cfg:    app.Cfg,
+		logger:  app.Logger,
+		cfg:     app.Cfg,
+		service: app.Service,
 	}
 }
 

@@ -95,7 +95,7 @@ var (
 	DataSourceRequests = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bodybalance_data_source_requests_total",
-			Help: "Общее количество запросов к разным источникам данных (Redis или SQL)",
+			Help: "Общее количество запросов к разным источникам данных (redis или SQL)",
 		},
 		[]string{"method", "endpoint", "source"},
 	)

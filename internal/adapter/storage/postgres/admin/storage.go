@@ -1,13 +1,13 @@
 package admin
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func New(db *sql.DB) *Storage {
+func New(db *pgxpool.Pool) *Storage {
 	return &Storage{db: db}
 }

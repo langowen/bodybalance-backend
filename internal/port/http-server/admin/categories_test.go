@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// RedisMock - мок для Redis хранилища
+// RedisMock - мок для redis хранилища
 type RedisMock struct {
 	mock.Mock
 }
@@ -420,7 +420,7 @@ func TestHandler_RemoveCache_Success(t *testing.T) {
 	// Создаем моки и хендлер
 	h, _, redisMockClient := newTestAuthHandlerWithMocks(t)
 
-	// Настройка ожиданий Redis для каждого шаблона
+	// Настройка ожиданий redis для каждого шаблона
 	// Для videos:*
 	redisMockClient.ExpectScan(uint64(0), "videos:*", int64(100)).SetVal([]string{"videos:1:1", "videos:2:1"}, 0)
 	redisMockClient.ExpectDel("videos:1:1", "videos:2:1").SetVal(2)

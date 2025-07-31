@@ -118,7 +118,7 @@ func (c *Config) LogValue() logging.Value {
 		logging.StringAttr("docs_user", c.Docs.User),
 		logging.StringAttr("docs_password", "REDACTED"),
 
-		//Redis
+		//redis
 		logging.StringAttr("redis_host", c.Redis.Host),
 		logging.StringAttr("redis_password", "REDACTED"),
 		logging.IntAttr("redis_db", c.Redis.DB),

@@ -72,10 +72,13 @@ services:
       POSTGRES_DB: bodybalance
       POSTGRES_USER: bodybalance
       POSTGRES_PASSWORD: ${BD_PASSWORD}
+      # Передаем переменные для миграций
+      POSTGRES_INITDB_ARGS: "--set app.admin_username=${DOCS_USER:-admin} --set app.admin_password=${DOCS_PASSWORD:-admin}"
     ports:
       - '5455:5432'
     volumes:
       - '/srv/docker/bodybalance/pg:/var/lib/postgresql/data'
+      - './deploy/migrations:/docker-entrypoint-initdb.d'
     networks:
       body:
 

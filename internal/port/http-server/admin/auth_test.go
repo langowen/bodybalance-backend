@@ -26,7 +26,7 @@ func newTestAuthHandlerWithMocks(t *testing.T) (*Handler, sqlmock.Sqlmock, redis
 	db, sqlMock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	// Создаем мок для Redis
+	// Создаем мок для redis
 	redisCli, redisMock := redismock.NewClientMock()
 
 	// Создаем postgres storage с моком

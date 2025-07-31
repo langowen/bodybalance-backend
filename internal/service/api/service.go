@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
-	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	mwMetrics "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
@@ -18,16 +17,16 @@ import (
 )
 
 type ServiceApi struct {
-	cfg   *config.Config
-	db    SqlStorageApi
-	redis CacheStorageApi
+	cfg *config.Config
+	db  SqlStorageApi
+	rdb CacheStorageApi
 }
 
-func NewServiceApi(app *app.App) *ServiceApi {
+func NewServiceApi(cfg *config.Config, db SqlStorageApi, rdb CacheStorageApi) *ServiceApi {
 	return &ServiceApi{
-		cfg:   app.Cfg,
-		db:    app.Storage.Api,
-		redis: app.Redis,
+		cfg: cfg,
+		db:  db,
+		rdb: rdb,
 	}
 }
 
@@ -44,17 +43,17 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 	}
 
 	if s.cfg.Redis.Enable == true {
-		res, err := s.redis.GetAccount(ctx, &account)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				logging.L(ctx).Debug("video not found in redis cache", sl.Err(err))
-			}
-			logging.L(ctx).Error("failed to get account from redis", sl.Err(err))
+		res, err := s.rdb.GetAccount(ctx, &account)
+		if err == nil {
+			logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name)
+			return res, mwMetrics.SourceRedis, nil
 		}
 
-		logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name)
-
-		return res, mwMetrics.SourceRedis, nil
+		if errors.Is(err, redis.Nil) {
+			logging.L(ctx).Debug("account not found in redis cache", sl.Err(err))
+		} else {
+			logging.L(ctx).Error("failed to get account from redis", sl.Err(err))
+		}
 	}
 
 	res, err := s.db.CheckAccount(ctx, &account)
@@ -72,7 +71,7 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err = s.redis.SetAccount(ctxRedis, res); err != nil {
+			if err = s.rdb.SetAccount(ctxRedis, res); err != nil {
 				logging.L(ctx).Warn("failed to cache account in redis", sl.Err(err))
 			}
 		}()
@@ -96,17 +95,19 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 	}
 
 	if s.cfg.Redis.Enable {
-		categories, err := s.redis.GetCategories(ctx, typeID)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				logging.L(ctx).Debug("video not found in redis cache", sl.Err(err))
-			}
-			logging.L(ctx).Error("failed to get categories from redis", sl.Err(err))
+		categories, err := s.rdb.GetCategories(ctx, typeID)
+		if err == nil && categories != nil {
+			logging.L(ctx).Debug("categories fetched from redis cache", "op", op)
+			return categories, mwMetrics.SourceRedis, nil
 		}
 
-		logging.L(ctx).Debug("categories fetched from redis cache", "op", op)
-		return categories, mwMetrics.SourceRedis, nil
-
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				logging.L(ctx).Debug("categories not found in redis cache", sl.Err(err))
+			} else {
+				logging.L(ctx).Error("failed to get categories from redis", sl.Err(err))
+			}
+		}
 	}
 
 	categories, err := s.db.GetCategories(ctx, typeID)
@@ -125,7 +126,7 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err = s.redis.SetCategories(ctxRedis, typeID, categories); err != nil {
+			if err = s.rdb.SetCategories(ctxRedis, typeID, categories); err != nil {
 				logging.L(ctx).Error("failed to cache categories in redis", sl.Err(err))
 			}
 		}()
@@ -149,17 +150,19 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 	}
 
 	if s.cfg.Redis.Enable {
-		video, err := s.redis.GetVideo(ctx, videoID)
+		video, err := s.rdb.GetVideo(ctx, videoID)
+		if err == nil && video != nil {
+			logging.L(ctx).Debug("video fetched from redis cache")
+			return video, mwMetrics.SourceRedis, nil
+		}
+
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
 				logging.L(ctx).Debug("video not found in redis cache", sl.Err(err))
+			} else {
+				logging.L(ctx).Error("failed to get video from redis", sl.Err(err))
 			}
-			logging.L(ctx).Error("failed to get video from redis", sl.Err(err))
 		}
-
-		logging.L(ctx).Debug("video fetched from redis cache")
-		return video, mwMetrics.SourceRedis, nil
-
 	}
 
 	video, err := s.db.GetVideo(ctx, videoID)
@@ -178,7 +181,7 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err = s.redis.SetVideo(ctxRedis, videoID, video); err != nil {
+			if err = s.rdb.SetVideo(ctxRedis, videoID, video); err != nil {
 				logging.L(ctx).Warn("failed to cache video in redis", sl.Err(err))
 			}
 		}()
@@ -213,17 +216,18 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 	}
 
 	if s.cfg.Redis.Enable == true {
-		videos, err := s.redis.GetVideosByCategoryAndType(ctx, typeID, catID)
+		videos, err := s.rdb.GetVideosByCategoryAndType(ctx, typeID, catID)
+		if err == nil && videos != nil {
+			logging.L(ctx).Debug("videos fetched from redis cache")
+			return videos, mwMetrics.SourceRedis, nil
+		}
+
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
 				logging.L(ctx).Debug("videos not found in redis cache", sl.Err(err))
+			} else {
+				logging.L(ctx).Error("failed to get videos from redis", sl.Err(err))
 			}
-			logging.L(ctx).Error("failed get video from redis", sl.Err(err))
-		}
-
-		if videos != nil {
-			logging.L(ctx).Debug("send from cache")
-			return videos, mwMetrics.SourceRedis, nil
 		}
 	}
 
@@ -250,7 +254,7 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err = s.redis.SetVideosByCategoryAndType(ctxRedis, typeID, catID, videos); err != nil {
+			if err = s.rdb.SetVideosByCategoryAndType(ctxRedis, typeID, catID, videos); err != nil {
 				logging.L(ctx).Warn("failed to set videos cache", sl.Err(err))
 			}
 		}()
