@@ -52,7 +52,7 @@ func TestFileResponseWriter(t *testing.T) {
 	projectMetrics.StaticFileLoadTime.Reset()
 	projectMetrics.StaticFileCacheHit.Reset()
 
-	t.Run("FileResponseWriter normal response", func(t *testing.T) {
+	t.Run("FileResponseWriter normal dto", func(t *testing.T) {
 		// Создаем базовый ResponseWriter
 		rr := httptest.NewRecorder()
 

@@ -3,9 +3,10 @@ package api
 import "errors"
 
 type Category struct {
-	ID     int64
-	Name   string
-	ImgURL string
+	ID         int64
+	Name       string
+	ImgURL     string
+	DataSource string
 }
 
 var (

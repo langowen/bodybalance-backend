@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -35,7 +35,7 @@ func TestHandler_AddVideo_Success(t *testing.T) {
 	sqlMock.ExpectCommit()
 
 	// Создаем тестовый запрос
-	req := admResponse.VideoRequest{
+	req := dto.VideoRequest{
 		Name:        "Test Video",
 		URL:         "test.mp4", // Используем только имя файла без URL
 		Description: "Test Description",
@@ -67,7 +67,7 @@ func TestHandler_AddVideo_ValidationError(t *testing.T) {
 	h, _, _ := newTestAuthHandlerWithMocks(t)
 
 	// Создаем тестовый запрос с пустыми обязательными полями
-	req := admResponse.VideoRequest{
+	req := dto.VideoRequest{
 		Name:        "", // Пустое имя
 		URL:         "", // Пустой URL
 		Description: "Test Description",
@@ -143,7 +143,7 @@ func TestHandler_GetVideo_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response admResponse.VideoResponse
+	var response dto.VideoResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
@@ -250,7 +250,7 @@ func TestHandler_GetVideos_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response []admResponse.VideoResponse
+	var response []dto.VideoResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response, 2)
@@ -292,7 +292,7 @@ func TestHandler_UpdateVideo_Success(t *testing.T) {
 	r.Put("/admin/video/{id}", h.updateVideo)
 
 	// Создаем тестовый запрос
-	req := admResponse.VideoRequest{
+	req := dto.VideoRequest{
 		Name:        "Updated Video",
 		URL:         "updated.mp4", // Используем только имя файла без URL
 		Description: "Updated Description",
@@ -330,7 +330,7 @@ func TestHandler_UpdateVideo_NotFound(t *testing.T) {
 	r.Put("/admin/video/{id}", h.updateVideo)
 
 	// Создаем тестовый запрос
-	req := admResponse.VideoRequest{
+	req := dto.VideoRequest{
 		Name:        "Updated Video",
 		URL:         "updated.mp4", // Используем только имя файла без URL
 		Description: "Updated Description",

@@ -1,8 +1,8 @@
-package admResponse
+package dto
 
 import (
 	"encoding/json"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"log/slog"
 	"net/http"
 	"time"
@@ -124,7 +124,7 @@ func RespondWithError(w http.ResponseWriter, code int, message string, details .
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		slog.Error("Failed to encode response", sl.Err(err))
+		slog.Error("Failed to encode dto", sl.Err(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -133,7 +133,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("Failed to encode response", sl.Err(err))
+		slog.Error("Failed to encode dto", sl.Err(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

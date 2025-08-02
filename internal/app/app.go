@@ -5,14 +5,12 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/logpretty"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 	"github.com/langowen/bodybalance-backend/internal/service/api"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/logpretty"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"log"
-	"log/slog"
 	"os"
-	"runtime"
 )
 
 type App struct {
@@ -28,6 +26,8 @@ func NewApp(cfg *config.Config) *App {
 		Cfg: cfg,
 	}
 }
+
+//TODO добавить методы Start для инициализации всех компонентов приложения
 
 func (a *App) GetLogger() {
 	logger := newLogger(a.Cfg)
@@ -93,11 +93,11 @@ func newLogger(cfg *config.Config) *logging.Logger {
 		)
 	}
 
-	logger = logger.With(
-		slog.Group("program_info",
-			slog.Int("num_goroutines", runtime.NumGoroutine()),
-			slog.Int("pid", os.Getpid()),
-		))
+	/*logger = logger.With(
+	slog.Group("program_info",
+		slog.Int("num_goroutines", runtime.NumGoroutine()),
+		slog.Int("pid", os.Getpid()),
+	))*/
 
 	return logger
 }

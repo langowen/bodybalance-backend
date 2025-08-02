@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"time"
 )
 
 // AddCategory добавляет новую категорию
-func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequest) (*admResponse.CategoryResponse, error) {
+func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*dto.CategoryResponse, error) {
 	const op = "storage.postgres.AddCategory"
 
 	tx, err := s.db.Begin(ctx)
@@ -24,7 +24,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 	}()
 
 	// Добавляем категорию
-	var category admResponse.CategoryResponse
+	var category dto.CategoryResponse
 	var createdAt time.Time
 
 	err = tx.QueryRow(ctx, `
@@ -69,7 +69,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 	defer rows.Close()
 
 	for rows.Next() {
-		var t admResponse.TypeResponse
+		var t dto.TypeResponse
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
@@ -88,10 +88,10 @@ func (s *Storage) AddCategory(ctx context.Context, req *admResponse.CategoryRequ
 }
 
 // GetCategory возвращает категорию по ID
-func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.CategoryResponse, error) {
+func (s *Storage) GetCategory(ctx context.Context, id int64) (*dto.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategory"
 
-	var category admResponse.CategoryResponse
+	var category dto.CategoryResponse
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, `
@@ -113,7 +113,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 	}
 
 	category.DateCreated = createdAt.Format("02.01.2006")
-	category.Types = []admResponse.TypeResponse{}
+	category.Types = []dto.TypeResponse{}
 
 	rows, err := s.db.Query(ctx, `
 		SELECT ct.id, ct.name
@@ -127,7 +127,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 	defer rows.Close()
 
 	for rows.Next() {
-		var t admResponse.TypeResponse
+		var t dto.TypeResponse
 
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
@@ -143,7 +143,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*admResponse.Categ
 }
 
 // GetCategories возвращает все категории
-func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Сначала получаем все категории
@@ -158,9 +158,9 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 	}
 	defer rows.Close()
 
-	var categories []admResponse.CategoryResponse
+	var categories []dto.CategoryResponse
 	for rows.Next() {
-		var category admResponse.CategoryResponse
+		var category dto.CategoryResponse
 		var createdAt time.Time
 
 		if err := rows.Scan(
@@ -173,7 +173,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 		}
 
 		category.DateCreated = createdAt.Format("02.01.2006")
-		category.Types = []admResponse.TypeResponse{}
+		category.Types = []dto.TypeResponse{}
 		categories = append(categories, category)
 	}
 
@@ -194,7 +194,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 		}
 
 		for rows.Next() {
-			var t admResponse.TypeResponse
+			var t dto.TypeResponse
 			if err := rows.Scan(&t.ID, &t.Name); err != nil {
 				rows.Close()
 				return nil, fmt.Errorf("%s: %w", op, err)
@@ -213,7 +213,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]admResponse.CategoryResp
 }
 
 // UpdateCategory обновляет данные категории
-func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admResponse.CategoryRequest) error {
+func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *dto.CategoryRequest) error {
 	const op = "storage.postgres.UpdateCategory"
 
 	tx, err := s.db.Begin(ctx)

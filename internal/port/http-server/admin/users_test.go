@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +29,7 @@ func TestHandler_AddUser_Success(t *testing.T) {
 			AddRow(1, "testuser", "1", "Йога", false, time.Now()))
 
 	// Создаем тестовый запрос
-	req := admResponse.UserRequest{
+	req := dto.UserRequest{
 		Username:      "testuser",
 		Password:      "password123",
 		ContentTypeID: 1,
@@ -65,7 +65,7 @@ func TestHandler_AddUser_Duplicate(t *testing.T) {
 		WillReturnError(errors.New("duplicate key value violates unique constraint"))
 
 	// Создаем тестовый запрос
-	req := admResponse.UserRequest{
+	req := dto.UserRequest{
 		Username:      "existinguser",
 		Password:      "password123",
 		ContentTypeID: 1,
@@ -89,7 +89,7 @@ func TestHandler_AddUser_ValidationError(t *testing.T) {
 	h, _, _ := newTestAuthHandlerWithMocks(t)
 
 	// Создаем тестовый запрос с пустыми обязательными полями
-	req := admResponse.UserRequest{
+	req := dto.UserRequest{
 		Username:      "", // Пустое имя пользователя
 		Password:      "", // Пустой пароль
 		ContentTypeID: 1,
@@ -149,7 +149,7 @@ func TestHandler_GetUser_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response admResponse.UserResponse
+	var response dto.UserResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
@@ -225,7 +225,7 @@ func TestHandler_GetUsers_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response []admResponse.UserResponse
+	var response []dto.UserResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response, 2)
@@ -272,7 +272,7 @@ func TestHandler_UpdateUser_Success(t *testing.T) {
 	r.Put("/admin/users/{id}", h.updateUser)
 
 	// Создаем тестовый запрос
-	req := admResponse.UserRequest{
+	req := dto.UserRequest{
 		Username:      "updateduser",
 		Password:      "newpassword",
 		ContentTypeID: 2,
@@ -312,7 +312,7 @@ func TestHandler_UpdateUser_NotFound(t *testing.T) {
 	r.Put("/admin/users/{id}", h.updateUser)
 
 	// Создаем тестовый запрос
-	req := admResponse.UserRequest{
+	req := dto.UserRequest{
 		Username:      "updateduser",
 		Password:      "newpassword",
 		ContentTypeID: 2,

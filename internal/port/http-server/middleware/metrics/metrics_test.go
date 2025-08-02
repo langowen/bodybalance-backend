@@ -26,7 +26,7 @@ func TestRequestMetricsMiddleware(t *testing.T) {
 			// Имитируем задержку запроса
 			time.Sleep(10 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("test response"))
+			w.Write([]byte("test dto"))
 		})
 
 		// Применяем middleware
@@ -105,7 +105,7 @@ func TestRequestMetricsMiddleware(t *testing.T) {
 	})
 
 	// Тест обработки ошибки
-	t.Run("Error response metrics", func(t *testing.T) {
+	t.Run("Error dto metrics", func(t *testing.T) {
 		// Сбрасываем метрики перед тестом
 		projectMetrics.APIRequestsTotal.Reset()
 

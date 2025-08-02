@@ -3,8 +3,9 @@ package api
 import "errors"
 
 type ContentType struct {
-	ID   int64
-	Name string
+	ID         int64
+	Name       string
+	DataSource string
 }
 
 var (

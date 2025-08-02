@@ -6,8 +6,8 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"net/http"
 	"time"
 )
@@ -23,12 +23,12 @@ type Claims struct {
 // @Tags Auth
 // @Accept  json
 // @Produce  json
-// @Param input body admResponse.SignInRequest true "Данные для входа"
-// @Success 200 {object} admResponse.SignInResponse
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 401 {object} admResponse.ErrorResponse
-// @Failure 403 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Param input body dto.SignInRequest true "Данные для входа"
+// @Success 200 {object} dto.SignInResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/signin [post]
 func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.signing"
@@ -38,16 +38,16 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	var req admResponse.SignInRequest
+	var req dto.SignInRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Login == "" || req.Password == "" {
 		logger.Error("empty login or password")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Login and password are required")
+		dto.RespondWithError(w, http.StatusBadRequest, "Login and password are required")
 		return
 	}
 
@@ -56,17 +56,17 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("invalid login credentials")
-			admResponse.RespondWithError(w, http.StatusUnauthorized, "Invalid login or password")
+			dto.RespondWithError(w, http.StatusUnauthorized, "Invalid login or password")
 			return
 		}
 		logger.Error("failed to get user", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to authenticate")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to authenticate")
 		return
 	}
 
 	if !user.IsAdmin {
 		logger.Warn("user is not admin", "username", req.Login)
-		admResponse.RespondWithError(w, http.StatusForbidden, "Access denied")
+		dto.RespondWithError(w, http.StatusForbidden, "Access denied")
 		return
 	}
 
@@ -82,14 +82,14 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	tokenString, err := token.SignedString([]byte(h.cfg.HTTPServer.SigningKey))
 	if err != nil {
 		logger.Error("failed to generate token", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to generate token")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
 	// Используем единый метод установки cookie
 	h.setAuthCookie(w, tokenString)
 
-	admResponse.RespondWithJSON(w, http.StatusOK, admResponse.SignInResponse{
+	dto.RespondWithJSON(w, http.StatusOK, dto.SignInResponse{
 		Message: "Authentication successful",
 	})
 }
@@ -98,7 +98,7 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 // @Description Завершает сеанс администратора, удаляя токен аутентификации
 // @Tags Auth
 // @Produce  json
-// @Success 200 {object} admResponse.SignInResponse
+// @Success 200 {object} dto.SignInResponse
 // @Router /admin/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	secure := false
@@ -123,7 +123,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: sameSite,
 	})
 
-	admResponse.RespondWithJSON(w, http.StatusOK, admResponse.SignInResponse{
+	dto.RespondWithJSON(w, http.StatusOK, dto.SignInResponse{
 		Message: "Logged out successfully",
 	})
 }

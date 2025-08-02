@@ -6,8 +6,8 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"net/http"
 	"strconv"
 )
@@ -17,10 +17,10 @@ import (
 // @Tags Admin Types
 // @Accept json
 // @Produce json
-// @Param input body admResponse.TypeRequest true "Данные типа"
+// @Param input body dto.TypeRequest true "Данные типа"
 // @Success 201 {object} object{id=int64,message=string} "Тип успешно создан"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/type [post]
 func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
@@ -31,16 +31,16 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	var req admResponse.TypeRequest
+	var req dto.TypeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Name == "" {
 		logger.Error("empty required field")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Name is required")
+		dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
 		return
 	}
 
@@ -48,11 +48,11 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 	typeID, err := h.storage.AddType(ctx, &req)
 	if err != nil {
 		logger.Error("failed to add type", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add type")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
+	dto.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":      typeID,
 		"message": "Type added successfully",
 	})
@@ -63,10 +63,10 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Types
 // @Produce json
 // @Param id path int true "ID типа"
-// @Success 200 {object} admResponse.TypeResponse
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {object} dto.TypeResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/type/{id} [get]
 func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +81,7 @@ func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid type ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
 		return
 	}
 
@@ -90,23 +90,23 @@ func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("type not found", "type_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Type not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
 		}
 		logger.Error("failed to get type", sl.Err(err), "type_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get type")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, contentType)
+	dto.RespondWithJSON(w, http.StatusOK, contentType)
 }
 
 // @Summary Получить все типы
 // @Description Возвращает список всех типов контента в системе
 // @Tags Admin Types
 // @Produce json
-// @Success 200 {array} admResponse.TypeResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {array} dto.TypeResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/type [get]
 func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
@@ -121,11 +121,11 @@ func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 	types, err := h.storage.GetTypes(ctx)
 	if err != nil {
 		logger.Error("failed to get types", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get types")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get types")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, types)
+	dto.RespondWithJSON(w, http.StatusOK, types)
 }
 
 // @Summary Обновить тип
@@ -134,11 +134,11 @@ func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID типа"
-// @Param input body admResponse.TypeRequest true "Новые данные типа"
+// @Param input body dto.TypeRequest true "Новые данные типа"
 // @Success 200 {object} object{id=int64,message=string} "Тип успешно обновлен"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/type/{id} [put]
 func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
@@ -153,20 +153,20 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid type ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
 		return
 	}
 
-	var req admResponse.TypeRequest
+	var req dto.TypeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Name == "" {
 		logger.Error("empty required field")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Name is required")
+		dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
 		return
 	}
 
@@ -175,11 +175,11 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("type not found", "type_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Type not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
 		}
 		logger.Error("failed to update type", sl.Err(err), "type_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update type")
 		return
 	}
 
@@ -187,7 +187,7 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 		go h.removeCache(op)
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Type updated successfully",
 	})
@@ -199,9 +199,9 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID типа"
 // @Success 200 {object} object{id=int64,message=string} "Тип успешно удален"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/type/{id} [delete]
 func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
@@ -216,7 +216,7 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid type ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
 		return
 	}
 
@@ -225,11 +225,11 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("type not found", "type_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Type not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
 		}
 		logger.Error("failed to delete type", sl.Err(err), "type_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete type")
 		return
 	}
 
@@ -237,7 +237,7 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 		go h.removeCache(op)
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Type deleted successfully",
 	})

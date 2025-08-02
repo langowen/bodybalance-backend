@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -57,6 +58,8 @@ func (s *Storage) GetCategories(ctx context.Context, typeID int64) ([]api.Catego
 		return nil, fmt.Errorf("%s: failed to unmarshal categories: %w", op, err)
 	}
 
+	categories[0].DataSource = metrics.SourceRedis
+
 	return categories, nil
 }
 
@@ -94,6 +97,8 @@ func (s *Storage) GetAccount(ctx context.Context, account *api.Account) (*api.Ac
 	if err = json.Unmarshal(data, &account.ContentType); err != nil {
 		return nil, fmt.Errorf("%s: failed to unmarshal account: %w", op, err)
 	}
+
+	account.DataSource = metrics.SourceRedis
 
 	return account, nil
 }
@@ -133,6 +138,8 @@ func (s *Storage) GetVideo(ctx context.Context, videoID int64) (*api.Video, erro
 		return nil, fmt.Errorf("%s: failed to unmarshal video: %w", op, err)
 	}
 
+	video.DataSource = metrics.SourceRedis
+
 	return &video, nil
 }
 
@@ -170,6 +177,8 @@ func (s *Storage) GetVideosByCategoryAndType(ctx context.Context, typeID, catID 
 	if err := json.Unmarshal(data, &videos); err != nil {
 		return nil, fmt.Errorf("%s: failed to unmarshal videos: %w", op, err)
 	}
+
+	videos[0].DataSource = metrics.SourceRedis
 
 	return videos, nil
 }

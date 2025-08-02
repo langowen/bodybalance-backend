@@ -9,6 +9,7 @@ type Video struct {
 	Description string
 	Category    Category
 	ImgURL      string
+	DataSource  string
 }
 
 var (

@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"log"
 	"sync"
@@ -20,7 +20,7 @@ type Config struct {
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchLog    string         `yaml:"patch_log" env:"PATCH_LOG" env-default:""`       // Путь к папке для логов, если не указано, то логи будут в stdout
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
-	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod
+	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod, local
 }
 
 // DatabaseConfig содержит конфигурацию для работы с базой данных.

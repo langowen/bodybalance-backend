@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/langowen/bodybalance-backend/deploy/config"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -36,7 +36,7 @@ func (h *fileTesterHandler) uploadVideoHandler(w http.ResponseWriter, r *http.Re
 	// Если есть ошибка парсинга формы, симулируем её
 	if h.parseMFError != nil {
 		logger.Error("File too large", "error", h.parseMFError)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "File too large (max 500MB)")
+		dto.RespondWithError(w, http.StatusBadRequest, "File too large (max 500MB)")
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *fileTesterHandler) uploadVideoHandler(w http.ResponseWriter, r *http.Re
 	file, header, err := r.FormFile("video")
 	if err != nil {
 		logger.Error("Failed to get file from request", "error", err)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid file upload")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid file upload")
 		return
 	}
 	defer file.Close()
@@ -53,7 +53,7 @@ func (h *fileTesterHandler) uploadVideoHandler(w http.ResponseWriter, r *http.Re
 	buff := make([]byte, 512)
 	if _, err = file.Read(buff); err != nil {
 		logger.Error("Failed to read file header", "error", err)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to verify file type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to verify file type")
 		return
 	}
 
@@ -63,25 +63,25 @@ func (h *fileTesterHandler) uploadVideoHandler(w http.ResponseWriter, r *http.Re
 	// Используем переопределенную функцию для проверки типа
 	if h.isVideoContentFunc != nil && !h.isVideoContentFunc(buff) {
 		logger.Error("Invalid file type", "content_type", contentType, "extension", fileExt)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid file type. Only video files are allowed")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid file type. Only video files are allowed")
 		return
 	}
 
 	// Сбрасываем позицию чтения файла
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		logger.Error("Failed to reset file position", "error", err)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to process file")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to process file")
 		return
 	}
 
 	// Сохраняем файл
 	if err := saveVideoFile(h.Handler, header.Filename, file); err != nil {
 		logger.Error("Failed to save file", "error", err)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]string{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]string{
 		"message": "File " + header.Filename + " uploaded successfully",
 	})
 }
@@ -227,7 +227,7 @@ func TestHandler_ListVideoFilesHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Проверяем ответ
-	var response []admResponse.FileInfo
+	var response []dto.FileInfo
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response, 2) // Должно быть только 2 видеофайла

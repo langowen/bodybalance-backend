@@ -20,11 +20,10 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
 	"github.com/langowen/bodybalance-backend/internal/app"
-	dtoApi "github.com/langowen/bodybalance-backend/internal/entities/api"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/api/v1/response"
+	"github.com/langowen/bodybalance-backend/internal/entities/api"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/api/v1/dto"
 	mwMetrics "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -65,7 +64,7 @@ func (h *Handler) Router(r ...chi.Router) chi.Router {
 // @Tags API v1
 // @Produce json
 // @Param username query string true "Username to check"
-// @Success 200 {object} response.AccountResponse
+// @Success 200 {object} dto.AccountResponse
 // @Failure 400 {object} string
 // @Failure 404 {object} string
 // @Failure 500 {object} string
@@ -83,29 +82,29 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	account, dataSource, err := h.service.GetTypeByAccount(ctx, username)
+	account, err := h.service.GetTypeByAccount(ctx, username)
 	if err != nil {
 		switch {
-		case errors.Is(err, dtoApi.ErrEmptyUsername):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Username is empty")
+		case errors.Is(err, api.ErrEmptyUsername):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Username is empty")
 			return
-		case errors.Is(err, dtoApi.ErrStorageServerError):
-			response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to check account")
+		case errors.Is(err, api.ErrStorageServerError):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to check account")
 			return
 		case errors.Is(err, storage.ErrAccountNotFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Account with username %s not found", username))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Account with username %s not found", username))
 			return
 		}
 	}
 
-	mwMetrics.RecordDataSource(r, dataSource)
+	mwMetrics.RecordDataSource(r, account.DataSource)
 
-	res := response.AccountResponse{
+	res := dto.AccountResponse{
 		TypeID:   account.ContentType.ID,
 		TypeName: account.ContentType.Name,
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, res)
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Get categories by type
@@ -113,7 +112,7 @@ func (h *Handler) checkAccount(w http.ResponseWriter, r *http.Request) {
 // @Tags API v1
 // @Produce json
 // @Param type query int true "Type ID"
-// @Success 200 {array} response.CategoryResponse
+// @Success 200 {array} dto.CategoryResponse
 // @Failure 400 {object} string
 // @Failure 404 {object} string
 // @Failure 500 {object} string
@@ -131,36 +130,36 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	categories, dataSource, err := h.service.GetCategoriesByType(ctx, contentType)
+	categories, err := h.service.GetCategoriesByType(ctx, contentType)
 	if err != nil {
 		switch {
-		case errors.Is(err, dtoApi.ErrEmptyTypeID):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
+		case errors.Is(err, api.ErrEmptyTypeID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
 			return
-		case errors.Is(err, dtoApi.ErrTypeInvalid):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid type ID")
+		case errors.Is(err, api.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid type ID")
 			return
 		case errors.Is(err, storage.ErrContentTypeNotFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Content type %s not found", contentType))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Content type %s not found", contentType))
 			return
-		case errors.Is(err, dtoApi.ErrStorageServerError):
-			response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get categories")
+		case errors.Is(err, api.ErrStorageServerError):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get categories")
 			return
 		}
 	}
 
-	mwMetrics.RecordDataSource(r, dataSource)
+	mwMetrics.RecordDataSource(r, categories[0].DataSource)
 
-	categoriesResponse := make([]response.CategoryResponse, 0, len(categories))
+	categoriesResponse := make([]dto.CategoryResponse, 0, len(categories))
 	for _, category := range categories {
-		categoriesResponse = append(categoriesResponse, response.CategoryResponse{
+		categoriesResponse = append(categoriesResponse, dto.CategoryResponse{
 			ID:     category.ID,
 			Name:   category.Name,
 			ImgURL: category.ImgURL,
 		})
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, categories)
+	dto.RespondWithJSON(w, http.StatusOK, categories)
 }
 
 // @Summary Get video by ID
@@ -168,7 +167,7 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 // @Tags API v1
 // @Produce json
 // @Param video_id query int true "Video ID"
-// @Success 200 {object} response.VideoResponse
+// @Success 200 {object} dto.VideoResponse
 // @Failure 400 {object} string
 // @Failure 404 {object} string
 // @Failure 500 {object} string
@@ -186,27 +185,27 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	video, dataSource, err := h.service.GetVideo(ctx, videoID)
+	video, err := h.service.GetVideo(ctx, videoID)
 	if err != nil {
 		switch {
-		case errors.Is(err, dtoApi.ErrEmptyVideoID):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
+		case errors.Is(err, api.ErrEmptyVideoID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Video id is empty")
 			return
-		case errors.Is(err, dtoApi.ErrInvalidVideoID):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", fmt.Sprintf("Video ID '%s' is not a valid number", videoID))
+		case errors.Is(err, api.ErrInvalidVideoID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", fmt.Sprintf("Video ID '%s' is not a valid number", videoID))
 			return
 		case errors.Is(err, storage.ErrVideoNotFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Video with id %d not found", videoID))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Video with id %d not found", videoID))
 			return
-		case errors.Is(err, dtoApi.ErrStorageServerError):
-			response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get video")
+		case errors.Is(err, api.ErrStorageServerError):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get video")
 			return
 		}
 	}
 
-	mwMetrics.RecordDataSource(r, dataSource)
+	mwMetrics.RecordDataSource(r, video.DataSource)
 
-	res := response.VideoResponse{
+	res := dto.VideoResponse{
 		ID:          video.ID,
 		Name:        video.Name,
 		Description: video.Description,
@@ -215,7 +214,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		ImgURL:      video.ImgURL,
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, res)
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Get videos by category and type
@@ -224,7 +223,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param type query int true "Type ID"
 // @Param category query int true "Category ID"
-// @Success 200 {array} response.VideoResponse
+// @Success 200 {array} dto.VideoResponse
 // @Failure 400 {object} string
 // @Failure 404 {object} string
 // @Failure 500 {object} string
@@ -244,40 +243,40 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	videos, dataSource, err := h.service.GetVideosByCategoryAndType(ctx, contentType, categoryName)
+	videos, err := h.service.GetVideosByCategoryAndType(ctx, contentType, categoryName)
 	if err != nil {
 		switch {
-		case errors.Is(err, dtoApi.ErrEmptyTypeID):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
+		case errors.Is(err, api.ErrEmptyTypeID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Content type is empty")
 			return
-		case errors.Is(err, dtoApi.ErrEmptyCategoryID):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Category is empty")
+		case errors.Is(err, api.ErrEmptyCategoryID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Category is empty")
 			return
-		case errors.Is(err, dtoApi.ErrTypeInvalid):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid type ID")
+		case errors.Is(err, api.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid type ID")
 			return
-		case errors.Is(err, dtoApi.ErrCategoryInvalid):
-			response.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid category ID")
+		case errors.Is(err, api.ErrCategoryInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", "Invalid category ID")
 			return
 		case errors.Is(err, storage.ErrContentTypeNotFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Content type %s not found", contentType))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Content type %s not found", contentType))
 			return
 		case errors.Is(err, storage.ErrNoCategoriesFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Category %s not found", categoryName))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Category %s not found", categoryName))
 			return
-		case errors.Is(err, dtoApi.ErrStorageServerError):
-			response.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get videos")
+		case errors.Is(err, api.ErrStorageServerError):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get videos")
 			return
 		case errors.Is(err, storage.ErrVideoNotFound):
-			response.RespondWithError(w, http.StatusNotFound, "Not Found", "No videos found for the specified type and category")
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", "No videos found for the specified type and category")
 		}
 	}
 
-	mwMetrics.RecordDataSource(r, dataSource)
+	mwMetrics.RecordDataSource(r, videos[0].DataSource)
 
-	res := make([]response.VideoResponse, 0, len(videos))
+	res := make([]dto.VideoResponse, 0, len(videos))
 	for _, video := range videos {
-		res = append(res, response.VideoResponse{
+		res = append(res, dto.VideoResponse{
 			ID:          video.ID,
 			URL:         video.URL,
 			Name:        video.Name,
@@ -287,7 +286,7 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 		})
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, res)
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Submit feedback
@@ -295,7 +294,7 @@ func (h *Handler) getVideosByCategoryAndType(w http.ResponseWriter, r *http.Requ
 // @Tags API v1
 // @Accept json
 // @Produce json
-// @Param feedback body response.FeedbackResponse true "Feedback data to submit. Required fields: message. At least one of: email (valid format) or telegram (must start with @, 5-32 chars)"
+// @Param feedback body dto.FeedbackResponse true "Feedback data to submit. Required fields: message. At least one of: email (valid format) or telegram (must start with @, 5-32 chars)"
 // @Success 200 {string} string "Feedback successfully saved"
 // @Failure 400 {object} string "Invalid request: possible reasons - missing required fields, invalid email/telegram format, no contact method provided"
 // @Failure 500 {object} string "Server Error"
@@ -308,16 +307,16 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	var req response.FeedbackResponse
+	var req dto.FeedbackResponse
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	feedback := dtoApi.Feedback{
+	feedback := api.Feedback{
 		Message:  req.Message,
 		Email:    req.Email,
 		Telegram: req.Telegram,
@@ -327,23 +326,23 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 	err := h.service.Feedback(ctx, &feedback)
 	if err != nil {
 		switch {
-		case errors.Is(err, dtoApi.ErrEmptyMessage):
-			response.RespondWithError(w, http.StatusBadRequest, "Message is required")
+		case errors.Is(err, api.ErrEmptyMessage):
+			dto.RespondWithError(w, http.StatusBadRequest, "Message is required")
 			return
-		case errors.Is(err, dtoApi.ErrInvalidEmail):
-			response.RespondWithError(w, http.StatusBadRequest, "Invalid email format")
+		case errors.Is(err, api.ErrInvalidEmail):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid email format")
 			return
-		case errors.Is(err, dtoApi.ErrInvalidTelegram):
-			response.RespondWithError(w, http.StatusBadRequest, "Telegram must start with @ and contain 5-32 characters")
+		case errors.Is(err, api.ErrInvalidTelegram):
+			dto.RespondWithError(w, http.StatusBadRequest, "Telegram must start with @ and contain 5-32 characters")
 			return
-		case errors.Is(err, dtoApi.ErrEmptyTelegramOrEmail):
-			response.RespondWithError(w, http.StatusBadRequest, "Either email or telegram must be provided")
+		case errors.Is(err, api.ErrEmptyTelegramOrEmail):
+			dto.RespondWithError(w, http.StatusBadRequest, "Either email or telegram must be provided")
 			return
-		case errors.Is(err, dtoApi.ErrStorageServerError):
-			response.RespondWithError(w, http.StatusInternalServerError, "Failed to save feedback")
+		case errors.Is(err, api.ErrStorageServerError):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save feedback")
 			return
 		}
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, "Feedback successfully saved")
+	dto.RespondWithJSON(w, http.StatusOK, "Feedback successfully saved")
 }

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"strings"
 	"time"
 )
 
 // AddUser добавляет нового пользователя
-func (s *Storage) AddUser(ctx context.Context, req *admResponse.UserRequest) (*admResponse.UserResponse, error) {
+func (s *Storage) AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserResponse, error) {
 	const op = "storage.postgres.AddUser"
 
 	query := `
@@ -22,7 +22,7 @@ func (s *Storage) AddUser(ctx context.Context, req *admResponse.UserRequest) (*a
                   admin, created_at
     `
 
-	var user admResponse.UserResponse
+	var user dto.UserResponse
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query,
@@ -52,7 +52,7 @@ func (s *Storage) AddUser(ctx context.Context, req *admResponse.UserRequest) (*a
 }
 
 // GetUser возвращает пользователя по ID
-func (s *Storage) GetUser(ctx context.Context, id int64) (*admResponse.UserResponse, error) {
+func (s *Storage) GetUser(ctx context.Context, id int64) (*dto.UserResponse, error) {
 	const op = "storage.postgres.GetUser"
 
 	query := `
@@ -63,7 +63,7 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (*admResponse.UserRespo
 		WHERE a.id = $1 AND a.deleted IS NOT TRUE
 	`
 
-	var user admResponse.UserResponse
+	var user dto.UserResponse
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, id).Scan(
@@ -87,7 +87,7 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (*admResponse.UserRespo
 }
 
 // GetUsers возвращает всех пользователей
-func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, error) {
+func (s *Storage) GetUsers(ctx context.Context) ([]dto.UserResponse, error) {
 	const op = "storage.postgres.GetUsers"
 
 	query := `
@@ -105,9 +105,9 @@ func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, err
 	}
 	defer rows.Close()
 
-	var users []admResponse.UserResponse
+	var users []dto.UserResponse
 	for rows.Next() {
-		var user admResponse.UserResponse
+		var user dto.UserResponse
 		var createdAt time.Time
 
 		if err := rows.Scan(
@@ -133,7 +133,7 @@ func (s *Storage) GetUsers(ctx context.Context) ([]admResponse.UserResponse, err
 }
 
 // UpdateUser обновляет данные пользователя
-func (s *Storage) UpdateUser(ctx context.Context, id int64, req *admResponse.UserRequest) error {
+func (s *Storage) UpdateUser(ctx context.Context, id int64, req *dto.UserRequest) error {
 	const op = "storage.postgres.UpdateUser"
 
 	query := `

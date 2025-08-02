@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +34,7 @@ func TestAddVideo(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/video.mp4",
 			Name:        "Test Video",
 			Description: "Test description",
@@ -64,7 +64,7 @@ func TestAddVideo(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/video.mp4",
 			Name:        "Test Video",
 			Description: "Test description",
@@ -608,7 +608,7 @@ func TestUpdateVideo(t *testing.T) {
 
 		ctx := context.Background()
 		videoID := int64(1)
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/updated.mp4",
 			Name:        "Updated Video",
 			Description: "Updated description",
@@ -637,7 +637,7 @@ func TestUpdateVideo(t *testing.T) {
 
 		ctx := context.Background()
 		videoID := int64(999)
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/updated.mp4",
 			Name:        "Updated Video",
 			Description: "Updated description",
@@ -667,7 +667,7 @@ func TestUpdateVideo(t *testing.T) {
 
 		ctx := context.Background()
 		videoID := int64(1)
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/updated.mp4",
 			Name:        "Updated Video",
 			Description: "Updated description",
@@ -697,7 +697,7 @@ func TestUpdateVideo(t *testing.T) {
 
 		ctx := context.Background()
 		videoID := int64(1)
-		request := admResponse.VideoRequest{
+		request := dto.VideoRequest{
 			URL:         "https://example.com/updated.mp4",
 			Name:        "Updated Video",
 			Description: "Updated description",

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"time"
 )
 
 // AddType добавляет новый тип
-func (s *Storage) AddType(ctx context.Context, req *admResponse.TypeRequest) (*admResponse.TypeResponse, error) {
+func (s *Storage) AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeResponse, error) {
 	const op = "storage.postgres.AddType"
 
 	query := `
@@ -19,7 +19,7 @@ func (s *Storage) AddType(ctx context.Context, req *admResponse.TypeRequest) (*a
         RETURNING id, name, created_at
     `
 
-	var response admResponse.TypeResponse
+	var response dto.TypeResponse
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, req.Name).Scan(
@@ -39,7 +39,7 @@ func (s *Storage) AddType(ctx context.Context, req *admResponse.TypeRequest) (*a
 }
 
 // GetType возвращает тип по ID
-func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeResponse, error) {
+func (s *Storage) GetType(ctx context.Context, id int64) (*dto.TypeResponse, error) {
 	const op = "storage.postgres.GetType"
 
 	query := `
@@ -48,7 +48,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeRespo
         WHERE id = $1 AND deleted IS NOT TRUE
     `
 
-	var contentType admResponse.TypeResponse
+	var contentType dto.TypeResponse
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, id).Scan(
@@ -71,7 +71,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*admResponse.TypeRespo
 }
 
 // GetTypes возвращает все типы
-func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, error) {
+func (s *Storage) GetTypes(ctx context.Context) ([]dto.TypeResponse, error) {
 	const op = "storage.postgres.GetTypes"
 
 	query := `
@@ -87,9 +87,9 @@ func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, err
 	}
 	defer rows.Close()
 
-	var types []admResponse.TypeResponse
+	var types []dto.TypeResponse
 	for rows.Next() {
-		var t admResponse.TypeResponse
+		var t dto.TypeResponse
 		var createdAt time.Time
 
 		if err := rows.Scan(
@@ -113,7 +113,7 @@ func (s *Storage) GetTypes(ctx context.Context) ([]admResponse.TypeResponse, err
 }
 
 // UpdateType обновляет данные типа
-func (s *Storage) UpdateType(ctx context.Context, id int64, req *admResponse.TypeRequest) error {
+func (s *Storage) UpdateType(ctx context.Context, id int64, req *dto.TypeRequest) error {
 	const op = "storage.postgres.UpdateType"
 
 	query := `

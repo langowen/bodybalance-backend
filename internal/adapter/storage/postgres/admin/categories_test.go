@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"testing"
 	"time"
 
@@ -33,7 +33,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -95,7 +95,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -121,7 +121,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -155,7 +155,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -198,7 +198,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -248,7 +248,7 @@ func TestAddCategory(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Test Category",
 			ImgURL:  "test.jpg",
 			TypeIDs: []int64{1, 2},
@@ -559,7 +559,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -605,7 +605,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -632,7 +632,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -667,7 +667,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(999)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -702,7 +702,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -742,7 +742,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},
@@ -787,7 +787,7 @@ func TestUpdateCategory(t *testing.T) {
 
 		ctx := context.Background()
 		categoryID := int64(1)
-		req := admResponse.CategoryRequest{
+		req := dto.CategoryRequest{
 			Name:    "Updated Category",
 			ImgURL:  "updated.jpg",
 			TypeIDs: []int64{2, 3},

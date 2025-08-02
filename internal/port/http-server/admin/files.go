@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -32,8 +32,8 @@ var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
 // @Produce json
 // @Param video formData file true "Видеофайл для загрузки"
 // @Success 200 {object} object{message=string} "Файл успешно загружен"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
 // @Router /admin/files/video [post]
 func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		logger.Error("File too large", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "File too large (max 500MB)")
+		dto.RespondWithError(w, http.StatusBadRequest, "File too large (max 500MB)")
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
 	if err != nil {
 		logger.Error("Failed to get file from request", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid file upload")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid file upload")
 		return
 	}
 	defer file.Close()
@@ -65,7 +65,7 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	buff := make([]byte, 512)
 	if _, err = file.Read(buff); err != nil {
 		logger.Error("Failed to read file header", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to verify file type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to verify file type")
 		return
 	}
 
@@ -75,31 +75,31 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, является ли файл видео на основе его содержимого
 	if !isVideoContent(buff) {
 		logger.Error("Invalid file type", "content_type", contentType, "extension", fileExt)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid file type. Only video files are allowed")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid file type. Only video files are allowed")
 		return
 	}
 
 	// Сбрасываем позицию чтения файла
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		logger.Error("Failed to reset file position", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to process file")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to process file")
 		return
 	}
 
 	if !validFile.MatchString(header.Filename) {
 		logger.Warn("invalid file format in URL", "url", header.Filename)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
+		dto.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
 		return
 	}
 
 	// Сохраняем файл
 	if err := saveVideoFile(h, header.Filename, file); err != nil {
 		logger.Error("Failed to save file", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]string{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("File %s uploaded successfully", header.Filename),
 	})
 }
@@ -108,8 +108,8 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 // @Description Возвращает список всех видеофайлов на сервере
 // @Tags Admin Files
 // @Produce json
-// @Success 200 {array} admResponse.FileInfo
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {array} dto.FileInfo
+// @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
 // @Router /admin/files/video [get]
 func (h *Handler) listVideoFilesHandler(w http.ResponseWriter, r *http.Request) {
@@ -123,11 +123,11 @@ func (h *Handler) listVideoFilesHandler(w http.ResponseWriter, r *http.Request) 
 	files, err := h.getVideoFilesList()
 	if err != nil {
 		logger.Error("Failed to get files list", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get files list")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get files list")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, files)
+	dto.RespondWithJSON(w, http.StatusOK, files)
 }
 
 // saveVideoFile сохраняет видеофайл
@@ -158,13 +158,13 @@ func saveVideoFile(h *Handler, filename string, file multipart.File) error {
 }
 
 // getVideoFilesList возвращает список видеофайлов
-func (h *Handler) getVideoFilesList() ([]admResponse.FileInfo, error) {
+func (h *Handler) getVideoFilesList() ([]dto.FileInfo, error) {
 	files, err := os.ReadDir(h.cfg.Media.VideoPatch)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []admResponse.FileInfo
+	var result []dto.FileInfo
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -181,7 +181,7 @@ func (h *Handler) getVideoFilesList() ([]admResponse.FileInfo, error) {
 			continue
 		}
 
-		result = append(result, admResponse.FileInfo{
+		result = append(result, dto.FileInfo{
 			Name:    file.Name(),
 			Size:    info.Size(),
 			ModTime: info.ModTime(),
@@ -198,8 +198,8 @@ func (h *Handler) getVideoFilesList() ([]admResponse.FileInfo, error) {
 // @Produce json
 // @Param image formData file true "Изображение для загрузки"
 // @Success 200 {object} object{message=string} "Изображение успешно загружено"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
 // @Router /admin/files/img [post]
 func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +214,7 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxImageUploadSize)
 	if err := r.ParseMultipartForm(maxImageUploadSize); err != nil {
 		logger.Error("Image too large", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Image too large (max 20MB)")
+		dto.RespondWithError(w, http.StatusBadRequest, "Image too large (max 20MB)")
 		return
 	}
 
@@ -222,7 +222,7 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		logger.Error("Failed to get image from request", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid image upload")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid image upload")
 		return
 	}
 	defer file.Close()
@@ -231,7 +231,7 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	buff := make([]byte, 512)
 	if _, err = file.Read(buff); err != nil {
 		logger.Error("Failed to read image header", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to verify image type")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to verify image type")
 		return
 	}
 
@@ -239,31 +239,31 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !strings.Contains(imageMIMETypes, mimeType.String()) {
 		logger.Error("Invalid image type", "content_type", mimeType.String())
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid image type. Only JPEG, PNG, GIF, SVG and WEBP are allowed")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid image type. Only JPEG, PNG, GIF, SVG and WEBP are allowed")
 		return
 	}
 
 	// Сбрасываем позицию чтения файла
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		logger.Error("Failed to reset file position", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to process image")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to process image")
 		return
 	}
 
 	if !validFile.MatchString(header.Filename) {
 		logger.Warn("invalid file format in URL", "url", header.Filename)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
+		dto.RespondWithError(w, http.StatusBadRequest, "Имя файлов должны содержать только латинские буквы, цифры, дефисы и подчеркивания")
 		return
 	}
 
 	// Сохраняем файл
 	if err := h.saveImageFile(header.Filename, file); err != nil {
 		logger.Error("Failed to save image", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save image")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]string{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("Image %s uploaded successfully", header.Filename),
 	})
 }
@@ -272,8 +272,8 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 // @Description Возвращает список всех изображений на сервере
 // @Tags Admin Files
 // @Produce json
-// @Success 200 {array} admResponse.FileInfo
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {array} dto.FileInfo
+// @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
 // @Router /admin/files/img [get]
 func (h *Handler) listImageFilesHandler(w http.ResponseWriter, r *http.Request) {
@@ -287,11 +287,11 @@ func (h *Handler) listImageFilesHandler(w http.ResponseWriter, r *http.Request) 
 	files, err := h.getImageFilesList()
 	if err != nil {
 		logger.Error("Failed to get images list", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get images list")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get images list")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, files)
+	dto.RespondWithJSON(w, http.StatusOK, files)
 }
 
 // saveImageFile сохраняет изображение
@@ -322,13 +322,13 @@ func (h *Handler) saveImageFile(filename string, file multipart.File) error {
 }
 
 // getImageFilesList возвращает список изображений
-func (h *Handler) getImageFilesList() ([]admResponse.FileInfo, error) {
+func (h *Handler) getImageFilesList() ([]dto.FileInfo, error) {
 	files, err := os.ReadDir(h.cfg.Media.ImagesPatch)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []admResponse.FileInfo
+	var result []dto.FileInfo
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -345,7 +345,7 @@ func (h *Handler) getImageFilesList() ([]admResponse.FileInfo, error) {
 			continue
 		}
 
-		result = append(result, admResponse.FileInfo{
+		result = append(result, dto.FileInfo{
 			Name:    file.Name(),
 			Size:    info.Size(),
 			ModTime: info.ModTime(),

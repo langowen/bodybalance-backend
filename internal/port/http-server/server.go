@@ -13,7 +13,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/logger"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
-	"github.com/langowen/bodybalance-backend/internal/service/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/theartofdevel/logging"
 	"net/http"
@@ -21,18 +20,16 @@ import (
 )
 
 type Server struct {
-	app     *app.App
-	service *api.ServiceApi
-	logger  *logging.Logger
-	cfg     *config.Config
+	app    *app.App
+	logger *logging.Logger
+	cfg    *config.Config
 }
 
 func NewServer(app *app.App) *Server {
 	return &Server{
-		app:     app,
-		service: app.Service,
-		logger:  app.Logger,
-		cfg:     app.Cfg,
+		app:    app,
+		logger: app.Logger,
+		cfg:    app.Cfg,
 	}
 }
 

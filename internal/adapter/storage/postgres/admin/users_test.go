@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +34,7 @@ func TestAddUser(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "testuser",
 			ContentTypeID: 1,
 			Admin:         false,
@@ -72,7 +72,7 @@ func TestAddUser(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "existinguser",
 			ContentTypeID: 1,
 			Admin:         false,
@@ -102,7 +102,7 @@ func TestAddUser(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "testuser",
 			ContentTypeID: 1,
 			Admin:         false,
@@ -342,7 +342,7 @@ func TestUpdateUser(t *testing.T) {
 
 		ctx := context.Background()
 		userID := int64(1)
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "updateduser",
 			ContentTypeID: 2,
 			Admin:         true,
@@ -371,7 +371,7 @@ func TestUpdateUser(t *testing.T) {
 
 		ctx := context.Background()
 		userID := int64(999)
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "updateduser",
 			ContentTypeID: 2,
 			Admin:         true,
@@ -401,7 +401,7 @@ func TestUpdateUser(t *testing.T) {
 
 		ctx := context.Background()
 		userID := int64(1)
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "updateduser",
 			ContentTypeID: 2,
 			Admin:         true,
@@ -431,7 +431,7 @@ func TestUpdateUser(t *testing.T) {
 
 		ctx := context.Background()
 		userID := int64(1)
-		req := admResponse.UserRequest{
+		req := dto.UserRequest{
 			Username:      "updateduser",
 			ContentTypeID: 2,
 			Admin:         true,

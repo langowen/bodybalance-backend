@@ -7,10 +7,9 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres/admin"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres/api"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"time"
-
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
 )
 
 type Storage struct {

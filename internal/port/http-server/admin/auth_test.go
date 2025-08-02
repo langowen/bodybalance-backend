@@ -8,7 +8,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
 	pgadmin "github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres/admin"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/logdiscart"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/logdiscart"
 	"net/http"
 	"net/http/httptest"
 	"testing"

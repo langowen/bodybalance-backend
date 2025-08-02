@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -70,7 +70,7 @@ func TestHandler_AddCategory_Success(t *testing.T) {
 	sqlMock.ExpectCommit()
 
 	// Создаем тестовый запрос на добавление категории
-	req := admResponse.CategoryRequest{
+	req := dto.CategoryRequest{
 		Name:    "Test Category",
 		ImgURL:  "image.jpg", // Используем только имя файла без URL
 		TypeIDs: []int64{1},
@@ -87,7 +87,7 @@ func TestHandler_AddCategory_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response admResponse.CategoryResponse
+	var response dto.CategoryResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
@@ -128,7 +128,7 @@ func TestHandler_GetCategory_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response admResponse.CategoryResponse
+	var response dto.CategoryResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
@@ -169,7 +169,7 @@ func TestHandler_GetCategories_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response []admResponse.CategoryResponse
+	var response []dto.CategoryResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response, 2)
@@ -205,7 +205,7 @@ func TestHandler_UpdateCategory_Success(t *testing.T) {
 	r.Put("/admin/category/{id}", h.updateCategory)
 
 	// Создаем тестовый запрос
-	req := admResponse.CategoryRequest{
+	req := dto.CategoryRequest{
 		Name:    "Updated Category",
 		ImgURL:  "updated.jpg", // Используем только имя файла без URL
 		TypeIDs: []int64{2},
@@ -269,7 +269,7 @@ func TestHandler_AddCategory_ValidationError(t *testing.T) {
 	h, _, _ := newTestAuthHandlerWithMocks(t)
 
 	// Создаем тестовый запрос с пустыми полями
-	req := admResponse.CategoryRequest{
+	req := dto.CategoryRequest{
 		Name:    "",
 		TypeIDs: []int64{},
 	}
@@ -358,7 +358,7 @@ func TestHandler_UpdateCategory_InvalidID(t *testing.T) {
 	r.Put("/admin/category/{id}", h.updateCategory)
 
 	// Создаем тестовый запрос
-	req := admResponse.CategoryRequest{
+	req := dto.CategoryRequest{
 		Name:    "Updated Category",
 		TypeIDs: []int64{1},
 	}

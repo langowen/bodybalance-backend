@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"testing"
 	"time"
 
@@ -33,7 +33,7 @@ func TestAddType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Test Type",
 		}
 
@@ -65,7 +65,7 @@ func TestAddType(t *testing.T) {
 		defer mock.ExpectClose()
 
 		ctx := context.Background()
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Test Type",
 		}
 
@@ -286,7 +286,7 @@ func TestUpdateType(t *testing.T) {
 
 		ctx := context.Background()
 		typeID := int64(1)
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Updated Type",
 		}
 
@@ -312,7 +312,7 @@ func TestUpdateType(t *testing.T) {
 
 		ctx := context.Background()
 		typeID := int64(999)
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Updated Type",
 		}
 
@@ -339,7 +339,7 @@ func TestUpdateType(t *testing.T) {
 
 		ctx := context.Background()
 		typeID := int64(1)
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Updated Type",
 		}
 
@@ -366,7 +366,7 @@ func TestUpdateType(t *testing.T) {
 
 		ctx := context.Background()
 		typeID := int64(1)
-		req := admResponse.TypeRequest{
+		req := dto.TypeRequest{
 			Name: "Updated Type",
 		}
 

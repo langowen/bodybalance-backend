@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -157,7 +157,7 @@ func TestHandler_GetType_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response admResponse.TypeResponse
+	var response dto.TypeResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), response.ID)
@@ -233,7 +233,7 @@ func TestHandler_GetTypes_Success(t *testing.T) {
 	assert.NoError(t, sqlMock.ExpectationsWereMet())
 
 	// Проверяем ответ
-	var response []admResponse.TypeResponse
+	var response []dto.TypeResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response, 2)

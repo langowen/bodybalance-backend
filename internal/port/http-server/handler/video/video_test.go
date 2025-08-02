@@ -3,7 +3,7 @@ package video
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/deploy/config"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/logdiscart"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/logdiscart"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"

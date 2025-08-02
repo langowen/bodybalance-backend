@@ -10,4 +10,5 @@ var (
 type Account struct {
 	Username    string
 	ContentType ContentType
+	DataSource  string
 }

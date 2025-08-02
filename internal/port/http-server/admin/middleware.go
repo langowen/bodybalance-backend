@@ -3,8 +3,8 @@ package admin
 import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"net/http"
 	"strings"
 )
@@ -12,22 +12,22 @@ import (
 // AuthMiddleware проверяет аутентификацию и права администратора
 // @security AdminAuth
 // @description Требуется JWT токен администратора в cookie с именем "token"
-// @response 401 {object} admResponse.ErrorResponse "Требуется аутентификация (нет токена)"
-// @response 403 {object} admResponse.ErrorResponse "Доступ запрещен (недостаточно прав)"
-// @response 400 {object} admResponse.ErrorResponse "Неверный токен"
+// @dto 401 {object} dto.ErrorResponse "Требуется аутентификация (нет токена)"
+// @dto 403 {object} dto.ErrorResponse "Доступ запрещен (недостаточно прав)"
+// @dto 400 {object} dto.ErrorResponse "Неверный токен"
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. Проверяем HTTPS в production
 		if h.cfg.Env == "prod" && r.Header.Get("X-Forwarded-Proto") != "https" {
 			h.logger.Warn("HTTPS required", "url", r.URL)
-			admResponse.RespondWithError(w, http.StatusForbidden, "HTTPS required")
+			dto.RespondWithError(w, http.StatusForbidden, "HTTPS required")
 			return
 		}
 
 		// 2. Проверяем cookie
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			admResponse.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
+			dto.RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 			return
 		}
 
@@ -42,14 +42,14 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 
 		if err != nil || !token.Valid {
 			h.logger.Warn("Invalid token", sl.Err(err))
-			admResponse.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
+			dto.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 
 		// 4. Проверка администраторских прав
 		if !claims.IsAdmin {
 			h.logger.Warn("Admin access required", "user", claims.Username)
-			admResponse.RespondWithError(w, http.StatusForbidden, "Admin access required")
+			dto.RespondWithError(w, http.StatusForbidden, "Admin access required")
 			return
 		}
 

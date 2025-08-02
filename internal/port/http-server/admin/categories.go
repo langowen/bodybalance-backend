@@ -7,8 +7,8 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/admResponse"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
@@ -20,10 +20,10 @@ import (
 // @Tags Admin Categories
 // @Accept json
 // @Produce json
-// @Param input body admResponse.CategoryRequest true "Данные категории"
-// @Success 201 {object} admResponse.CategoryResponse "Категория успешно создана"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Param input body dto.CategoryRequest true "Данные категории"
+// @Success 201 {object} dto.CategoryResponse "Категория успешно создана"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/category [post]
 func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
@@ -34,10 +34,10 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	var req admResponse.CategoryRequest
+	var req dto.CategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -49,11 +49,11 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 	category, err := h.storage.AddCategory(ctx, &req)
 	if err != nil {
 		logger.Error("failed to add category", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to add category")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add category")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusCreated, category)
+	dto.RespondWithJSON(w, http.StatusCreated, category)
 }
 
 // @Summary Получить категорию по ID
@@ -61,10 +61,10 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Categories
 // @Produce json
 // @Param id path int true "ID категории"
-// @Success 200 {object} admResponse.CategoryResponse
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {object} dto.CategoryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/category/{id} [get]
 func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +79,7 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid category ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
 
@@ -88,11 +88,11 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("category not found", "category_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Category not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
 		}
 		logger.Error("failed to get category", sl.Err(err), "category_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get category")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get category")
 		return
 	}
 
@@ -100,15 +100,15 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 		go h.removeCache(op)
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, category)
+	dto.RespondWithJSON(w, http.StatusOK, category)
 }
 
 // @Summary Получить все категории
 // @Description Возвращает список всех категорий в системе
 // @Tags Admin Categories
 // @Produce json
-// @Success 200 {array} admResponse.CategoryResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Success 200 {array} dto.CategoryResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/category [get]
 func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
@@ -123,11 +123,11 @@ func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.storage.GetCategories(ctx)
 	if err != nil {
 		logger.Error("failed to get categories", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to get categories")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get categories")
 		return
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, categories)
+	dto.RespondWithJSON(w, http.StatusOK, categories)
 }
 
 // @Summary Обновить категорию
@@ -136,11 +136,11 @@ func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID категории"
-// @Param input body admResponse.CategoryRequest true "Новые данные категории"
+// @Param input body dto.CategoryRequest true "Новые данные категории"
 // @Success 200 {object} object{id=int64,message=string} "Категория успешно обновлена"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/category/{id} [put]
 func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
@@ -155,14 +155,14 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid category ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
 
-	var req admResponse.CategoryRequest
+	var req dto.CategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode request body", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -176,11 +176,11 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("category not found", "category_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Category not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
 		}
 		logger.Error("failed to update category", sl.Err(err), "category_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to update category")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update category")
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		go h.removeCache(op)
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Category updated successfully",
 	})
@@ -200,9 +200,9 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID категории"
 // @Success 200 {object} object{id=int64,message=string} "Категория успешно удалена"
-// @Failure 400 {object} admResponse.ErrorResponse
-// @Failure 404 {object} admResponse.ErrorResponse
-// @Failure 500 {object} admResponse.ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/category/{id} [delete]
 func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +217,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid category ID", sl.Err(err))
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
 
@@ -227,11 +227,11 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("category not found", "category_id", id)
-			admResponse.RespondWithError(w, http.StatusNotFound, "Category not found")
+			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
 		}
 		logger.Error("failed to delete category", sl.Err(err), "category_id", id)
-		admResponse.RespondWithError(w, http.StatusInternalServerError, "Failed to delete category")
+		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete category")
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 		go h.removeCache(op)
 	}
 
-	admResponse.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Category deleted successfully",
 	})
@@ -270,33 +270,33 @@ func (h *Handler) removeCache(op string) {
 }
 
 // validCat проверят данные входящего запроса на их валидность
-func (h *Handler) validCat(req *admResponse.CategoryRequest, w http.ResponseWriter, logger *logging.Logger) bool {
+func (h *Handler) validCat(req *dto.CategoryRequest, w http.ResponseWriter, logger *logging.Logger) bool {
 	switch {
 	case req.Name == "":
 		logger.Warn("empty required Name")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
+		dto.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
 		return false
 	case req.ImgURL == "":
 		logger.Warn("empty required ImgURL")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
+		dto.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
 		return false
 	case len(req.TypeIDs) == 0:
 		logger.Warn("empty required TypeIDs")
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
+		dto.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
 		return false
 	}
 
 	// Проверка ImgURL
 	if !validFilePattern.MatchString(req.ImgURL) {
 		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
-		admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
+		dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
 		return false
 	}
 
 	for _, pattern := range suspiciousPatterns {
 		if strings.Contains(req.ImgURL, pattern) {
 			logger.Warn("suspicious pattern in ImgURL", "imgurl", req.ImgURL, "pattern", pattern)
-			admResponse.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
+			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
 			return false
 		}
 	}

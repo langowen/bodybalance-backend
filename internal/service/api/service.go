@@ -6,8 +6,7 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
-	"github.com/langowen/bodybalance-backend/internal/lib/logger/sl"
-	mwMetrics "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/redis/go-redis/v9"
 	"github.com/theartofdevel/logging"
 	"regexp"
@@ -30,12 +29,12 @@ func NewServiceApi(cfg *config.Config, db SqlStorageApi, rdb CacheStorageApi) *S
 	}
 }
 
-func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*api.Account, string, error) {
+func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*api.Account, error) {
 	const op = "service.GetTypeByAccount"
 
 	if username == "" {
 		logging.L(ctx).Error("Username is empty", "op", op)
-		return nil, "", api.ErrEmptyUsername
+		return nil, api.ErrEmptyUsername
 	}
 
 	account := api.Account{
@@ -46,7 +45,7 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 		res, err := s.rdb.GetAccount(ctx, &account)
 		if err == nil {
 			logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name)
-			return res, mwMetrics.SourceRedis, nil
+			return res, nil
 		}
 
 		if errors.Is(err, redis.Nil) {
@@ -59,11 +58,11 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 	res, err := s.db.CheckAccount(ctx, &account)
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountNotFound) {
-			return nil, "", err
+			return nil, err
 		}
 
 		logging.L(ctx).Error("storage get error", sl.Err(err))
-		return nil, "", api.ErrStorageServerError
+		return nil, api.ErrStorageServerError
 	}
 
 	if s.cfg.Redis.Enable {
@@ -77,28 +76,28 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 		}()
 	}
 
-	return res, mwMetrics.SourceSQL, nil
+	return res, nil
 }
 
-func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string) ([]api.Category, string, error) {
+func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string) ([]api.Category, error) {
 	const op = "service.getCategoriesByType"
 
 	if contentType == "" {
 		logging.L(ctx).Error("Content type ID is empty", "op", op)
-		return nil, "", api.ErrEmptyTypeID
+		return nil, api.ErrEmptyTypeID
 	}
 
 	typeID, err := strconv.ParseInt(contentType, 10, 64)
 	if err != nil {
 		logging.L(ctx).Error("invalid type ID", "op", op, sl.Err(err))
-		return nil, "", api.ErrTypeInvalid
+		return nil, api.ErrTypeInvalid
 	}
 
 	if s.cfg.Redis.Enable {
 		categories, err := s.rdb.GetCategories(ctx, typeID)
 		if err == nil && categories != nil {
 			logging.L(ctx).Debug("categories fetched from redis cache", "op", op)
-			return categories, mwMetrics.SourceRedis, nil
+			return categories, nil
 		}
 
 		if err != nil {
@@ -114,11 +113,11 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 	if err != nil {
 		if errors.Is(err, storage.ErrContentTypeNotFound) {
 			logging.L(ctx).Debug("content type not found", sl.Err(err))
-			return nil, "", err
+			return nil, err
 		}
 
 		logging.L(ctx).Error("failed to get categories from DB", sl.Err(err))
-		return nil, "", api.ErrStorageServerError
+		return nil, api.ErrStorageServerError
 	}
 
 	if s.cfg.Redis.Enable && categories != nil {
@@ -132,28 +131,28 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 		}()
 	}
 
-	return categories, mwMetrics.SourceSQL, nil
+	return categories, nil
 }
 
-func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video, string, error) {
+func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video, error) {
 	const op = "service.GetVideo"
 
 	if videoStr == "" {
 		logging.L(ctx).Error("Video id is empty", "op", op)
-		return nil, "", api.ErrEmptyVideoID
+		return nil, api.ErrEmptyVideoID
 	}
 
 	videoID, err := strconv.ParseInt(videoStr, 10, 64)
 	if err != nil {
 		logging.L(ctx).Error("Invalid video ID", "op", op, sl.Err(err))
-		return nil, "", api.ErrInvalidVideoID
+		return nil, api.ErrInvalidVideoID
 	}
 
 	if s.cfg.Redis.Enable {
 		video, err := s.rdb.GetVideo(ctx, videoID)
 		if err == nil && video != nil {
 			logging.L(ctx).Debug("video fetched from redis cache")
-			return video, mwMetrics.SourceRedis, nil
+			return video, nil
 		}
 
 		if err != nil {
@@ -169,11 +168,11 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 	if err != nil {
 		if errors.Is(err, storage.ErrVideoNotFound) {
 			logging.L(ctx).Debug("video not found in DB", sl.Err(err))
-			return nil, "", storage.ErrVideoNotFound
+			return nil, storage.ErrVideoNotFound
 		}
 
 		logging.L(ctx).Error("failed to get video", sl.Err(err))
-		return nil, "", api.ErrStorageServerError
+		return nil, api.ErrStorageServerError
 	}
 
 	if s.cfg.Redis.Enable && video != nil {
@@ -187,39 +186,39 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 		}()
 	}
 
-	return video, mwMetrics.SourceSQL, nil
+	return video, nil
 }
 
-func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]api.Video, string, error) {
+func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]api.Video, error) {
 	const op = "service.GetVideosByCategoryAndType"
 
 	if category == "" {
 		logging.L(ctx).Error("Category is empty", "op", op)
-		return nil, "", api.ErrEmptyCategoryID
+		return nil, api.ErrEmptyCategoryID
 	}
 
 	if contentType == "" {
 		logging.L(ctx).Error("Content type is empty", "op", op)
-		return nil, "", api.ErrEmptyTypeID
+		return nil, api.ErrEmptyTypeID
 	}
 
 	typeID, err := strconv.ParseInt(contentType, 10, 64)
 	if err != nil {
 		logging.L(ctx).Error("Invalid type ID", "op", op, sl.Err(err))
-		return nil, "", api.ErrTypeInvalid
+		return nil, api.ErrTypeInvalid
 	}
 
 	catID, err := strconv.ParseInt(category, 10, 64)
 	if err != nil {
 		logging.L(ctx).Error("Invalid category ID", "op", op, sl.Err(err))
-		return nil, "", api.ErrCategoryInvalid
+		return nil, api.ErrCategoryInvalid
 	}
 
 	if s.cfg.Redis.Enable == true {
 		videos, err := s.rdb.GetVideosByCategoryAndType(ctx, typeID, catID)
 		if err == nil && videos != nil {
 			logging.L(ctx).Debug("videos fetched from redis cache")
-			return videos, mwMetrics.SourceRedis, nil
+			return videos, nil
 		}
 
 		if err != nil {
@@ -236,16 +235,16 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 		switch {
 		case errors.Is(err, storage.ErrContentTypeNotFound):
 			logging.L(ctx).Warn("content type not found", sl.Err(err))
-			return nil, "", err
+			return nil, err
 		case errors.Is(err, storage.ErrNoCategoriesFound):
 			logging.L(ctx).Warn("no categories found", sl.Err(err))
-			return nil, "", err
+			return nil, err
 		case errors.Is(err, storage.ErrVideoNotFound):
 			logging.L(ctx).Warn("video not found", sl.Err(err))
-			return nil, "", err
+			return nil, err
 		default:
 			logging.L(ctx).Error("Failed to get videos", sl.Err(err))
-			return nil, "", api.ErrStorageServerError
+			return nil, api.ErrStorageServerError
 		}
 	}
 
@@ -260,7 +259,7 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 		}()
 	}
 
-	return videos, mwMetrics.SourceSQL, nil
+	return videos, nil
 }
 
 func (s *ServiceApi) Feedback(ctx context.Context, feedback *api.Feedback) error {
