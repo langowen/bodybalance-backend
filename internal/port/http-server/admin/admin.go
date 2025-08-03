@@ -1,5 +1,5 @@
 // Package admin содержит обработчики административного API
-// @title BodyBalance Admin API
+// @title BodyBalance IsAdmin API
 // @version 1.0
 // @description API для управления административной частью BodyBalance.
 // @contact.name Sergei
@@ -17,26 +17,23 @@ package admin
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/deploy/config"
-	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/docs"
+	admin2 "github.com/langowen/bodybalance-backend/internal/service/admin"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
 
 type Handler struct {
 	logger  *logging.Logger
-	storage AdmStorage
 	cfg     *config.Config
-	redis   *redis.Storage
+	service *admin2.ServiceAdmin
 }
 
 func New(app *app.App) *Handler {
 	return &Handler{
-		logger:  app.Logger,
-		storage: app.Storage.Admin,
-		cfg:     app.Cfg,
-		redis:   app.Redis,
+		logger: app.Logger,
+		cfg:    app.Cfg,
 	}
 }
 

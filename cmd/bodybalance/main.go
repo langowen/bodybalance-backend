@@ -32,8 +32,8 @@ var (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// BodyBalance Admin API
-// @title BodyBalance Admin API
+// BodyBalance IsAdmin API
+// @title BodyBalance IsAdmin API
 // @version 1.0
 // @description API для управления административной частью BodyBalance.
 // @host body.7375.org

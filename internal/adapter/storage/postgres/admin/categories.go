@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"time"
 )
 
 // AddCategory добавляет новую категорию
-func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*dto.CategoryResponse, error) {
+func (s *Storage) AddCategory(ctx context.Context, req *admin.Category) (*admin.Category, error) {
 	const op = "storage.postgres.AddCategory"
 
 	tx, err := s.db.Begin(ctx)
@@ -24,7 +24,7 @@ func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*d
 	}()
 
 	// Добавляем категорию
-	var category dto.CategoryResponse
+	var category admin.Category
 	var createdAt time.Time
 
 	err = tx.QueryRow(ctx, `
@@ -42,15 +42,15 @@ func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*d
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	category.DateCreated = createdAt.Format("02.01.2006")
+	category.CreatedAt = createdAt.Format("02.01.2006")
 
 	// Добавляем связи с типами
-	for _, typeID := range req.TypeIDs {
+	for _, contentType := range req.ContentType {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO category_content_types (category_id, content_type_id)
 			VALUES ($1, $2)
 			ON CONFLICT DO NOTHING
-		`, category.ID, typeID)
+		`, category.ID, contentType.ID)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
@@ -69,11 +69,11 @@ func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*d
 	defer rows.Close()
 
 	for rows.Next() {
-		var t dto.TypeResponse
-		if err := rows.Scan(&t.ID, &t.Name); err != nil {
+		var t admin.ContentType
+		if err = rows.Scan(&t.ID, &t.Name); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		category.Types = append(category.Types, t)
+		category.ContentType = append(category.ContentType, t)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -88,10 +88,10 @@ func (s *Storage) AddCategory(ctx context.Context, req *dto.CategoryRequest) (*d
 }
 
 // GetCategory возвращает категорию по ID
-func (s *Storage) GetCategory(ctx context.Context, id int64) (*dto.CategoryResponse, error) {
+func (s *Storage) GetCategory(ctx context.Context, id int64) (*admin.Category, error) {
 	const op = "storage.postgres.GetCategory"
 
-	var category dto.CategoryResponse
+	var category admin.Category
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, `
@@ -107,13 +107,13 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*dto.CategoryRespo
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, admin.ErrCategoryNotFound
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	category.DateCreated = createdAt.Format("02.01.2006")
-	category.Types = []dto.TypeResponse{}
+	category.CreatedAt = createdAt.Format("02.01.2006")
+	category.ContentType = []admin.ContentType{}
 
 	rows, err := s.db.Query(ctx, `
 		SELECT ct.id, ct.name
@@ -127,12 +127,12 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*dto.CategoryRespo
 	defer rows.Close()
 
 	for rows.Next() {
-		var t dto.TypeResponse
+		var contentType admin.ContentType
 
-		if err := rows.Scan(&t.ID, &t.Name); err != nil {
+		if err = rows.Scan(&contentType.ID, &contentType.Name); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		category.Types = append(category.Types, t)
+		category.ContentType = append(category.ContentType, contentType)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -143,7 +143,7 @@ func (s *Storage) GetCategory(ctx context.Context, id int64) (*dto.CategoryRespo
 }
 
 // GetCategories возвращает все категории
-func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, error) {
+func (s *Storage) GetCategories(ctx context.Context) ([]admin.Category, error) {
 	const op = "storage.postgres.GetCategories"
 
 	// Сначала получаем все категории
@@ -158,12 +158,12 @@ func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, er
 	}
 	defer rows.Close()
 
-	var categories []dto.CategoryResponse
+	var categories []admin.Category
 	for rows.Next() {
-		var category dto.CategoryResponse
+		var category admin.Category
 		var createdAt time.Time
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&category.ID,
 			&category.Name,
 			&category.ImgURL,
@@ -172,8 +172,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, er
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 
-		category.DateCreated = createdAt.Format("02.01.2006")
-		category.Types = []dto.TypeResponse{}
+		category.CreatedAt = createdAt.Format("02.01.2006")
 		categories = append(categories, category)
 	}
 
@@ -183,7 +182,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, er
 
 	// Для каждой категории получаем связанные типы
 	for i := range categories {
-		rows, err := s.db.Query(ctx, `
+		rowsType, err := s.db.Query(ctx, `
 			SELECT ct.id, ct.name
 			FROM content_types ct
 			JOIN category_content_types cct ON ct.id = cct.content_type_id
@@ -193,19 +192,19 @@ func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, er
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 
-		for rows.Next() {
-			var t dto.TypeResponse
-			if err := rows.Scan(&t.ID, &t.Name); err != nil {
-				rows.Close()
+		for rowsType.Next() {
+			var t admin.ContentType
+			if err = rowsType.Scan(&t.ID, &t.Name); err != nil {
+				rowsType.Close()
 				return nil, fmt.Errorf("%s: %w", op, err)
 			}
 
-			categories[i].Types = append(categories[i].Types, t)
+			categories[i].ContentType = append(categories[i].ContentType, t)
 		}
 
-		rows.Close()
-		if rows.Err() != nil {
-			return nil, fmt.Errorf("%s: %w", op, rows.Err())
+		rowsType.Close()
+		if rowsType.Err() != nil {
+			return nil, fmt.Errorf("%s: %w", op, rowsType.Err())
 		}
 	}
 
@@ -213,7 +212,7 @@ func (s *Storage) GetCategories(ctx context.Context) ([]dto.CategoryResponse, er
 }
 
 // UpdateCategory обновляет данные категории
-func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *dto.CategoryRequest) error {
+func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *admin.Category) error {
 	const op = "storage.postgres.UpdateCategory"
 
 	tx, err := s.db.Begin(ctx)
@@ -238,7 +237,7 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *dto.Categor
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrCategoryNotFound
 	}
 
 	// Удаляем старые связи с типами
@@ -251,11 +250,11 @@ func (s *Storage) UpdateCategory(ctx context.Context, id int64, req *dto.Categor
 	}
 
 	// Добавляем новые связи с типами
-	for _, typeID := range req.TypeIDs {
+	for _, contentType := range req.ContentType {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO category_content_types (category_id, content_type_id)
 			VALUES ($1, $2)
-		`, id, typeID)
+		`, id, contentType.ID)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
@@ -308,7 +307,7 @@ func (s *Storage) DeleteCategory(ctx context.Context, id int64) error {
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrCategoryNotFound
 	}
 
 	if err = tx.Commit(ctx); err != nil {

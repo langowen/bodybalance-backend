@@ -1,22 +1,17 @@
 package admin
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 	"net/http"
 	"time"
 )
-
-type Claims struct {
-	jwt.RegisteredClaims
-	Username string `json:"username"`
-	IsAdmin  bool   `json:"is_admin"`
-}
 
 // @Summary Аутентификация администратора
 // @Description Вход в систему с логином и паролем администратора
@@ -34,40 +29,39 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.signing"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
 	var req dto.SignInRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Error("failed to decode request body", sl.Err(err))
+		h.logger.Error("failed to decode request body", sl.Err(err))
 		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
-	if req.Login == "" || req.Password == "" {
-		logger.Error("empty login or password")
-		dto.RespondWithError(w, http.StatusBadRequest, "Login and password are required")
-		return
-	}
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	ctx := r.Context()
-	user, err := h.storage.GetAdminUser(ctx, req.Login, req.Password)
+	user, err := h.service.Signing(ctx, req.Login, req.Password)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("invalid login credentials")
-			dto.RespondWithError(w, http.StatusUnauthorized, "Invalid login or password")
+		switch {
+		case errors.Is(err, admin.ErrEmptyUsername):
+			dto.RespondWithError(w, http.StatusBadRequest, "Login are required")
+			return
+		case errors.Is(err, admin.ErrEmptyPassword):
+			dto.RespondWithError(w, http.StatusBadRequest, "Password are required")
+			return
+		case errors.Is(err, admin.ErrUserNotFound):
+			dto.RespondWithError(w, http.StatusUnauthorized, "Invalid login")
+			return
+		case errors.Is(err, admin.ErrUserNotAdmin):
+			dto.RespondWithError(w, http.StatusForbidden, "Access denied")
+			return
+		default:
+			logger.Error("failed to authenticate user", sl.Err(err))
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to authenticate")
 			return
 		}
-		logger.Error("failed to get user", sl.Err(err))
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to authenticate")
-		return
-	}
-
-	if !user.IsAdmin {
-		logger.Warn("user is not admin", "username", req.Login)
-		dto.RespondWithError(w, http.StatusForbidden, "Access denied")
-		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
@@ -75,8 +69,8 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.cfg.HTTPServer.TokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Username: req.Login,
-		IsAdmin:  true,
+		Username: user.Username,
+		IsAdmin:  user.IsAdmin,
 	})
 
 	tokenString, err := token.SignedString([]byte(h.cfg.HTTPServer.SigningKey))
@@ -86,7 +80,6 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Используем единый метод установки cookie
 	h.setAuthCookie(w, tokenString)
 
 	dto.RespondWithJSON(w, http.StatusOK, dto.SignInResponse{

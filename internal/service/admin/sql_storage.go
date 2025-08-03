@@ -2,7 +2,7 @@ package admin
 
 import (
 	"context"
-	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres/admin"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 )
 
@@ -17,7 +17,7 @@ type AdmStorage interface {
 	GetVideoCategories(ctx context.Context, videoID int64) ([]dto.CategoryResponse, error)
 	AddVideoCategories(ctx context.Context, videoID int64, categoryIDs []int64) error
 
-	GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.AdmUser, error)
+	GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.Users, error)
 
 	AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeResponse, error)
 	GetType(ctx context.Context, id int64) (*dto.TypeResponse, error)
@@ -31,9 +31,9 @@ type AdmStorage interface {
 	UpdateUser(ctx context.Context, id int64, req *dto.UserRequest) error
 	DeleteUser(ctx context.Context, id int64) error
 
-	AddCategory(ctx context.Context, req *dto.CategoryRequest) (*dto.CategoryResponse, error)
-	GetCategory(ctx context.Context, id int64) (*dto.CategoryResponse, error)
-	GetCategories(ctx context.Context) ([]dto.CategoryResponse, error)
-	UpdateCategory(ctx context.Context, id int64, req *dto.CategoryRequest) error
+	AddCategory(ctx context.Context, req *admin.Category) (*admin.Category, error)
+	GetCategory(ctx context.Context, id int64) (*admin.Category, error)
+	GetCategories(ctx context.Context) ([]admin.Category, error)
+	UpdateCategory(ctx context.Context, id int64, req *admin.Category) error
 	DeleteCategory(ctx context.Context, id int64) error
 }

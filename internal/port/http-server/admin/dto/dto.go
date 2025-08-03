@@ -101,7 +101,6 @@ type SignInRequest struct {
 // swagger:model signInResponse
 type SignInResponse struct {
 	Message string `json:"message,omitempty"` // Сообщение об успехе; example: Authentication successful
-	Error   string `json:"error,omitempty"`   // Сообщение об ошибке; example: Invalid credentials
 }
 
 // ErrorResponse представляет стандартный ответ об ошибке
@@ -120,7 +119,12 @@ func RespondWithError(w http.ResponseWriter, code int, message string, details .
 	}
 
 	if len(details) > 0 {
-		response.Details = details[0]
+		for i, detail := range details {
+			if i > 0 {
+				response.Details += "\n, "
+			}
+			response.Details += detail
+		}
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

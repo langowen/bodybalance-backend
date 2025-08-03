@@ -5,15 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 )
 
-type AdmUser struct {
-	Username string
-	Password string // Хэш пароля
-	IsAdmin  bool
-}
-
-func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) (*AdmUser, error) {
+func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.Users, error) {
 	const op = "storage.postgres.admin.GetAdminUser"
 
 	query := `
@@ -22,7 +17,7 @@ func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) 
         WHERE username = $1 AND password = $2 AND admin = TRUE AND deleted IS NOT TRUE
     `
 
-	var user AdmUser
+	var user admin.Users
 	err := s.db.QueryRow(ctx, query, login, passwordHash).Scan(
 		&user.Username,
 		&user.Password,
@@ -31,7 +26,7 @@ func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) 
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, admin.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}

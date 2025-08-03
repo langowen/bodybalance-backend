@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+type Claims struct {
+	jwt.RegisteredClaims
+	Username string `json:"username"`
+	IsAdmin  bool   `json:"is_admin"`
+}
+
 // AuthMiddleware проверяет аутентификацию и права администратора
 // @security AdminAuth
 // @description Требуется JWT токен администратора в cookie с именем "token"
@@ -48,8 +54,8 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 
 		// 4. Проверка администраторских прав
 		if !claims.IsAdmin {
-			h.logger.Warn("Admin access required", "user", claims.Username)
-			dto.RespondWithError(w, http.StatusForbidden, "Admin access required")
+			h.logger.Warn("IsAdmin access required", "user", claims.Username)
+			dto.RespondWithError(w, http.StatusForbidden, "IsAdmin access required")
 			return
 		}
 

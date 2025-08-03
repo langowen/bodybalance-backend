@@ -1,18 +1,16 @@
 package admin
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // @Summary Создать новую категорию
@@ -30,9 +28,11 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addCategory"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
+
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
 	var req dto.CategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -41,19 +41,56 @@ func (h *Handler) addCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validCat(&req, w, logger) {
-		return
+	catReq := admin.Category{
+		Name:        req.Name,
+		ImgURL:      req.ImgURL,
+		ContentType: make([]admin.ContentType, len(req.TypeIDs)),
 	}
 
-	ctx := r.Context()
-	category, err := h.storage.AddCategory(ctx, &req)
+	for i, typeID := range req.TypeIDs {
+		catReq.ContentType[i].ID = typeID
+	}
+
+	category, err := h.service.AddCategory(ctx, &catReq)
 	if err != nil {
-		logger.Error("failed to add category", sl.Err(err))
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add category")
-		return
+		switch {
+		case errors.Is(err, admin.ErrEmptyName):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
+			return
+		case errors.Is(err, admin.ErrEmptyImgURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
+			return
+		case errors.Is(err, admin.ErrEmptyTypeIDs):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
+			return
+		case errors.Is(err, admin.ErrInvalidImgFormat):
+			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
+			return
+		case errors.Is(err, admin.ErrSuspiciousContent):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный контент в URL превью")
+			return
+		default:
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add category")
+			return
+		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusCreated, category)
+	res := dto.CategoryResponse{
+		ID:          category.ID,
+		Name:        category.Name,
+		ImgURL:      category.ImgURL,
+		Types:       make([]dto.TypeResponse, len(category.ContentType)),
+		DateCreated: category.CreatedAt,
+	}
+
+	for i, contentType := range category.ContentType {
+		res.Types[i] = dto.TypeResponse{
+			ID:   contentType.ID,
+			Name: contentType.Name,
+		}
+	}
+
+	dto.RespondWithJSON(w, http.StatusCreated, res)
 }
 
 // @Summary Получить категорию по ID
@@ -71,7 +108,7 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getCategory"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -83,11 +120,11 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	category, err := h.storage.GetCategory(ctx, id)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	category, err := h.service.GetCategory(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("category not found", "category_id", id)
+		if errors.Is(err, admin.ErrCategoryNotFound) {
 			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
 		}
@@ -96,11 +133,22 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
+	res := dto.CategoryResponse{
+		ID:          category.ID,
+		Name:        category.Name,
+		ImgURL:      category.ImgURL,
+		Types:       make([]dto.TypeResponse, len(category.ContentType)),
+		DateCreated: category.CreatedAt,
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, category)
+	for i, contentType := range category.ContentType {
+		res.Types[i] = dto.TypeResponse{
+			ID:   contentType.ID,
+			Name: contentType.Name,
+		}
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить все категории
@@ -115,19 +163,35 @@ func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getCategories"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	ctx := r.Context()
-	categories, err := h.storage.GetCategories(ctx)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+	categories, err := h.service.GetCategories(ctx)
 	if err != nil {
-		logger.Error("failed to get categories", sl.Err(err))
 		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get categories")
 		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, categories)
+	res := make([]dto.CategoryResponse, len(categories))
+	for i, category := range categories {
+		res[i] = dto.CategoryResponse{
+			ID:          category.ID,
+			Name:        category.Name,
+			ImgURL:      category.ImgURL,
+			Types:       make([]dto.TypeResponse, len(category.ContentType)),
+			DateCreated: category.CreatedAt,
+		}
+		for j, contentType := range category.ContentType {
+			res[i].Types[j] = dto.TypeResponse{
+				ID:   contentType.ID,
+				Name: contentType.Name,
+			}
+		}
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Обновить категорию
@@ -147,7 +211,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateCategory"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -155,7 +219,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		logger.Error("invalid category ID", sl.Err(err))
-		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
+		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID", "category_id", idStr)
 		return
 	}
 
@@ -166,26 +230,44 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validCat(&req, w, logger) {
-		return
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	catReq := admin.Category{
+		ID:          id,
+		Name:        req.Name,
+		ImgURL:      req.ImgURL,
+		ContentType: make([]admin.ContentType, len(req.TypeIDs)),
+	}
+	for i, typeID := range req.TypeIDs {
+		catReq.ContentType[i].ID = typeID
 	}
 
-	ctx := r.Context()
-
-	err = h.storage.UpdateCategory(ctx, id, &req)
+	err = h.service.UpdateCategory(ctx, id, &catReq)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("category not found", "category_id", id)
+		switch {
+		case errors.Is(err, admin.ErrEmptyName):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
+			return
+		case errors.Is(err, admin.ErrEmptyImgURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
+			return
+		case errors.Is(err, admin.ErrEmptyTypeIDs):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
+			return
+		case errors.Is(err, admin.ErrInvalidImgFormat):
+			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
+			return
+		case errors.Is(err, admin.ErrSuspiciousContent):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный контент в URL превью")
+			return
+		case errors.Is(err, admin.ErrCategoryNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
+		default:
+			logger.Error("failed to update category", sl.Err(err), "category_id", id)
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update category")
+			return
 		}
-		logger.Error("failed to update category", sl.Err(err), "category_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update category")
-		return
-	}
-
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
 	}
 
 	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -209,97 +291,32 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteCategory"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		logger.Error("invalid category ID", sl.Err(err))
+		logger.Error("invalid category ID", sl.Err(err), "category_id", idStr)
 		dto.RespondWithError(w, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
 
-	ctx := r.Context()
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	err = h.storage.DeleteCategory(ctx, id)
+	err = h.service.DeleteCategory(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("category not found", "category_id", id)
+		if errors.Is(err, admin.ErrCategoryNotFound) {
 			dto.RespondWithError(w, http.StatusNotFound, "Category not found")
 			return
 		}
-		logger.Error("failed to delete category", sl.Err(err), "category_id", id)
 		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete category")
 		return
-	}
-
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
 	}
 
 	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"message": "Category deleted successfully",
 	})
-}
-
-// removeCache удаляет записи из кэша при обновлении удаления данных
-func (h *Handler) removeCache(op string) {
-	logger := h.logger.With(
-		"op", op)
-
-	ctx := context.Background()
-
-	err := h.redis.InvalidateVideosCache(ctx)
-	if err != nil {
-		logger.Warn("failed to invalidate videos cache", sl.Err(err))
-	}
-
-	err = h.redis.InvalidateCategoriesCache(ctx)
-	if err != nil {
-		logger.Warn("failed to invalidate category cache", sl.Err(err))
-	}
-
-	err = h.redis.InvalidateAccountsCache(ctx)
-	if err != nil {
-		logger.Warn("failed to invalidate account cache", sl.Err(err))
-	}
-
-}
-
-// validCat проверят данные входящего запроса на их валидность
-func (h *Handler) validCat(req *dto.CategoryRequest, w http.ResponseWriter, logger *logging.Logger) bool {
-	switch {
-	case req.Name == "":
-		logger.Warn("empty required Name")
-		dto.RespondWithError(w, http.StatusBadRequest, "Введите название категории")
-		return false
-	case req.ImgURL == "":
-		logger.Warn("empty required ImgURL")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберите превью для категории")
-		return false
-	case len(req.TypeIDs) == 0:
-		logger.Warn("empty required TypeIDs")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы один тип контента")
-		return false
-	}
-
-	// Проверка ImgURL
-	if !validFilePattern.MatchString(req.ImgURL) {
-		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
-		dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
-		return false
-	}
-
-	for _, pattern := range suspiciousPatterns {
-		if strings.Contains(req.ImgURL, pattern) {
-			logger.Warn("suspicious pattern in ImgURL", "imgurl", req.ImgURL, "pattern", pattern)
-			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
-			return false
-		}
-	}
-
-	return true
 }
