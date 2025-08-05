@@ -1,13 +1,14 @@
 package admin
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
 )
@@ -27,7 +28,7 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addType"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -38,22 +39,26 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" {
-		logger.Error("empty required field")
-		dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
-		return
+	contentType := &admin.ContentType{
+		Name: req.Name,
 	}
 
-	ctx := r.Context()
-	typeID, err := h.storage.AddType(ctx, &req)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	result, err := h.service.AddType(ctx, contentType)
 	if err != nil {
-		logger.Error("failed to add type", sl.Err(err))
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add type")
-		return
+		switch {
+		case errors.Is(err, admin.ErrTypeNameEmpty):
+			dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
+			return
+		case errors.Is(err, admin.ErrFailedSaveType):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add type")
+			return
+		}
 	}
 
 	dto.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":      typeID,
+		"id":      result.ID,
 		"message": "Type added successfully",
 	})
 }
@@ -73,7 +78,7 @@ func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getType"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -85,20 +90,30 @@ func (h *Handler) getType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	contentType, err := h.storage.GetType(ctx, id)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	contentType, err := h.service.GetType(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("type not found", "type_id", id)
+		switch {
+		case errors.Is(err, admin.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+			return
+		case errors.Is(err, admin.ErrTypeNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
+		case errors.Is(err, admin.ErrFailedGetType):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get type")
+			return
 		}
-		logger.Error("failed to get type", sl.Err(err), "type_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get type")
-		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, contentType)
+	res := dto.TypeResponse{
+		ID:          contentType.ID,
+		Name:        contentType.Name,
+		DateCreated: contentType.DateCreated,
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить все типы
@@ -113,19 +128,35 @@ func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getTypes"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	ctx := r.Context()
-	types, err := h.storage.GetTypes(ctx)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	types, err := h.service.GetTypes(ctx)
 	if err != nil {
-		logger.Error("failed to get types", sl.Err(err))
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get types")
-		return
+		switch {
+		case errors.Is(err, admin.ErrTypeNotFound):
+			dto.RespondWithError(w, http.StatusNotFound, "No types found")
+			return
+		case errors.Is(err, admin.ErrFailedGetType):
+			logger.Error("failed to get types", sl.Err(err))
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get types")
+			return
+		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, types)
+	res := make([]dto.TypeResponse, len(types))
+	for i, contentType := range types {
+		res[i] = dto.TypeResponse{
+			ID:          contentType.ID,
+			Name:        contentType.Name,
+			DateCreated: contentType.DateCreated,
+		}
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Обновить тип
@@ -145,7 +176,7 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateType"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -163,28 +194,30 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 		dto.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
-
-	if req.Name == "" {
-		logger.Error("empty required field")
-		dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
-		return
+	contentType := &admin.ContentType{
+		ID:   id,
+		Name: req.Name,
 	}
 
-	ctx := r.Context()
-	err = h.storage.UpdateType(ctx, id, &req)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	err = h.service.UpdateType(ctx, contentType)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("type not found", "type_id", id)
+		switch {
+		case errors.Is(err, admin.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+			return
+		case errors.Is(err, admin.ErrTypeNameEmpty):
+			dto.RespondWithError(w, http.StatusBadRequest, "Name is required")
+			return
+		case errors.Is(err, admin.ErrTypeNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
+		case errors.Is(err, admin.ErrFailedSaveType):
+			logger.Error("failed to update type", sl.Err(err))
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update type")
+			return
 		}
-		logger.Error("failed to update type", sl.Err(err), "type_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update type")
-		return
-	}
-
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
 	}
 
 	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
@@ -208,7 +241,7 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteType"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -220,21 +253,22 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	err = h.storage.DeleteType(ctx, id)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	err = h.service.DeleteType(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("type not found", "type_id", id)
+		switch {
+		case errors.Is(err, admin.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid type ID")
+			return
+		case errors.Is(err, admin.ErrTypeNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Type not found")
 			return
+		case errors.Is(err, admin.ErrFailedSaveType):
+			logger.Error("failed to delete type", sl.Err(err))
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete type")
+			return
 		}
-		logger.Error("failed to delete type", sl.Err(err), "type_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete type")
-		return
-	}
-
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
 	}
 
 	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{

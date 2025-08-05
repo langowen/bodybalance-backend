@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"time"
 )
 
 // AddType добавляет новый тип
-func (s *Storage) AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeResponse, error) {
+func (s *Storage) AddType(ctx context.Context, req *admin.ContentType) (*admin.ContentType, error) {
 	const op = "storage.postgres.AddType"
 
 	query := `
@@ -19,7 +19,7 @@ func (s *Storage) AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeR
         RETURNING id, name, created_at
     `
 
-	var response dto.TypeResponse
+	var response admin.ContentType
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, req.Name).Scan(
@@ -32,14 +32,13 @@ func (s *Storage) AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeR
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Форматируем дату
 	response.DateCreated = createdAt.Format("02.01.2006")
 
 	return &response, nil
 }
 
 // GetType возвращает тип по ID
-func (s *Storage) GetType(ctx context.Context, id int64) (*dto.TypeResponse, error) {
+func (s *Storage) GetType(ctx context.Context, id int64) (*admin.ContentType, error) {
 	const op = "storage.postgres.GetType"
 
 	query := `
@@ -48,7 +47,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*dto.TypeResponse, err
         WHERE id = $1 AND deleted IS NOT TRUE
     `
 
-	var contentType dto.TypeResponse
+	var contentType admin.ContentType
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, id).Scan(
@@ -59,7 +58,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*dto.TypeResponse, err
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, admin.ErrTypeNotFound
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -71,7 +70,7 @@ func (s *Storage) GetType(ctx context.Context, id int64) (*dto.TypeResponse, err
 }
 
 // GetTypes возвращает все типы
-func (s *Storage) GetTypes(ctx context.Context) ([]dto.TypeResponse, error) {
+func (s *Storage) GetTypes(ctx context.Context) ([]admin.ContentType, error) {
 	const op = "storage.postgres.GetTypes"
 
 	query := `
@@ -83,13 +82,16 @@ func (s *Storage) GetTypes(ctx context.Context) ([]dto.TypeResponse, error) {
 
 	rows, err := s.db.Query(ctx, query)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, admin.ErrTypeNotFound
+		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer rows.Close()
 
-	var types []dto.TypeResponse
+	var types []admin.ContentType
 	for rows.Next() {
-		var t dto.TypeResponse
+		var t admin.ContentType
 		var createdAt time.Time
 
 		if err := rows.Scan(
@@ -113,7 +115,7 @@ func (s *Storage) GetTypes(ctx context.Context) ([]dto.TypeResponse, error) {
 }
 
 // UpdateType обновляет данные типа
-func (s *Storage) UpdateType(ctx context.Context, id int64, req *dto.TypeRequest) error {
+func (s *Storage) UpdateType(ctx context.Context, req *admin.ContentType) error {
 	const op = "storage.postgres.UpdateType"
 
 	query := `
@@ -122,13 +124,13 @@ func (s *Storage) UpdateType(ctx context.Context, id int64, req *dto.TypeRequest
 		WHERE id = $2 AND deleted IS NOT TRUE
 	`
 
-	commandTag, err := s.db.Exec(ctx, query, req.Name, id)
+	commandTag, err := s.db.Exec(ctx, query, req.Name, req.ID)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrTypeNotFound
 	}
 
 	return nil
@@ -166,7 +168,7 @@ func (s *Storage) DeleteType(ctx context.Context, id int64) error {
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrTypeNotFound
 	}
 
 	if err = tx.Commit(ctx); err != nil {

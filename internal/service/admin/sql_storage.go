@@ -19,10 +19,10 @@ type AdmStorage interface {
 
 	GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.Users, error)
 
-	AddType(ctx context.Context, req *dto.TypeRequest) (*dto.TypeResponse, error)
-	GetType(ctx context.Context, id int64) (*dto.TypeResponse, error)
-	GetTypes(ctx context.Context) ([]dto.TypeResponse, error)
-	UpdateType(ctx context.Context, id int64, req *dto.TypeRequest) error
+	AddType(ctx context.Context, req *admin.ContentType) (*admin.ContentType, error)
+	GetType(ctx context.Context, id int64) (*admin.ContentType, error)
+	GetTypes(ctx context.Context) ([]admin.ContentType, error)
+	UpdateType(ctx context.Context, req *admin.ContentType) error
 	DeleteType(ctx context.Context, id int64) error
 
 	AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserResponse, error)
