@@ -19,7 +19,6 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/docs"
-	admin2 "github.com/langowen/bodybalance-backend/internal/service/admin"
 	"github.com/theartofdevel/logging"
 	"net/http"
 )
@@ -27,13 +26,14 @@ import (
 type Handler struct {
 	logger  *logging.Logger
 	cfg     *config.Config
-	service *admin2.ServiceAdmin
+	service Service
 }
 
 func New(app *app.App) *Handler {
 	return &Handler{
-		logger: app.Logger,
-		cfg:    app.Cfg,
+		logger:  app.Logger,
+		cfg:     app.Cfg,
+		service: app.ServiceAdmin,
 	}
 }
 

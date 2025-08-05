@@ -38,7 +38,7 @@ func New(app *app.App) *Handler {
 	return &Handler{
 		logger:  app.Logger,
 		cfg:     app.Cfg,
-		service: app.Service,
+		service: app.ServiceApi,
 	}
 }
 

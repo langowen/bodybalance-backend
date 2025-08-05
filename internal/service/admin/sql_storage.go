@@ -3,19 +3,15 @@ package admin
 import (
 	"context"
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 )
 
 // AdmStorage определяет методы, которые нужны admin для работы с хранилищем.
 type AdmStorage interface {
-	AddVideo(ctx context.Context, video *dto.VideoRequest) (int64, error)
-	GetVideo(ctx context.Context, id int64) (*dto.VideoResponse, error)
-	GetVideos(ctx context.Context) ([]dto.VideoResponse, error)
-	UpdateVideo(ctx context.Context, id int64, video *dto.VideoRequest) error
+	AddVideo(ctx context.Context, video *admin.Video) (int64, error)
+	GetVideo(ctx context.Context, id int64) (*admin.Video, error)
+	GetVideos(ctx context.Context) ([]admin.Video, error)
+	UpdateVideo(ctx context.Context, video *admin.Video) error
 	DeleteVideo(ctx context.Context, id int64) error
-	DeleteVideoCategories(ctx context.Context, videoID int64) error
-	GetVideoCategories(ctx context.Context, videoID int64) ([]dto.CategoryResponse, error)
-	AddVideoCategories(ctx context.Context, videoID int64, categoryIDs []int64) error
 
 	GetAdminUser(ctx context.Context, login, passwordHash string) (*admin.Users, error)
 

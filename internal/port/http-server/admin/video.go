@@ -1,25 +1,17 @@
 package admin
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 )
-
-// validFilePattern паттерны для проверки правильности названия файлов
-var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9а-яА-ЯёЁ_\-.]+\.[a-zA-Z0-9]+$`)
-
-// suspiciousPatterns паттерны для проверки нет ли лишних символов и ссылок в данных
-var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=", "%"}
 
 // @Summary Добавить новое видео
 // @Description Создает новую запись видео в системе
@@ -27,7 +19,7 @@ var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=",
 // @Accept json
 // @Produce json
 // @Param input body dto.VideoRequest true "Данные видео"
-// @Success 201 {object} object{id=int64,message=string} "Видео успешно добавлено"
+// @Success 201 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
@@ -47,35 +39,60 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validVideo(&req, w, logger) {
-		return
+	video := &admin.Video{
+		Name:        req.Name,
+		URL:         req.URL,
+		ImgURL:      req.ImgURL,
+		Description: req.Description,
+		Categories:  make([]admin.Category, len(req.CategoryIDs)),
+	}
+	for i, catID := range req.CategoryIDs {
+		video.Categories[i] = admin.Category{
+			ID: catID,
+		}
 	}
 
-	ctx := r.Context()
-	videoID, err := h.storage.AddVideo(ctx, &req)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	videoID, err := h.service.AddVideo(ctx, video)
 	if err != nil {
-		logger.Error("failed to add video", sl.Err(err))
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add video")
-		return
-	}
-
-	if len(req.CategoryIDs) > 0 {
-		err = h.storage.AddVideoCategories(ctx, videoID, req.CategoryIDs)
-		if err != nil {
-			logger.Error("failed to add video categories", sl.Err(err))
-			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add video categories")
+		switch {
+		case errors.Is(err, admin.ErrVideoInvalidName):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите название видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidImgURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidCategory):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите категории для видео")
+			return
+		case errors.Is(err, admin.ErrVideoURLPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Неверный формат URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoSuspiciousPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoImgPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Неверный формат URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoImgSuspiciousPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoSaveFailed):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save video")
 			return
 		}
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
+	res := dto.SuccessResponse{
+		ID:      videoID,
+		Message: "Video added successfully",
 	}
 
-	dto.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":      videoID,
-		"message": "Video added successfully",
-	})
+	dto.RespondWithJSON(w, http.StatusCreated, res)
 }
 
 // @Summary Получить видео по ID
@@ -105,33 +122,41 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	video, err := h.storage.GetVideo(ctx, id)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	video, err := h.service.GetVideo(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("video not found", "video_id", id)
+		switch {
+		case errors.Is(err, admin.ErrVideoInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid video ID")
+			return
+		case errors.Is(err, admin.ErrVideoNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Video not found")
 			return
+		case errors.Is(err, admin.ErrFailedGetVideo):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get video")
+			return
 		}
-		logger.Error("failed to get video", sl.Err(err), "video_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get video")
-		return
 	}
 
-	categories, err := h.storage.GetVideoCategories(ctx, id)
-	if err != nil {
-		logger.Error("failed to get video categories", sl.Err(err), "video_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
-		return
+	res := dto.VideoResponse{
+		ID:          video.ID,
+		Name:        video.Name,
+		URL:         video.URL,
+		ImgURL:      video.ImgURL,
+		Description: video.Description,
+		Categories:  make([]dto.CategoryResponse, len(video.Categories)),
+	}
+	for i, cat := range video.Categories {
+		res.Categories[i] = dto.CategoryResponse{
+			ID:          cat.ID,
+			Name:        cat.Name,
+			ImgURL:      cat.ImgURL,
+			DateCreated: cat.CreatedAt,
+		}
 	}
 
-	if len(categories) != 0 {
-		video.Categories = categories
-	} else {
-		video.Categories = []dto.CategoryResponse{}
-	}
-
-	dto.RespondWithJSON(w, http.StatusOK, video)
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить список всех видео
@@ -150,30 +175,39 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	ctx := r.Context()
-	videos, err := h.storage.GetVideos(ctx)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	videos, err := h.service.GetVideos(ctx)
 	if err != nil {
-		logger.Error("failed to get videos", sl.Err(err))
+		if errors.Is(err, admin.ErrVideoNotFound) {
+			dto.RespondWithError(w, http.StatusNotFound, "No videos found")
+			return
+		}
 		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get videos")
 		return
 	}
 
-	for i := range videos {
-		categories, err := h.storage.GetVideoCategories(ctx, videos[i].ID)
-		if err != nil {
-			logger.Error("failed to get video categories", sl.Err(err), "video_id", videos[i].ID)
-			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get video categories")
-			return
+	res := make([]dto.VideoResponse, len(videos))
+	for i, video := range videos {
+		res[i] = dto.VideoResponse{
+			ID:          video.ID,
+			Name:        video.Name,
+			URL:         video.URL,
+			ImgURL:      video.ImgURL,
+			Description: video.Description,
+			Categories:  make([]dto.CategoryResponse, len(video.Categories)),
 		}
-
-		if len(videos[i].Categories) == 0 {
-			videos[i].Categories = make([]dto.CategoryResponse, 0, len(categories))
+		for j, cat := range video.Categories {
+			res[i].Categories[j] = dto.CategoryResponse{
+				ID:          cat.ID,
+				Name:        cat.Name,
+				ImgURL:      cat.ImgURL,
+				DateCreated: cat.CreatedAt,
+			}
 		}
-
-		videos[i].Categories = append(videos[i].Categories, categories...)
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, videos)
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Обновить данные видео
@@ -183,7 +217,7 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID видео"
 // @Param input body dto.VideoRequest true "Новые данные видео"
-// @Success 200 {object} object{id=int64,message=string} "Видео успешно обновлено"
+// @Success 200 {object} dto.SuccessResponse "Видео успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -206,7 +240,7 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
 	var req dto.VideoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -215,49 +249,65 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validVideo(&req, w, logger) {
-		return
+	video := &admin.Video{
+		ID:          id,
+		Name:        req.Name,
+		URL:         req.URL,
+		ImgURL:      req.ImgURL,
+		Description: req.Description,
+		Categories:  make([]admin.Category, len(req.CategoryIDs)),
+	}
+	for i, catID := range req.CategoryIDs {
+		video.Categories[i] = admin.Category{
+			ID: catID,
+		}
 	}
 
-	err = h.storage.UpdateVideo(ctx, id, &req)
+	err = h.service.UpdateVideo(ctx, video)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("video not found", "video_id", id)
+		switch {
+		case errors.Is(err, admin.ErrVideoInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid video ID")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidName):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите название видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidImgURL):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoInvalidCategory):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите категории для видео")
+			return
+		case errors.Is(err, admin.ErrVideoURLPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Неверный формат URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoSuspiciousPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный URL видео")
+			return
+		case errors.Is(err, admin.ErrVideoImgPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Неверный формат URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoImgSuspiciousPattern):
+			dto.RespondWithError(w, http.StatusBadRequest, "Подозрительный URL изображения видео")
+			return
+		case errors.Is(err, admin.ErrVideoUpdateFailed):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update video")
+			return
+		case errors.Is(err, admin.ErrVideoNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Video not found")
 			return
 		}
-		logger.Error("failed to update video", sl.Err(err), "video_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update video")
-		return
 	}
 
-	// Обновляем категории видео
-	if len(req.CategoryIDs) > 0 {
-		// Сначала удаляем все существующие связи
-		err = h.storage.DeleteVideoCategories(ctx, id)
-		if err != nil {
-			logger.Error("failed to delete video categories", sl.Err(err), "video_id", id)
-			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update video categories")
-			return
-		}
-
-		// Затем добавляем новые
-		err = h.storage.AddVideoCategories(ctx, id, req.CategoryIDs)
-		if err != nil {
-			logger.Error("failed to add video categories", sl.Err(err), "video_id", id)
-			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update video categories")
-			return
-		}
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Video updated successfully",
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
-	}
-
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Video updated successfully",
-	})
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Удалить видео
@@ -287,78 +337,27 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	err = h.storage.DeleteVideo(ctx, id)
+	err = h.service.DeleteVideo(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("video not found", "video_id", id)
+		switch {
+		case errors.Is(err, admin.ErrVideoInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid video ID")
+			return
+		case errors.Is(err, admin.ErrVideoNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "Video not found")
 			return
-		}
-		logger.Error("failed to delete video", sl.Err(err), "video_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete video")
-		return
-	}
-
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
-	}
-
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Video deleted successfully",
-	})
-}
-
-// validUser проверят входящие данные на валидность
-func (h *Handler) validVideo(req *dto.VideoRequest, w http.ResponseWriter, logger *logging.Logger) bool {
-	switch {
-	case req.Name == "":
-		logger.Warn("empty required Name")
-		dto.RespondWithError(w, http.StatusBadRequest, "Введите название видео")
-		return false
-	case req.URL == "":
-		logger.Warn("empty required video")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберете видео")
-		return false
-	case req.ImgURL == "":
-		logger.Warn("empty required img")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберите превью для видео")
-		return false
-	case len(req.CategoryIDs) == 0:
-		logger.Warn("empty required CategoryIDs")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберите хотя бы одну категорию для видео")
-		return false
-	}
-
-	if !validFilePattern.MatchString(req.URL) {
-		logger.Warn("invalid file format in URL", "url", req.URL)
-		dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени видео-файла")
-		return false
-	}
-
-	for _, pattern := range suspiciousPatterns {
-		if strings.Contains(req.URL, pattern) {
-			logger.Warn("suspicious pattern in URL", "url", req.URL, "pattern", pattern)
-			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени видео-файла")
-			return false
+		case errors.Is(err, admin.ErrVideoDeleteFailed):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete video")
+			return
 		}
 	}
 
-	if !validFilePattern.MatchString(req.ImgURL) {
-		logger.Warn("invalid file format in ImgURL", "imgurl", req.ImgURL)
-		dto.RespondWithError(w, http.StatusBadRequest, "Недопустимый формат имени файла превью")
-		return false
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Video deleted successfully",
 	}
 
-	for _, pattern := range suspiciousPatterns {
-		if strings.Contains(req.ImgURL, pattern) {
-			logger.Warn("suspicious pattern in ImgURL", "imgurl", req.ImgURL, "pattern", pattern)
-			dto.RespondWithError(w, http.StatusBadRequest, "Недопустимые символы в имени файла превью")
-			return false
-		}
-	}
-
-	return true
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }

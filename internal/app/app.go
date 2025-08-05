@@ -5,6 +5,7 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
+	"github.com/langowen/bodybalance-backend/internal/service/admin"
 	"github.com/langowen/bodybalance-backend/internal/service/api"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/logpretty"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
@@ -14,11 +15,12 @@ import (
 )
 
 type App struct {
-	Cfg     *config.Config
-	Logger  *logging.Logger
-	Storage *postgres.Storage
-	Redis   *redis.Storage
-	Service *api.ServiceApi
+	Cfg          *config.Config
+	Logger       *logging.Logger
+	Storage      *postgres.Storage
+	Redis        *redis.Storage
+	ServiceApi   *api.ServiceApi
+	ServiceAdmin *admin.ServiceAdmin
 }
 
 func NewApp(cfg *config.Config) *App {
@@ -59,9 +61,15 @@ func (a *App) GetRedis(ctx context.Context) {
 }
 
 func (a *App) GetService() {
-	service := api.NewServiceApi(a.Cfg, a.Storage.Api, a.Redis)
+	serviceApi := api.NewServiceApi(a.Cfg, a.Storage.Api, a.Redis)
+	serviceAdmin := admin.NewServiceAdmin(
+		a.Cfg,
+		a.Storage.Admin,
+		a.Redis,
+	)
 
-	a.Service = service
+	a.ServiceApi = serviceApi
+	a.ServiceAdmin = serviceAdmin
 }
 
 func newLogger(cfg *config.Config) *logging.Logger {

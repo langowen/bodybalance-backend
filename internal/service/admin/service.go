@@ -5,7 +5,14 @@ import (
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
+	"regexp"
 )
+
+// validFilePattern паттерны для проверки правильности названия файлов
+var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
+
+// suspiciousPatterns паттерны для проверки нет ли лишних символов и ссылок в данных
+var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=", "%"}
 
 type ServiceAdmin struct {
 	cfg   *config.Config

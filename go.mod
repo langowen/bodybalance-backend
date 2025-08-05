@@ -3,7 +3,6 @@ module github.com/langowen/bodybalance-backend
 go 1.24.3
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/fatih/color v1.18.0
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/go-chi/chi/v5 v5.2.1

@@ -13,9 +13,7 @@ import (
 
 const (
 	maxUploadSize      = 500 << 20 // 500 MB
-	videoMIMETypes     = "video/mp4,video/quicktime,video/webm,video/ogg"
-	maxImageUploadSize = 20 << 20 // 20 MB
-	imageMIMETypes     = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+	maxImageUploadSize = 20 << 20  // 20 MB
 )
 
 // @Summary Загрузить видеофайл

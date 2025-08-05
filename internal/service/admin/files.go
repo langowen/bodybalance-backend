@@ -11,7 +11,6 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -20,12 +19,10 @@ const (
 	imageMIMETypes = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
 )
 
-var validFile = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+\.[a-zA-Z0-9]+$`)
-
 func (s *ServiceAdmin) UploadFile(ctx context.Context, file multipart.File, header *multipart.FileHeader) error {
 	const op = "service.UploadFile"
 
-	if !validFile.MatchString(header.Filename) {
+	if !validFilePattern.MatchString(header.Filename) {
 		logging.L(ctx).Warn("invalid file format in URL", "url", header.Filename, "op", op)
 		return admin.ErrInvalidFileName
 	}
@@ -76,7 +73,7 @@ func (s *ServiceAdmin) ListVideoFiles(ctx context.Context) ([]admin.File, error)
 func (s *ServiceAdmin) UploadImage(ctx context.Context, file multipart.File, header *multipart.FileHeader) error {
 	const op = "service.UploadImage"
 
-	if !validFile.MatchString(header.Filename) {
+	if !validFilePattern.MatchString(header.Filename) {
 		logging.L(ctx).Warn("invalid file format in URL", "url", header.Filename, "op", op)
 		return admin.ErrInvalidFileName
 	}

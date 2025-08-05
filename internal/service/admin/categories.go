@@ -6,15 +6,8 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"regexp"
 	"strings"
 )
-
-// validFilePattern паттерны для проверки правильности названия файлов
-var validFilePattern = regexp.MustCompile(`^[a-zA-Z0-9а-яА-ЯёЁ_\-.]+\.[a-zA-Z0-9]+$`)
-
-// suspiciousPatterns паттерны для проверки нет ли лишних символов и ссылок в данных
-var suspiciousPatterns = []string{"://", "//", "../", "./", "\\", "?", "&", "=", "%"}
 
 func (s *ServiceAdmin) AddCategory(ctx context.Context, req *admin.Category) (*admin.Category, error) {
 	const op = "service.AddCategory"

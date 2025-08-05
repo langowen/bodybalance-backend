@@ -5,74 +5,84 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"time"
 )
 
 // AddVideo добавляет новое видео в БД
-func (s *Storage) AddVideo(ctx context.Context, video *dto.VideoRequest) (int64, error) {
+func (s *Storage) AddVideo(ctx context.Context, video *admin.Video) (int64, error) {
 	const op = "storage.postgres.AddVideo"
 
-	query := `
-		INSERT INTO videos (url, name, description, img_url, deleted)
-		VALUES ($1, $2, $3, $4, FALSE)
-		RETURNING id
-	`
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+	defer tx.Rollback(ctx)
 
-	var id int64
-	err := s.db.QueryRow(ctx, query,
+	// 1. Вставляем видео
+	var videoID int64
+	err = tx.QueryRow(ctx, `
+        INSERT INTO videos (url, name, description, img_url, deleted)
+        VALUES ($1, $2, $3, $4, FALSE)
+        RETURNING id
+    `,
 		video.URL,
 		video.Name,
 		video.Description,
 		video.ImgURL,
-	).Scan(&id)
+	).Scan(&videoID)
 
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return 0, fmt.Errorf("%s: failed to insert video: %w", op, err)
 	}
 
-	return id, nil
-}
+	// 2. Добавляем связи с категориями
+	if len(video.Categories) > 0 {
+		for _, cat := range video.Categories {
+			_, err := tx.Exec(ctx, `
+                INSERT INTO video_categories (video_id, category_id)
+                VALUES ($1, $2)
+                ON CONFLICT (video_id, category_id) DO NOTHING
+            `, videoID, cat.ID)
 
-// AddVideoCategories добавляет связи видео с категориями
-func (s *Storage) AddVideoCategories(ctx context.Context, videoID int64, categoryIDs []int64) error {
-	const op = "storage.postgres.AddVideoCategories"
-
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-	defer tx.Rollback(ctx)
-
-	// В pgx нет PrepareContext, поэтому просто выполняем запросы в цикле
-	for _, catID := range categoryIDs {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO video_categories (video_id, category_id)
-			VALUES ($1, $2)
-			ON CONFLICT (video_id, category_id) DO NOTHING
-		`, videoID, catID)
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			if err != nil {
+				return 0, fmt.Errorf("%s: failed to add category %d: %w", op, cat.ID, err)
+			}
 		}
 	}
 
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("%s: transaction commit failed: %w", op, err)
+	}
+
+	return videoID, nil
 }
 
 // GetVideo возвращает видео по ID (только не удаленные)
-func (s *Storage) GetVideo(ctx context.Context, id int64) (*dto.VideoResponse, error) {
+func (s *Storage) GetVideo(ctx context.Context, id int64) (*admin.Video, error) {
 	const op = "storage.postgres.GetVideo"
 
-	query := `
-		SELECT id, url, name, description, img_url, created_at
-		FROM videos
-		WHERE id = $1 AND deleted IS NOT TRUE
-	`
+	// Начинаем read-only транзакцию для обеспечения консистентности данных
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadOnly,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to begin transaction: %w", op, err)
+	}
+	defer tx.Rollback(ctx)
 
-	var video dto.VideoResponse
+	// Сначала получаем данные видео
+	videoQuery := `
+        SELECT id, url, name, description, img_url, created_at
+        FROM videos
+        WHERE id = $1 AND deleted IS NOT TRUE
+    `
+
+	var video admin.Video
 	var createdAt time.Time
 
-	err := s.db.QueryRow(ctx, query, id).Scan(
+	err = tx.QueryRow(ctx, videoQuery, id).Scan(
 		&video.ID,
 		&video.URL,
 		&video.Name,
@@ -80,152 +90,283 @@ func (s *Storage) GetVideo(ctx context.Context, id int64) (*dto.VideoResponse, e
 		&video.ImgURL,
 		&createdAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, admin.ErrVideoNotFound
 		}
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: failed to get video: %w", op, err)
 	}
 
 	video.DateCreated = createdAt.Format("02.01.2006")
+	video.Categories = make([]admin.Category, 0)
+
+	// Теперь получаем категории для этого видео в той же транзакции
+	categoryQuery := `
+        SELECT c.id, c.name, c.img_url, c.created_at
+        FROM video_categories vc
+        INNER JOIN categories c ON c.id = vc.category_id
+        WHERE vc.video_id = $1 AND c.deleted IS NOT TRUE
+        ORDER BY c.name
+    `
+
+	categoryRows, err := tx.Query(ctx, categoryQuery, id)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to get categories: %w", op, err)
+	}
+	defer categoryRows.Close()
+
+	for categoryRows.Next() {
+		var category admin.Category
+		var catCreatedAt time.Time
+
+		err := categoryRows.Scan(
+			&category.ID,
+			&category.Name,
+			&category.ImgURL,
+			&catCreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to scan category: %w", op, err)
+		}
+
+		category.CreatedAt = catCreatedAt.Format("02.01.2006")
+		video.Categories = append(video.Categories, category)
+	}
+
+	if err := categoryRows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: category rows error: %w", op, err)
+	}
+
+	// Коммитим read-only транзакцию
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("%s: failed to commit transaction: %w", op, err)
+	}
 
 	return &video, nil
 }
 
-// GetVideoCategories возвращает категории видео
-func (s *Storage) GetVideoCategories(ctx context.Context, videoID int64) ([]dto.CategoryResponse, error) {
-	const op = "storage.postgres.GetVideoCategories"
-
-	query := `
-		SELECT c.id, c.name
-		FROM categories c
-		JOIN video_categories vc ON c.id = vc.category_id
-		WHERE vc.video_id = $1
-	`
-
-	rows, err := s.db.Query(ctx, query, videoID)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-	defer rows.Close()
-
-	var categories []dto.CategoryResponse
-	for rows.Next() {
-		var cat dto.CategoryResponse
-		if err := rows.Scan(&cat.ID, &cat.Name); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
-		}
-
-		// Получаем типы контента для данной категории
-		typesQuery := `
-			SELECT ct.id, ct.name
-			FROM content_types ct
-			JOIN category_content_types cct ON ct.id = cct.content_type_id
-			WHERE cct.category_id = $1
-		`
-
-		typesRows, err := s.db.Query(ctx, typesQuery, cat.ID)
-		if err != nil {
-			return nil, fmt.Errorf("%s: failed to get content types for category %d: %w", op, cat.ID, err)
-		}
-
-		var types []dto.TypeResponse
-		for typesRows.Next() {
-			var t dto.TypeResponse
-			if err := typesRows.Scan(&t.ID, &t.Name); err != nil {
-				typesRows.Close()
-				return nil, fmt.Errorf("%s: failed to scan content type: %w", op, err)
-			}
-			types = append(types, t)
-		}
-
-		typesRows.Close()
-
-		if err := typesRows.Err(); err != nil {
-			return nil, fmt.Errorf("%s: error after scanning content types: %w", op, err)
-		}
-
-		// Устанавливаем типы для категории
-		cat.Types = types
-
-		categories = append(categories, cat)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	return categories, nil
-}
-
-// GetVideos возвращает все не удаленные видео
-func (s *Storage) GetVideos(ctx context.Context) ([]dto.VideoResponse, error) {
+// GetVideos возвращает все не удаленные видео с их категориями
+func (s *Storage) GetVideos(ctx context.Context) ([]admin.Video, error) {
 	const op = "storage.postgres.GetVideos"
 
-	query := `
-		SELECT id, url, name, description, img_url, created_at
-		FROM videos
-		WHERE deleted IS NOT TRUE
-		ORDER BY id
-	`
-
-	rows, err := s.db.Query(ctx, query)
+	// Начинаем read-only транзакцию для обеспечения консистентности данных
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadOnly,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: failed to begin transaction: %w", op, err)
 	}
-	defer rows.Close()
+	defer tx.Rollback(ctx)
 
-	var videos []dto.VideoResponse
-	for rows.Next() {
-		var video dto.VideoResponse
+	// Сначала получаем все видео
+	videoQuery := `
+        SELECT id, url, name, description, img_url, created_at
+        FROM videos
+        WHERE deleted IS NOT TRUE
+        ORDER BY created_at DESC, id
+    `
+
+	videoRows, err := tx.Query(ctx, videoQuery)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to query videos: %w", op, err)
+	}
+	defer videoRows.Close()
+
+	var videos []admin.Video
+	var videoIDs []int64
+
+	for videoRows.Next() {
+		var video admin.Video
 		var createdAt time.Time
 
-		if err := rows.Scan(
+		err := videoRows.Scan(
 			&video.ID,
 			&video.URL,
 			&video.Name,
 			&video.Description,
 			&video.ImgURL,
 			&createdAt,
-		); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to scan video: %w", op, err)
 		}
+
 		video.DateCreated = createdAt.Format("02.01.2006")
+		video.Categories = make([]admin.Category, 0)
 		videos = append(videos, video)
+		videoIDs = append(videoIDs, video.ID)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	if err := videoRows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: video rows error: %w", op, err)
+	}
+
+	if len(videos) == 0 {
+		return nil, admin.ErrVideoNotFound
+	}
+
+	// Теперь получаем все категории для этих видео одним запросом в той же транзакции
+	categoryQuery := `
+        SELECT 
+            vc.video_id,
+            c.id, c.name, c.img_url, c.created_at
+        FROM video_categories vc
+        INNER JOIN categories c ON c.id = vc.category_id
+        WHERE vc.video_id = ANY($1) AND c.deleted IS NOT TRUE
+        ORDER BY vc.video_id, c.name
+    `
+
+	categoryRows, err := tx.Query(ctx, categoryQuery, videoIDs)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to query categories: %w", op, err)
+	}
+	defer categoryRows.Close()
+
+	// Создаем map для быстрого поиска видео по ID
+	videoMap := make(map[int64]*admin.Video, len(videos))
+	for i := range videos {
+		videoMap[videos[i].ID] = &videos[i]
+	}
+
+	// Добавляем категории к соответствующим видео
+	for categoryRows.Next() {
+		var videoID int64
+		var category admin.Category
+		var createdAt time.Time
+
+		err := categoryRows.Scan(
+			&videoID,
+			&category.ID,
+			&category.Name,
+			&category.ImgURL,
+			&createdAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to scan category: %w", op, err)
+		}
+
+		category.CreatedAt = createdAt.Format("02.01.2006")
+
+		if video, exists := videoMap[videoID]; exists {
+			video.Categories = append(video.Categories, category)
+		}
+	}
+
+	if err := categoryRows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: category rows error: %w", op, err)
+	}
+
+	// Коммитим read-only транзакцию
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("%s: failed to commit transaction: %w", op, err)
 	}
 
 	return videos, nil
 }
 
-// UpdateVideo обновляет данные видео
-func (s *Storage) UpdateVideo(ctx context.Context, id int64, video *dto.VideoRequest) error {
+// UpdateVideo обновляет данные видео и его связи с категориями
+func (s *Storage) UpdateVideo(ctx context.Context, video *admin.Video) error {
 	const op = "storage.postgres.UpdateVideo"
 
-	query := `
+	// Начинаем транзакцию для атомарного обновления
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("%s: failed to begin transaction: %w", op, err)
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Обновляем основные данные видео
+	updateVideoQuery := `
 		UPDATE videos
 		SET url = $1, name = $2, description = $3, img_url = $4
 		WHERE id = $5 AND deleted IS NOT TRUE
 	`
 
-	commandTag, err := s.db.Exec(ctx, query,
+	commandTag, err := tx.Exec(ctx, updateVideoQuery,
 		video.URL,
 		video.Name,
 		video.Description,
 		video.ImgURL,
-		id,
+		video.ID,
 	)
-
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: failed to update video: %w", op, err)
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrVideoNotFound
+	}
+
+	// 2. Получаем существующие связи с категориями
+	existingCategoriesQuery := `
+		SELECT category_id 
+		FROM video_categories 
+		WHERE video_id = $1
+	`
+
+	rows, err := tx.Query(ctx, existingCategoriesQuery, video.ID)
+	if err != nil {
+		return fmt.Errorf("%s: failed to get existing categories: %w", op, err)
+	}
+	defer rows.Close()
+
+	existingCategories := make(map[int64]bool)
+	for rows.Next() {
+		var categoryID int64
+		if err := rows.Scan(&categoryID); err != nil {
+			return fmt.Errorf("%s: failed to scan category ID: %w", op, err)
+		}
+		existingCategories[categoryID] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	// 3. Создаем мапу новых категорий
+	newCategories := make(map[int64]bool)
+	for _, cat := range video.Categories {
+		newCategories[cat.ID] = true
+	}
+
+	// 4. Удаляем категории, которых нет в новом списке
+	categoriesToRemove := make([]int64, 0)
+	for categoryID := range existingCategories {
+		if !newCategories[categoryID] {
+			categoriesToRemove = append(categoriesToRemove, categoryID)
+		}
+	}
+
+	if len(categoriesToRemove) > 0 {
+		deleteCategoriesQuery := `
+			DELETE FROM video_categories 
+			WHERE video_id = $1 AND category_id = ANY($2)
+		`
+		_, err := tx.Exec(ctx, deleteCategoriesQuery, video.ID, categoriesToRemove)
+		if err != nil {
+			return fmt.Errorf("%s: failed to remove categories: %w", op, err)
+		}
+	}
+
+	// 5. Добавляем новые категории
+	for _, cat := range video.Categories {
+		if !existingCategories[cat.ID] {
+			insertCategoryQuery := `
+				INSERT INTO video_categories (video_id, category_id)
+				VALUES ($1, $2)
+				ON CONFLICT (video_id, category_id) DO NOTHING
+			`
+			_, err := tx.Exec(ctx, insertCategoryQuery, video.ID, cat.ID)
+			if err != nil {
+				return fmt.Errorf("%s: failed to add category %d: %w", op, cat.ID, err)
+			}
+		}
+	}
+
+	// 6. Коммитим транзакцию
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%s: failed to commit transaction: %w", op, err)
 	}
 
 	return nil
@@ -263,28 +404,11 @@ func (s *Storage) DeleteVideo(ctx context.Context, id int64) error {
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrVideoNotFound
 	}
 
 	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s: commit transaction failed: %w", op, err)
-	}
-
-	return nil
-}
-
-// DeleteVideoCategories удаляет все связи видео с категориями
-func (s *Storage) DeleteVideoCategories(ctx context.Context, videoID int64) error {
-	const op = "storage.postgres.DeleteVideoCategories"
-
-	query := `
-		DELETE FROM video_categories
-		WHERE video_id = $1
-	`
-
-	_, err := s.db.Exec(ctx, query, videoID)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
