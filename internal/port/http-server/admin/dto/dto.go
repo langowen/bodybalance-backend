@@ -30,9 +30,9 @@ type VideoRequest struct {
 	CategoryIDs []int64 `json:"category_ids"` // Список ID категорий; example: [1, 2, 3]
 }
 
-// FileInfo представляет информацию о файле
+// FileInfoResponse представляет информацию о файле
 // swagger:model fileInfo
-type FileInfo struct {
+type FileInfoResponse struct {
 	Name    string    `json:"name"`     // Имя файла; example: video.mp4
 	Size    int64     `json:"size"`     // Размер файла в байтах; example: 1024000
 	ModTime time.Time `json:"mod_time"` // Время последнего изменения; example: 2023-01-01T12:00:00Z
