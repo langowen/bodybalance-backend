@@ -25,10 +25,10 @@ type AdmStorage interface {
 	UpdateType(ctx context.Context, req *admin.ContentType) error
 	DeleteType(ctx context.Context, id int64) error
 
-	AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserResponse, error)
-	GetUser(ctx context.Context, id int64) (*dto.UserResponse, error)
-	GetUsers(ctx context.Context) ([]dto.UserResponse, error)
-	UpdateUser(ctx context.Context, id int64, req *dto.UserRequest) error
+	AddUser(ctx context.Context, req *admin.Users) (*admin.Users, error)
+	GetUser(ctx context.Context, id int64) (*admin.Users, error)
+	GetUsers(ctx context.Context) ([]admin.Users, error)
+	UpdateUser(ctx context.Context, req *admin.Users) error
 	DeleteUser(ctx context.Context, id int64) error
 
 	AddCategory(ctx context.Context, req *admin.Category) (*admin.Category, error)

@@ -201,7 +201,7 @@ func (h *Handler) getCategories(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID категории"
 // @Param input body dto.CategoryRequest true "Новые данные категории"
-// @Success 200 {object} object{id=int64,message=string} "Категория успешно обновлена"
+// @Success 200 {object} dto.CategoryResponse "Категория успешно обновлена"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -270,10 +270,12 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Category updated successfully",
-	})
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Category updated successfully",
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Удалить категорию
@@ -281,7 +283,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Categories
 // @Produce json
 // @Param id path int true "ID категории"
-// @Success 200 {object} object{id=int64,message=string} "Категория успешно удалена"
+// @Success 200 {object} dto.SuccessResponse "Категория успешно удалена"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -315,8 +317,10 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Category deleted successfully",
-	})
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Category deleted successfully",
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }

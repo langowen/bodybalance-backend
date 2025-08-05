@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
-	"strings"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"time"
 )
 
 // AddUser добавляет нового пользователя
-func (s *Storage) AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserResponse, error) {
+func (s *Storage) AddUser(ctx context.Context, req *admin.Users) (*admin.Users, error) {
 	const op = "storage.postgres.AddUser"
 
 	query := `
@@ -22,27 +22,27 @@ func (s *Storage) AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserR
                   admin, created_at
     `
 
-	var user dto.UserResponse
+	var user admin.Users
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query,
 		req.Username,
-		req.ContentTypeID,
-		req.Admin,
+		req.ContentType.ID,
+		req.IsAdmin,
 		req.Password,
 	).Scan(
 		&user.ID,
 		&user.Username,
-		&user.ContentTypeID,
-		&user.ContentType,
-		&user.Admin,
+		&user.ContentType.ID,
+		&user.ContentType.Name,
+		&user.IsAdmin,
 		&createdAt,
 	)
 
 	if err != nil {
-		// Проверяем, является ли ошибка ошибкой дубликата
-		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return nil, fmt.Errorf("%s: user already exists", op)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, admin.ErrUserAlreadyExists
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -52,7 +52,7 @@ func (s *Storage) AddUser(ctx context.Context, req *dto.UserRequest) (*dto.UserR
 }
 
 // GetUser возвращает пользователя по ID
-func (s *Storage) GetUser(ctx context.Context, id int64) (*dto.UserResponse, error) {
+func (s *Storage) GetUser(ctx context.Context, id int64) (*admin.Users, error) {
 	const op = "storage.postgres.GetUser"
 
 	query := `
@@ -63,21 +63,21 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (*dto.UserResponse, err
 		WHERE a.id = $1 AND a.deleted IS NOT TRUE
 	`
 
-	var user dto.UserResponse
+	var user admin.Users
 	var createdAt time.Time
 
 	err := s.db.QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.Username,
-		&user.ContentTypeID,
-		&user.ContentType,
-		&user.Admin,
+		&user.ContentType.ID,
+		&user.ContentType.Name,
+		&user.IsAdmin,
 		&createdAt,
 	)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, admin.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -87,7 +87,7 @@ func (s *Storage) GetUser(ctx context.Context, id int64) (*dto.UserResponse, err
 }
 
 // GetUsers возвращает всех пользователей
-func (s *Storage) GetUsers(ctx context.Context) ([]dto.UserResponse, error) {
+func (s *Storage) GetUsers(ctx context.Context) ([]admin.Users, error) {
 	const op = "storage.postgres.GetUsers"
 
 	query := `
@@ -105,19 +105,22 @@ func (s *Storage) GetUsers(ctx context.Context) ([]dto.UserResponse, error) {
 	}
 	defer rows.Close()
 
-	var users []dto.UserResponse
+	var users []admin.Users
 	for rows.Next() {
-		var user dto.UserResponse
+		var user admin.Users
 		var createdAt time.Time
 
 		if err := rows.Scan(
 			&user.ID,
 			&user.Username,
-			&user.ContentTypeID,
-			&user.ContentType,
-			&user.Admin,
+			&user.ContentType.ID,
+			&user.ContentType.Name,
+			&user.IsAdmin,
 			&createdAt,
 		); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, admin.ErrUserNotFound
+			}
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 
@@ -133,7 +136,7 @@ func (s *Storage) GetUsers(ctx context.Context) ([]dto.UserResponse, error) {
 }
 
 // UpdateUser обновляет данные пользователя
-func (s *Storage) UpdateUser(ctx context.Context, id int64, req *dto.UserRequest) error {
+func (s *Storage) UpdateUser(ctx context.Context, req *admin.Users) error {
 	const op = "storage.postgres.UpdateUser"
 
 	query := `
@@ -144,13 +147,17 @@ func (s *Storage) UpdateUser(ctx context.Context, id int64, req *dto.UserRequest
 
 	commandTag, err := s.db.Exec(ctx, query,
 		req.Username,
-		req.ContentTypeID,
-		req.Admin,
+		req.ContentType.ID,
+		req.IsAdmin,
 		req.Password,
-		id,
+		req.ID,
 	)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return admin.ErrUserAlreadyExists
+		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -177,7 +184,7 @@ func (s *Storage) DeleteUser(ctx context.Context, id int64) error {
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return admin.ErrUserNotFound
 	}
 
 	return nil

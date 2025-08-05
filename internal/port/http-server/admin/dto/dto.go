@@ -97,17 +97,16 @@ type SignInRequest struct {
 	Password string `json:"password"` // Пароль администратора; required: true; example: hash(password123)
 }
 
-// SignInResponse представляет ответ на успешную аутентификацию
-// swagger:model signInResponse
-type SignInResponse struct {
-	Message string `json:"message,omitempty"` // Сообщение об успехе; example: Authentication successful
-}
-
 // ErrorResponse представляет стандартный ответ об ошибке
 // swagger:model errorResponse
 type ErrorResponse struct {
 	Error   string `json:"error"`             // Текст ошибки; example: Invalid request
 	Details string `json:"details,omitempty"` // Детали ошибки (опционально); example: Login field is required
+}
+
+type SuccessResponse struct {
+	ID      int64  `json:"id,omitempty"`      // ID ресурса; example: 1
+	Message string `json:"message,omitempty"` // Сообщение об успехе; example: "Resource created successfully"
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string, details ...string) {

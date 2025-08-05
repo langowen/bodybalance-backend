@@ -24,7 +24,7 @@ const (
 // @Accept multipart/form-data
 // @Produce json
 // @Param video formData file true "Видеофайл для загрузки"
-// @Success 200 {object} object{message=string} "Файл успешно загружен"
+// @Success 200 {object} dto.SuccessResponse "Видео успешно загружено"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
@@ -74,9 +74,11 @@ func (h *Handler) uploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]string{
-		"message": fmt.Sprintf("File %s uploaded successfully", header.Filename),
-	})
+	res := dto.SuccessResponse{
+		Message: fmt.Sprintf("Video %s uploaded successfully", header.Filename),
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить список видеофайлов
@@ -126,7 +128,7 @@ func (h *Handler) listVideoFilesHandler(w http.ResponseWriter, r *http.Request) 
 // @Accept multipart/form-data
 // @Produce json
 // @Param image formData file true "Изображение для загрузки"
-// @Success 200 {object} object{message=string} "Изображение успешно загружено"
+// @Success 200 {object} dto.SuccessResponse "Изображение успешно загружено"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Security AdminAuth
@@ -176,9 +178,11 @@ func (h *Handler) uploadImageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]string{
-		"message": fmt.Sprintf("Image %s uploaded successfully", header.Filename),
-	})
+	res := dto.SuccessResponse{
+		Message: fmt.Sprintf("Image %s uploaded successfully", header.Filename),
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить список изображений

@@ -1,17 +1,16 @@
 package admin
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // @Summary Создать нового пользователя
@@ -20,7 +19,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param input body dto.UserRequest true "Данные пользователя"
-// @Success 201 {object} object{id=string,username=string,content_type_id=string,content_type=string,admin=bool,date_created=string,message=string} "Пользователь успешно создан"
+// @Success 201 {object} dto.UserResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse "Пользователь уже существует"
 // @Failure 500 {object} dto.ErrorResponse
@@ -30,7 +29,7 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addUser"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -41,40 +40,48 @@ func (h *Handler) addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validUser(&req, w, logger) {
-		return
+	user := &admin.Users{
+		Username: req.Username,
+		ContentType: admin.ContentType{
+			ID: req.ContentTypeID,
+		},
+		IsAdmin:  req.Admin,
+		Password: req.Password,
 	}
 
-	if req.Password == "" && req.Admin == true {
-		logger.Warn("empty required password")
-		dto.RespondWithError(w, http.StatusBadRequest, "Пароль обязателен для администратора")
-		return
-	}
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	ctx := r.Context()
-	user, err := h.storage.AddUser(ctx, &req)
+	result, err := h.service.AddUser(ctx, user)
 	if err != nil {
-
-		if strings.Contains(err.Error(), "user already exists") {
-			logger.Warn("fuser already exists", sl.Err(err))
-			dto.RespondWithError(w, http.StatusConflict, "duplicate key")
+		switch {
+		case errors.Is(err, admin.ErrEmptyUsername):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите имя пользователя")
+			return
+		case errors.Is(err, admin.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите тип контента")
+			return
+		case errors.Is(err, admin.ErrNotFoundPassword):
+			dto.RespondWithError(w, http.StatusBadRequest, "Пароль обязателен для администратора")
+			return
+		case errors.Is(err, admin.ErrUserAlreadyExists):
+			dto.RespondWithError(w, http.StatusConflict, "Пользователь с таким именем уже существует")
+			return
+		case errors.Is(err, admin.ErrFailedSaveUser):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add user")
 			return
 		}
-		logger.Warn("failed to add user", sl.Err(err))
-
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to add user")
-		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":              user.ID,
-		"username":        user.Username,
-		"content_type_id": user.ContentTypeID,
-		"content_type":    user.ContentType,
-		"admin":           user.Admin,
-		"date_created":    user.DateCreated,
-		"message":         "User added successfully",
-	})
+	response := dto.UserResponse{
+		ID:            result.ID,
+		Username:      result.Username,
+		ContentTypeID: result.ContentType.ID,
+		ContentType:   result.ContentType.Name,
+		Admin:         result.IsAdmin,
+		DateCreated:   result.DateCreated,
+	}
+
+	dto.RespondWithJSON(w, http.StatusCreated, response)
 }
 
 // @Summary Получить пользователя по ID
@@ -92,7 +99,7 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getUser"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -104,20 +111,33 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	user, err := h.storage.GetUser(ctx, id)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	user, err := h.service.GetUser(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("user not found", "user_id", id)
+		switch {
+		case errors.Is(err, admin.ErrUserInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+			return
+		case errors.Is(err, admin.ErrUserNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "User not found")
 			return
+		case errors.Is(err, admin.ErrFailedGetUser):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get user")
+			return
 		}
-		logger.Error("failed to get user", sl.Err(err), "user_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get user")
-		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, user)
+	res := dto.UserResponse{
+		ID:            user.ID,
+		Username:      user.Username,
+		ContentTypeID: user.ContentType.ID,
+		ContentType:   user.ContentType.Name,
+		Admin:         user.IsAdmin,
+		DateCreated:   user.DateCreated,
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Получить всех пользователей
@@ -125,6 +145,7 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Users
 // @Produce json
 // @Success 200 {array} dto.UserResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/users [get]
@@ -132,19 +153,36 @@ func (h *Handler) getUsers(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getUsers"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
-	ctx := r.Context()
-	users, err := h.storage.GetUsers(ctx)
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	users, err := h.service.GetUsers(ctx)
 	if err != nil {
+		if errors.Is(err, admin.ErrUserNotFound) {
+			dto.RespondWithError(w, http.StatusNotFound, "No users found")
+			return
+		}
 		logger.Error("failed to get users", sl.Err(err))
 		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to get users")
 		return
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, users)
+	res := make([]dto.UserResponse, len(users))
+	for i, user := range users {
+		res[i] = dto.UserResponse{
+			ID:            user.ID,
+			Username:      user.Username,
+			ContentTypeID: user.ContentType.ID,
+			ContentType:   user.ContentType.Name,
+			Admin:         user.IsAdmin,
+			DateCreated:   user.DateCreated,
+		}
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Обновить пользователя
@@ -154,9 +192,10 @@ func (h *Handler) getUsers(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID пользователя"
 // @Param input body dto.UserRequest true "Новые данные пользователя"
-// @Success 200 {object} object{id=int64,message=string} "Пользователь успешно обновлен"
+// @Success 200 {object} dto.UserResponse "Пользователь успешно обновлен"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse "Пользователь с таким именем уже существует"
 // @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
 // @Router /admin/users/{id} [put]
@@ -164,7 +203,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateUser"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -183,32 +222,51 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validUser(&req, w, logger) {
-		return
+	user := &admin.Users{
+		ID:       id,
+		Username: req.Username,
+		ContentType: admin.ContentType{
+			ID: req.ContentTypeID,
+		},
+		IsAdmin:  req.Admin,
+		Password: req.Password,
 	}
 
-	ctx := r.Context()
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
-	err = h.storage.UpdateUser(ctx, id, &req)
+	err = h.service.UpdateUser(ctx, user)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("user not found", "user_id", id)
+		switch {
+		case errors.Is(err, admin.ErrUserInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+			return
+		case errors.Is(err, admin.ErrEmptyUsername):
+			dto.RespondWithError(w, http.StatusBadRequest, "Введите имя пользователя")
+			return
+		case errors.Is(err, admin.ErrTypeInvalid):
+			dto.RespondWithError(w, http.StatusBadRequest, "Выберите тип контента")
+			return
+		case errors.Is(err, admin.ErrNotFoundPassword):
+			dto.RespondWithError(w, http.StatusBadRequest, "Пароль обязателен для администратора")
+			return
+		case errors.Is(err, admin.ErrUserNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "User not found")
 			return
+		case errors.Is(err, admin.ErrFailedGetUser):
+			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
+			return
+		case errors.Is(err, admin.ErrUserAlreadyExists):
+			dto.RespondWithError(w, http.StatusConflict, "Пользователь с таким именем уже существует")
+			return
 		}
-		logger.Error("failed to update user", sl.Err(err), "user_id", id)
-		dto.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
-		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "User updated successfully",
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "User updated successfully",
-	})
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Удалить пользователя
@@ -216,7 +274,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Users
 // @Produce json
 // @Param id path int true "ID пользователя"
-// @Success 200 {object} object{id=int64,message=string} "Пользователь успешно удален"
+// @Success 200 {object} dto.SuccessResponse "Пользователь успешно удален"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -226,10 +284,10 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteUser"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 	)
 
-	ctx := r.Context()
+	ctx := logging.ContextWithLogger(r.Context(), logger)
 
 	userIDParam := chi.URLParam(r, "id")
 	if userIDParam == "" {
@@ -245,39 +303,25 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.storage.DeleteUser(ctx, id)
+	err = h.service.DeleteUser(ctx, id)
 	if err != nil {
-		logger.Error("failed to delete user", sl.Err(err), "user_id", id)
-		if errors.Is(err, sql.ErrNoRows) {
+		switch {
+		case errors.Is(err, admin.ErrUserInvalidID):
+			dto.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+			return
+		case errors.Is(err, admin.ErrUserNotFound):
 			dto.RespondWithError(w, http.StatusNotFound, "User not found")
-		} else {
+			return
+		case errors.Is(err, admin.ErrFailedGetUser):
 			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+			return
 		}
-		return
 	}
 
-	if h.cfg.Redis.Enable == true {
-		go h.removeCache(op)
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "User deleted successfully",
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "User deleted successfully",
-	})
-}
-
-// validUser проверят входящие данные на валидность
-func (h *Handler) validUser(req *dto.UserRequest, w http.ResponseWriter, logger *logging.Logger) bool {
-	switch {
-	case req.Username == "":
-		logger.Warn("empty required name")
-		dto.RespondWithError(w, http.StatusBadRequest, "Введите имя пользователя")
-		return false
-	case req.ContentTypeID == 0:
-		logger.Warn("empty required type ID")
-		dto.RespondWithError(w, http.StatusBadRequest, "Выберите тип контента")
-		return false
-	}
-
-	return true
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }

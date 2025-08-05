@@ -19,7 +19,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param input body dto.TypeRequest true "Данные типа"
-// @Success 201 {object} object{id=int64,message=string} "Тип успешно создан"
+// @Success 201 {object} dto.TypeResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @security AdminAuth
@@ -57,10 +57,13 @@ func (h *Handler) addType(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":      result.ID,
-		"message": "Type added successfully",
-	})
+	response := dto.TypeResponse{
+		ID:          result.ID,
+		Name:        result.Name,
+		DateCreated: result.DateCreated,
+	}
+
+	dto.RespondWithJSON(w, http.StatusCreated, response)
 }
 
 // @Summary Получить тип по ID
@@ -166,7 +169,7 @@ func (h *Handler) getTypes(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID типа"
 // @Param input body dto.TypeRequest true "Новые данные типа"
-// @Success 200 {object} object{id=int64,message=string} "Тип успешно обновлен"
+// @Success 200 {object} dto.SuccessResponse "Тип успешно обновлен"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -220,10 +223,12 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Type updated successfully",
-	})
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Type updated successfully",
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Удалить тип
@@ -231,7 +236,7 @@ func (h *Handler) updateType(w http.ResponseWriter, r *http.Request) {
 // @Tags Admin Types
 // @Produce json
 // @Param id path int true "ID типа"
-// @Success 200 {object} object{id=int64,message=string} "Тип успешно удален"
+// @Success 200 {object} dto.SuccessResponse "Тип успешно удален"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -271,8 +276,10 @@ func (h *Handler) deleteType(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      id,
-		"message": "Type deleted successfully",
-	})
+	res := dto.SuccessResponse{
+		ID:      id,
+		Message: "Type deleted successfully",
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }

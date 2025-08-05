@@ -19,7 +19,7 @@ import (
 // @Accept  json
 // @Produce  json
 // @Param input body dto.SignInRequest true "Данные для входа"
-// @Success 200 {object} dto.SignInResponse
+// @Success 200 {object} dto.SignInResponse "Успешная аутентификация"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -82,16 +82,18 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 
 	h.setAuthCookie(w, tokenString)
 
-	dto.RespondWithJSON(w, http.StatusOK, dto.SignInResponse{
+	res := dto.SuccessResponse{
 		Message: "Authentication successful",
-	})
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // @Summary Выход из системы
 // @Description Завершает сеанс администратора, удаляя токен аутентификации
 // @Tags Auth
 // @Produce  json
-// @Success 200 {object} dto.SignInResponse
+// @Success 200 {object} dto.SuccessResponse "Успешный выход"
 // @Router /admin/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	secure := false
@@ -116,9 +118,10 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: sameSite,
 	})
 
-	dto.RespondWithJSON(w, http.StatusOK, dto.SignInResponse{
+	res := dto.SuccessResponse{
 		Message: "Logged out successfully",
-	})
+	}
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }
 
 func (h *Handler) setAuthCookie(w http.ResponseWriter, token string) {
