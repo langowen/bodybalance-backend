@@ -195,7 +195,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 			dto.RespondWithError(w, http.StatusBadRequest, "Bad Request", fmt.Sprintf("Video ID '%s' is not a valid number", videoID))
 			return
 		case errors.Is(err, storage.ErrVideoNotFound):
-			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Video with id %d not found", videoID))
+			dto.RespondWithError(w, http.StatusNotFound, "Not Found", fmt.Sprintf("Video with id %s not found", videoID))
 			return
 		case errors.Is(err, api.ErrStorageServerError):
 			dto.RespondWithError(w, http.StatusInternalServerError, "Server Error", "Failed to get video")
