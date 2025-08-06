@@ -1,6 +1,6 @@
 basePath: /admin
 definitions:
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest:
     properties:
       img_url:
         description: 'URL изображения категории; example: https://example.com/category.jpg'
@@ -14,7 +14,7 @@ definitions:
           type: integer
         type: array
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse:
     properties:
       date_created:
         description: 'Дата создания; example: 02.01.2006'
@@ -31,10 +31,10 @@ definitions:
       types:
         description: Список типов категории
         items:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse'
         type: array
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse:
     properties:
       details:
         description: 'Детали ошибки (опционально); example: Login field is required'
@@ -43,7 +43,7 @@ definitions:
         description: 'Текст ошибки; example: Invalid request'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse:
     properties:
       mod_time:
         description: 'Время последнего изменения; example: 2023-01-01T12:00:00Z'
@@ -55,7 +55,7 @@ definitions:
         description: 'Размер файла в байтах; example: 1024000'
         type: integer
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SignInRequest:
     properties:
       login:
         description: 'Логин администратора; required: true; example: admin'
@@ -64,22 +64,22 @@ definitions:
         description: 'Пароль администратора; required: true; example: hash(password123)'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse:
     properties:
-      error:
-        description: 'Сообщение об ошибке; example: Invalid credentials'
-        type: string
+      id:
+        description: 'ID ресурса; example: 1'
+        type: integer
       message:
-        description: 'Сообщение об успехе; example: Authentication successful'
+        description: 'Сообщение об успехе; example: "Resource created successfully"'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest:
     properties:
       name:
         description: 'Название типа; required: true; example: Йога'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse:
     properties:
       created_at:
         description: 'Дата создания; example: 02.01.2006'
@@ -91,7 +91,7 @@ definitions:
         description: 'Название типа; example: Йога'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest:
     properties:
       admin:
         description: 'Флаг администратора; example: true'
@@ -106,7 +106,7 @@ definitions:
         description: 'Имя пользователя; required: true; example: admin'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse:
     properties:
       admin:
         description: 'Флаг администратора; example: true'
@@ -127,7 +127,7 @@ definitions:
         description: 'Имя пользователя; example: admin'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest:
     properties:
       category_ids:
         description: 'Список ID категорий; example: [1, 2, 3]'
@@ -147,12 +147,12 @@ definitions:
         description: 'URL видеофайла; required: true; example: https://example.com/video.mp4'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse:
     properties:
       categories:
         description: Список категорий видео
         items:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse'
         type: array
       created_at:
         description: 'Дата создания; example: 02.01.2006'
@@ -173,7 +173,7 @@ definitions:
         description: 'URL видеофайла; example: https://example.com/video.mp4'
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.AccountResponse:
     description: Информация о типе аккаунта пользователя
     properties:
       type_id:
@@ -183,7 +183,7 @@ definitions:
         description: Название type
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.CategoryResponse:
     description: Информация о категории контента
     properties:
       id:
@@ -196,18 +196,8 @@ definitions:
         description: Название категории
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse:
-    description: Стандартная структура для возврата ошибок
-    properties:
-      details:
-        description: Дополнительные детали ошибки
-        type: string
-      error:
-        description: Наименование ошибки
-        type: string
-    type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse:
-    description: Информация о фидбэке, отправленном пользователем
+  github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.FeedbackResponse:
+    description: Информация об обратной связи, отправленная пользователем
     properties:
       email:
         description: Email пользователя
@@ -222,7 +212,7 @@ definitions:
         description: Telegram пользователя
         type: string
     type: object
-  github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse:
+  github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse:
     description: Информация о видео, включая URL, описание и категорию
     properties:
       category:
@@ -253,7 +243,7 @@ info:
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  title: BodyBalance Admin API
+  title: BodyBalance IsAdmin API
   version: "1.0"
 paths:
   /admin/category:
@@ -266,12 +256,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить все категории
@@ -287,22 +277,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Категория успешно создана
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Создать новую категорию
@@ -323,24 +313,19 @@ paths:
         "200":
           description: Категория успешно удалена
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Удалить категорию
@@ -360,19 +345,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить категорию по ID
@@ -393,31 +378,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Категория успешно обновлена
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Обновить категорию
@@ -433,12 +413,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse'
             type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить список изображений
@@ -460,18 +444,15 @@ paths:
         "200":
           description: Изображение успешно загружено
           schema:
-            properties:
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Загрузить изображение
@@ -487,12 +468,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse'
             type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить список видеофайлов
@@ -512,20 +497,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Файл успешно загружен
+          description: Видео успешно загружено
           schema:
-            properties:
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Загрузить видеофайл
@@ -538,9 +520,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный выход
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
       summary: Выход из системы
       tags:
       - Auth
@@ -555,30 +537,30 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SignInRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешная аутентификация
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       summary: Аутентификация администратора
       tags:
       - Auth
@@ -592,12 +574,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить все типы
@@ -613,27 +595,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: Тип успешно создан
+          description: Created
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Создать новый тип
@@ -654,24 +631,19 @@ paths:
         "200":
           description: Тип успешно удален
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Удалить тип
@@ -691,19 +663,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить тип по ID
@@ -724,31 +696,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Тип успешно обновлен
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Обновить тип
@@ -764,12 +731,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse'
             type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить всех пользователей
@@ -785,41 +756,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: Пользователь успешно создан
+          description: Created
           schema:
-            properties:
-              admin:
-                type: boolean
-              content_type:
-                type: string
-              content_type_id:
-                type: string
-              date_created:
-                type: string
-              id:
-                type: string
-              message:
-                type: string
-              username:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "409":
           description: Пользователь уже существует
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Создать нового пользователя
@@ -840,24 +796,19 @@ paths:
         "200":
           description: Пользователь успешно удален
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Удалить пользователя
@@ -877,19 +828,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить пользователя по ID
@@ -910,31 +861,30 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Пользователь успешно обновлен
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
+        "409":
+          description: Пользователь с таким именем уже существует
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Обновить пользователя
@@ -950,12 +900,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить список всех видео
@@ -971,27 +921,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: Видео успешно добавлено
+          description: Created
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Добавить новое видео
@@ -1014,6 +959,7 @@ paths:
           schema:
             properties:
               id:
+                format: int64
                 type: integer
               message:
                 type: string
@@ -1021,15 +967,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Удалить видео
@@ -1049,19 +995,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Получить видео по ID
@@ -1082,31 +1028,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Видео успешно обновлено
           schema:
-            properties:
-              id:
-                type: integer
-              message:
-                type: string
-            type: object
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse'
       security:
       - AdminAuth: []
       summary: Обновить данные видео
@@ -1128,20 +1069,20 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.CategoryResponse'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
       summary: Get categories by type
       tags:
       - API v1
@@ -1159,7 +1100,7 @@ paths:
         name: feedback
         required: true
         schema:
-          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse'
+          $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.FeedbackResponse'
       produces:
       - application/json
       responses:
@@ -1171,11 +1112,11 @@ paths:
           description: 'Invalid request: possible reasons - missing required fields,
             invalid email/telegram format, no contact method provided'
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "500":
           description: Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
       summary: Submit feedback
       tags:
       - API v1
@@ -1228,19 +1169,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.AccountResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
       summary: Check account existence
       tags:
       - API v1
@@ -1259,19 +1200,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse'
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
       summary: Get video by ID
       tags:
       - API v1
@@ -1333,20 +1274,20 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse'
+              $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse'
+            type: string
       summary: Get videos by category and type
       tags:
       - API v1

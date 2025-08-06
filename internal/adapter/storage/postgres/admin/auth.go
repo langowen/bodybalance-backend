@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 )
@@ -12,13 +13,14 @@ func (s *Storage) GetAdminUser(ctx context.Context, login, passwordHash string) 
 	const op = "storage.postgres.admin.GetAdminUser"
 
 	query := `
-        SELECT username, password, admin 
+        SELECT id, username, password, admin 
         FROM accounts 
         WHERE username = $1 AND password = $2 AND admin = TRUE AND deleted IS NOT TRUE
     `
 
 	var user admin.Users
 	err := s.db.QueryRow(ctx, query, login, passwordHash).Scan(
+		&user.ID,
 		&user.Username,
 		&user.Password,
 		&user.IsAdmin,

@@ -34,7 +34,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Categories"
+                    "Admin Categories"
                 ],
                 "summary": "Получить все категории",
                 "responses": {
@@ -43,14 +43,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -69,7 +69,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Categories"
+                    "Admin Categories"
                 ],
                 "summary": "Создать новую категорию",
                 "parameters": [
@@ -79,7 +79,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest"
                         }
                     }
                 ],
@@ -87,19 +87,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Категория успешно создана",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -117,7 +117,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Categories"
+                    "Admin Categories"
                 ],
                 "summary": "Получить категорию по ID",
                 "parameters": [
@@ -133,25 +133,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -170,7 +170,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Categories"
+                    "Admin Categories"
                 ],
                 "summary": "Обновить категорию",
                 "parameters": [
@@ -187,7 +187,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest"
                         }
                     }
                 ],
@@ -195,33 +195,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Категория успешно обновлена",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -237,7 +229,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Categories"
+                    "Admin Categories"
                 ],
                 "summary": "Удалить категорию",
                 "parameters": [
@@ -253,33 +245,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Категория успешно удалена",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -297,7 +281,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Files"
+                    "Admin Files"
                 ],
                 "summary": "Получить список изображений",
                 "responses": {
@@ -306,14 +290,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse"
                             }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -332,7 +322,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Files"
+                    "Admin Files"
                 ],
                 "summary": "Загрузить изображение",
                 "parameters": [
@@ -348,24 +338,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Изображение успешно загружено",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -383,7 +368,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Files"
+                    "Admin Files"
                 ],
                 "summary": "Получить список видеофайлов",
                 "responses": {
@@ -392,14 +377,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse"
                             }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -418,7 +409,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Files"
+                    "Admin Files"
                 ],
                 "summary": "Загрузить видеофайл",
                 "parameters": [
@@ -432,26 +423,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Файл успешно загружен",
+                        "description": "Видео успешно загружено",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -469,9 +455,9 @@ const docTemplate = `{
                 "summary": "Выход из системы",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный выход",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     }
                 }
@@ -497,39 +483,39 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SignInRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешная аутентификация",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -547,7 +533,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Types"
+                    "Admin Types"
                 ],
                 "summary": "Получить все типы",
                 "responses": {
@@ -556,14 +542,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -582,7 +568,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Types"
+                    "Admin Types"
                 ],
                 "summary": "Создать новый тип",
                 "parameters": [
@@ -592,35 +578,27 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Тип успешно создан",
+                        "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -638,7 +616,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Types"
+                    "Admin Types"
                 ],
                 "summary": "Получить тип по ID",
                 "parameters": [
@@ -654,25 +632,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -691,7 +669,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Types"
+                    "Admin Types"
                 ],
                 "summary": "Обновить тип",
                 "parameters": [
@@ -708,7 +686,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest"
                         }
                     }
                 ],
@@ -716,33 +694,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Тип успешно обновлен",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -758,7 +728,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Types"
+                    "Admin Types"
                 ],
                 "summary": "Удалить тип",
                 "parameters": [
@@ -774,33 +744,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Тип успешно удален",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -818,7 +780,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Users"
+                    "Admin Users"
                 ],
                 "summary": "Получить всех пользователей",
                 "responses": {
@@ -827,14 +789,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse"
                             }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -853,7 +821,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Users"
+                    "Admin Users"
                 ],
                 "summary": "Создать нового пользователя",
                 "parameters": [
@@ -863,56 +831,33 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Пользователь успешно создан",
+                        "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "admin": {
-                                    "type": "boolean"
-                                },
-                                "content_type": {
-                                    "type": "string"
-                                },
-                                "content_type_id": {
-                                    "type": "string"
-                                },
-                                "date_created": {
-                                    "type": "string"
-                                },
-                                "id": {
-                                    "type": "string"
-                                },
-                                "message": {
-                                    "type": "string"
-                                },
-                                "username": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Пользователь уже существует",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -930,7 +875,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Users"
+                    "Admin Users"
                 ],
                 "summary": "Получить пользователя по ID",
                 "parameters": [
@@ -946,25 +891,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -983,7 +928,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Users"
+                    "Admin Users"
                 ],
                 "summary": "Обновить пользователя",
                 "parameters": [
@@ -1000,7 +945,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest"
                         }
                     }
                 ],
@@ -1008,33 +953,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Пользователь успешно обновлен",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Пользователь с таким именем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1050,7 +993,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Users"
+                    "Admin Users"
                 ],
                 "summary": "Удалить пользователя",
                 "parameters": [
@@ -1066,33 +1009,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Пользователь успешно удален",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1110,7 +1045,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Videos"
+                    "Admin Videos"
                 ],
                 "summary": "Получить список всех видео",
                 "responses": {
@@ -1119,14 +1054,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1145,7 +1080,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Videos"
+                    "Admin Videos"
                 ],
                 "summary": "Добавить новое видео",
                 "parameters": [
@@ -1155,35 +1090,27 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Видео успешно добавлено",
+                        "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1201,7 +1128,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Videos"
+                    "Admin Videos"
                 ],
                 "summary": "Получить видео по ID",
                 "parameters": [
@@ -1217,25 +1144,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1254,7 +1181,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Videos"
+                    "Admin Videos"
                 ],
                 "summary": "Обновить данные видео",
                 "parameters": [
@@ -1271,7 +1198,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest"
                         }
                     }
                 ],
@@ -1279,33 +1206,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Видео успешно обновлено",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {
-                                    "type": "integer"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1321,7 +1240,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IsAdmin Videos"
+                    "Admin Videos"
                 ],
                 "summary": "Удалить видео",
                 "parameters": [
@@ -1340,7 +1259,8 @@ const docTemplate = `{
                             "type": "object",
                             "properties": {
                                 "id": {
-                                    "type": "integer"
+                                    "type": "integer",
+                                    "format": "int64"
                                 },
                                 "message": {
                                     "type": "string"
@@ -1351,19 +1271,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1394,26 +1314,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.CategoryResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     }
                 }
@@ -1439,7 +1359,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.FeedbackResponse"
                         }
                     }
                 ],
@@ -1453,13 +1373,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request: possible reasons - missing required fields, invalid email/telegram format, no contact method provided",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "500": {
                         "description": "Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     }
                 }
@@ -1538,25 +1458,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.AccountResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     }
                 }
@@ -1585,25 +1505,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse"
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     }
                 }
@@ -1697,26 +1617,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse"
+                                "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse"
+                            "type": "string"
                         }
                     }
                 }
@@ -1724,7 +1644,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryRequest": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryRequest": {
             "type": "object",
             "properties": {
                 "img_url": {
@@ -1744,7 +1664,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse": {
             "type": "object",
             "properties": {
                 "date_created": {
@@ -1767,12 +1687,12 @@ const docTemplate = `{
                     "description": "Список типов категории",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse"
+                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse"
                     }
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.ErrorResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "details": {
@@ -1785,7 +1705,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.FileInfo": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.FileInfoResponse": {
             "type": "object",
             "properties": {
                 "mod_time": {
@@ -1802,7 +1722,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInRequest": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SignInRequest": {
             "type": "object",
             "properties": {
                 "login": {
@@ -1815,20 +1735,20 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.SignInResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.SuccessResponse": {
             "type": "object",
             "properties": {
-                "error": {
-                    "description": "Сообщение об ошибке; example: Invalid credentials",
-                    "type": "string"
+                "id": {
+                    "description": "ID ресурса; example: 1",
+                    "type": "integer"
                 },
                 "message": {
-                    "description": "Сообщение об успехе; example: Authentication successful",
+                    "description": "Сообщение об успехе; example: \"Resource created successfully\"",
                     "type": "string"
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeRequest": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -1837,7 +1757,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.TypeResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.TypeResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1854,7 +1774,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserRequest": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserRequest": {
             "type": "object",
             "properties": {
                 "admin": {
@@ -1875,7 +1795,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.UserResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.UserResponse": {
             "type": "object",
             "properties": {
                 "admin": {
@@ -1904,7 +1824,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoRequest": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoRequest": {
             "type": "object",
             "properties": {
                 "category_ids": {
@@ -1932,14 +1852,14 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.VideoResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.VideoResponse": {
             "type": "object",
             "properties": {
                 "categories": {
                     "description": "Список категорий видео",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_http-server_admin_admResponse.CategoryResponse"
+                        "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_admin_dto.CategoryResponse"
                     }
                 },
                 "created_at": {
@@ -1968,7 +1888,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.AccountResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.AccountResponse": {
             "description": "Информация о типе аккаунта пользователя",
             "type": "object",
             "properties": {
@@ -1982,7 +1902,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.CategoryResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.CategoryResponse": {
             "description": "Информация о категории контента",
             "type": "object",
             "properties": {
@@ -2000,22 +1920,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.ErrorResponse": {
-            "description": "Стандартная структура для возврата ошибок",
-            "type": "object",
-            "properties": {
-                "details": {
-                    "description": "Дополнительные детали ошибки",
-                    "type": "string"
-                },
-                "error": {
-                    "description": "Наименование ошибки",
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.FeedbackResponse": {
-            "description": "Информация о фидбэке, отправленном пользователем",
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.FeedbackResponse": {
+            "description": "Информация об обратной связи, отправленная пользователем",
             "type": "object",
             "properties": {
                 "email": {
@@ -2036,7 +1942,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_langowen_bodybalance-backend_internal_http-server_api_v1_response.VideoResponse": {
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse": {
             "description": "Информация о видео, включая URL, описание и категорию",
             "type": "object",
             "properties": {

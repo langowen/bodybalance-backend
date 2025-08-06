@@ -3,14 +3,15 @@ package admin
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"net/http"
-	"time"
 )
 
 // @Summary Аутентификация администратора
@@ -19,7 +20,7 @@ import (
 // @Accept  json
 // @Produce  json
 // @Param input body dto.SignInRequest true "Данные для входа"
-// @Success 200 {object} dto.SignInResponse "Успешная аутентификация"
+// @Success 200 {object} dto.SuccessResponse "Успешная аутентификация"
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -83,6 +84,7 @@ func (h *Handler) signing(w http.ResponseWriter, r *http.Request) {
 	h.setAuthCookie(w, tokenString)
 
 	res := dto.SuccessResponse{
+		ID:      user.ID,
 		Message: "Authentication successful",
 	}
 
