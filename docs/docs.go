@@ -34,7 +34,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Categories"
+                    "IsAdmin Categories"
                 ],
                 "summary": "Получить все категории",
                 "responses": {
@@ -69,7 +69,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Categories"
+                    "IsAdmin Categories"
                 ],
                 "summary": "Создать новую категорию",
                 "parameters": [
@@ -117,7 +117,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Categories"
+                    "IsAdmin Categories"
                 ],
                 "summary": "Получить категорию по ID",
                 "parameters": [
@@ -170,7 +170,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Categories"
+                    "IsAdmin Categories"
                 ],
                 "summary": "Обновить категорию",
                 "parameters": [
@@ -237,7 +237,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Categories"
+                    "IsAdmin Categories"
                 ],
                 "summary": "Удалить категорию",
                 "parameters": [
@@ -297,7 +297,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Files"
+                    "IsAdmin Files"
                 ],
                 "summary": "Получить список изображений",
                 "responses": {
@@ -332,7 +332,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Files"
+                    "IsAdmin Files"
                 ],
                 "summary": "Загрузить изображение",
                 "parameters": [
@@ -383,7 +383,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Files"
+                    "IsAdmin Files"
                 ],
                 "summary": "Получить список видеофайлов",
                 "responses": {
@@ -418,7 +418,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Files"
+                    "IsAdmin Files"
                 ],
                 "summary": "Загрузить видеофайл",
                 "parameters": [
@@ -547,7 +547,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Types"
+                    "IsAdmin Types"
                 ],
                 "summary": "Получить все типы",
                 "responses": {
@@ -582,7 +582,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Types"
+                    "IsAdmin Types"
                 ],
                 "summary": "Создать новый тип",
                 "parameters": [
@@ -638,7 +638,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Types"
+                    "IsAdmin Types"
                 ],
                 "summary": "Получить тип по ID",
                 "parameters": [
@@ -691,7 +691,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Types"
+                    "IsAdmin Types"
                 ],
                 "summary": "Обновить тип",
                 "parameters": [
@@ -758,7 +758,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Types"
+                    "IsAdmin Types"
                 ],
                 "summary": "Удалить тип",
                 "parameters": [
@@ -818,7 +818,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Users"
+                    "IsAdmin Users"
                 ],
                 "summary": "Получить всех пользователей",
                 "responses": {
@@ -853,7 +853,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Users"
+                    "IsAdmin Users"
                 ],
                 "summary": "Создать нового пользователя",
                 "parameters": [
@@ -930,7 +930,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Users"
+                    "IsAdmin Users"
                 ],
                 "summary": "Получить пользователя по ID",
                 "parameters": [
@@ -983,7 +983,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Users"
+                    "IsAdmin Users"
                 ],
                 "summary": "Обновить пользователя",
                 "parameters": [
@@ -1050,7 +1050,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Users"
+                    "IsAdmin Users"
                 ],
                 "summary": "Удалить пользователя",
                 "parameters": [
@@ -1110,7 +1110,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Videos"
+                    "IsAdmin Videos"
                 ],
                 "summary": "Получить список всех видео",
                 "responses": {
@@ -1145,7 +1145,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Videos"
+                    "IsAdmin Videos"
                 ],
                 "summary": "Добавить новое видео",
                 "parameters": [
@@ -1201,7 +1201,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Videos"
+                    "IsAdmin Videos"
                 ],
                 "summary": "Получить видео по ID",
                 "parameters": [
@@ -1254,7 +1254,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Videos"
+                    "IsAdmin Videos"
                 ],
                 "summary": "Обновить данные видео",
                 "parameters": [
@@ -1321,7 +1321,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Videos"
+                    "IsAdmin Videos"
                 ],
                 "summary": "Удалить видео",
                 "parameters": [
@@ -2082,7 +2082,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "body.7375.org",
 	BasePath:         "/admin",
 	Schemes:          []string{"https"},
-	Title:            "BodyBalance Admin API",
+	Title:            "BodyBalance IsAdmin API",
 	Description:      "API для управления административной частью BodyBalance.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
