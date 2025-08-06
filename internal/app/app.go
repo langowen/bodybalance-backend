@@ -2,6 +2,10 @@ package app
 
 import (
 	"context"
+	"log"
+	"log/slog"
+	"os"
+
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/postgres"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage/redis"
@@ -10,8 +14,6 @@ import (
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/logpretty"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"log"
-	"os"
 )
 
 type App struct {
@@ -106,6 +108,8 @@ func newLogger(cfg *config.Config) *logging.Logger {
 		slog.Int("num_goroutines", runtime.NumGoroutine()),
 		slog.Int("pid", os.Getpid()),
 	))*/
+
+	slog.SetDefault(logger)
 
 	return logger
 }

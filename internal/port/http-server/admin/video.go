@@ -3,14 +3,15 @@ package admin
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strconv"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/admin/dto"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"net/http"
-	"strconv"
 )
 
 // @Summary Добавить новое видео
@@ -28,7 +29,7 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.addVideo"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -84,6 +85,9 @@ func (h *Handler) addVideo(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, admin.ErrVideoSaveFailed):
 			dto.RespondWithError(w, http.StatusInternalServerError, "Failed to save video")
 			return
+		case errors.Is(err, admin.ErrCategoryNotFound):
+			dto.RespondWithError(w, http.StatusBadRequest, "One or more categories not found")
+			return
 		}
 	}
 
@@ -110,7 +114,7 @@ func (h *Handler) getVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getVideo"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -171,7 +175,7 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.getVideos"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -196,6 +200,7 @@ func (h *Handler) getVideos(w http.ResponseWriter, r *http.Request) {
 			ImgURL:      video.ImgURL,
 			Description: video.Description,
 			Categories:  make([]dto.CategoryResponse, len(video.Categories)),
+			DateCreated: video.DateCreated,
 		}
 		for j, cat := range video.Categories {
 			res[i].Categories[j] = dto.CategoryResponse{
@@ -227,7 +232,7 @@ func (h *Handler) updateVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.updateVideo"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 
@@ -325,7 +330,7 @@ func (h *Handler) deleteVideo(w http.ResponseWriter, r *http.Request) {
 	const op = "admin.deleteVideo"
 
 	logger := h.logger.With(
-		"op", op,
+		"handler", op,
 		"request_id", middleware.GetReqID(r.Context()),
 	)
 

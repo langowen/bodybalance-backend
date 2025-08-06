@@ -3,6 +3,9 @@ package http_server
 import (
 	"context"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/deploy/config"
@@ -15,8 +18,6 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/theartofdevel/logging"
-	"net/http"
-	"time"
 )
 
 type Server struct {

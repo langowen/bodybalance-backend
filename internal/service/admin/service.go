@@ -2,10 +2,12 @@ package admin
 
 import (
 	"context"
+	"regexp"
+	"time"
+
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"regexp"
 )
 
 // validFilePattern паттерны для проверки правильности названия файлов
@@ -30,20 +32,22 @@ func NewServiceAdmin(cfg *config.Config, storage AdmStorage, redis CashStorage) 
 
 // removeCache удаляет записи из кэша при обновлении или удаления данных
 func (s *ServiceAdmin) removeCache(ctx context.Context, op string) {
+	ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	err := s.redis.InvalidateVideosCache(ctx)
+	err := s.redis.InvalidateVideosCache(ctxRedis)
 	if err != nil {
-		logging.L(ctx).Warn("failed to invalidate videos cache", "op", op, sl.Err(err))
+		logging.L(ctx).Warn("failed to invalidate videos cache", "service", op, sl.Err(err))
 	}
 
-	err = s.redis.InvalidateCategoriesCache(ctx)
+	err = s.redis.InvalidateCategoriesCache(ctxRedis)
 	if err != nil {
-		logging.L(ctx).Warn("failed to invalidate category cache", "op", op, sl.Err(err))
+		logging.L(ctx).Warn("failed to invalidate category cache", "service", op, sl.Err(err))
 	}
 
-	err = s.redis.InvalidateAccountsCache(ctx)
+	err = s.redis.InvalidateAccountsCache(ctxRedis)
 	if err != nil {
-		logging.L(ctx).Warn("failed to invalidate account cache", "op", op, sl.Err(err))
+		logging.L(ctx).Warn("failed to invalidate account cache", "service", op, sl.Err(err))
 	}
 
 }

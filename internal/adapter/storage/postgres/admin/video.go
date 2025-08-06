@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 )
 
 // AddVideo добавляет новое видео в БД
@@ -46,6 +48,10 @@ func (s *Storage) AddVideo(ctx context.Context, video *admin.Video) (int64, erro
             `, videoID, cat.ID)
 
 			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+					return 0, admin.ErrCategoryNotFound
+				}
 				return 0, fmt.Errorf("%s: failed to add category %d: %w", op, cat.ID, err)
 			}
 		}

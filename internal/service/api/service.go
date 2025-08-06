@@ -3,16 +3,17 @@ package api
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/redis/go-redis/v9"
 	"github.com/theartofdevel/logging"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type ServiceApi struct {
@@ -44,14 +45,14 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 	if s.cfg.Redis.Enable == true {
 		res, err := s.rdb.GetAccount(ctx, &account)
 		if err == nil {
-			logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name)
+			logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name, "op", op)
 			return res, nil
 		}
 
 		if errors.Is(err, redis.Nil) {
-			logging.L(ctx).Debug("account not found in redis cache", sl.Err(err))
+			logging.L(ctx).Debug("account not found in redis cache", sl.Err(err), "op", op)
 		} else {
-			logging.L(ctx).Error("failed to get account from redis", sl.Err(err))
+			logging.L(ctx).Error("failed to get account from redis", sl.Err(err), "op", op)
 		}
 	}
 
@@ -67,11 +68,11 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 
 	if s.cfg.Redis.Enable {
 		go func() {
-			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			if err = s.rdb.SetAccount(ctxRedis, res); err != nil {
-				logging.L(ctx).Warn("failed to cache account in redis", sl.Err(err))
+				logging.L(ctx).Warn("failed to cache account in redis", sl.Err(err), "op", op)
 			}
 		}()
 	}
@@ -89,7 +90,7 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 
 	typeID, err := strconv.ParseInt(contentType, 10, 64)
 	if err != nil {
-		logging.L(ctx).Error("invalid type ID", "op", op, sl.Err(err))
+		logging.L(ctx).Error("invalid type ID", "op", op, sl.Err(err), "op", op)
 		return nil, api.ErrTypeInvalid
 	}
 
@@ -102,9 +103,9 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
-				logging.L(ctx).Debug("categories not found in redis cache", sl.Err(err))
+				logging.L(ctx).Debug("categories not found in redis cache", sl.Err(err), "op", op)
 			} else {
-				logging.L(ctx).Error("failed to get categories from redis", sl.Err(err))
+				logging.L(ctx).Error("failed to get categories from redis", sl.Err(err), "op", op)
 			}
 		}
 	}
@@ -112,21 +113,21 @@ func (s *ServiceApi) GetCategoriesByType(ctx context.Context, contentType string
 	categories, err := s.db.GetCategories(ctx, typeID)
 	if err != nil {
 		if errors.Is(err, storage.ErrContentTypeNotFound) {
-			logging.L(ctx).Debug("content type not found", sl.Err(err))
+			logging.L(ctx).Debug("content type not found", sl.Err(err), "op", op)
 			return nil, err
 		}
 
-		logging.L(ctx).Error("failed to get categories from DB", sl.Err(err))
+		logging.L(ctx).Error("failed to get categories from DB", sl.Err(err), "op", op)
 		return nil, api.ErrStorageServerError
 	}
 
 	if s.cfg.Redis.Enable && categories != nil {
 		go func() {
-			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			if err = s.rdb.SetCategories(ctxRedis, typeID, categories); err != nil {
-				logging.L(ctx).Error("failed to cache categories in redis", sl.Err(err))
+				logging.L(ctx).Error("failed to cache categories in redis", sl.Err(err), "op", op)
 			}
 		}()
 	}
@@ -144,22 +145,22 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 
 	videoID, err := strconv.ParseInt(videoStr, 10, 64)
 	if err != nil {
-		logging.L(ctx).Error("Invalid video ID", "op", op, sl.Err(err))
+		logging.L(ctx).Error("Invalid video ID", "op", op, sl.Err(err), "op", op)
 		return nil, api.ErrInvalidVideoID
 	}
 
 	if s.cfg.Redis.Enable {
 		video, err := s.rdb.GetVideo(ctx, videoID)
 		if err == nil && video != nil {
-			logging.L(ctx).Debug("video fetched from redis cache")
+			logging.L(ctx).Debug("video fetched from redis cache", "op", op)
 			return video, nil
 		}
 
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
-				logging.L(ctx).Debug("video not found in redis cache", sl.Err(err))
+				logging.L(ctx).Debug("video not found in redis cache", sl.Err(err), "op", op)
 			} else {
-				logging.L(ctx).Error("failed to get video from redis", sl.Err(err))
+				logging.L(ctx).Error("failed to get video from redis", sl.Err(err), "op", op)
 			}
 		}
 	}
@@ -167,21 +168,21 @@ func (s *ServiceApi) GetVideo(ctx context.Context, videoStr string) (*api.Video,
 	video, err := s.db.GetVideo(ctx, videoID)
 	if err != nil {
 		if errors.Is(err, storage.ErrVideoNotFound) {
-			logging.L(ctx).Debug("video not found in DB", sl.Err(err))
+			logging.L(ctx).Debug("video not found in DB", sl.Err(err), "op", op)
 			return nil, storage.ErrVideoNotFound
 		}
 
-		logging.L(ctx).Error("failed to get video", sl.Err(err))
+		logging.L(ctx).Error("failed to get video", sl.Err(err), "op", op)
 		return nil, api.ErrStorageServerError
 	}
 
 	if s.cfg.Redis.Enable && video != nil {
 		go func() {
-			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			if err = s.rdb.SetVideo(ctxRedis, videoID, video); err != nil {
-				logging.L(ctx).Warn("failed to cache video in redis", sl.Err(err))
+				logging.L(ctx).Warn("failed to cache video in redis", sl.Err(err), "op", op)
 			}
 		}()
 	}
@@ -217,15 +218,15 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 	if s.cfg.Redis.Enable == true {
 		videos, err := s.rdb.GetVideosByCategoryAndType(ctx, typeID, catID)
 		if err == nil && videos != nil {
-			logging.L(ctx).Debug("videos fetched from redis cache")
+			logging.L(ctx).Debug("videos fetched from redis cache", "op", op)
 			return videos, nil
 		}
 
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
-				logging.L(ctx).Debug("videos not found in redis cache", sl.Err(err))
+				logging.L(ctx).Debug("videos not found in redis cache", sl.Err(err), "op", op)
 			} else {
-				logging.L(ctx).Error("failed to get videos from redis", sl.Err(err))
+				logging.L(ctx).Error("failed to get videos from redis", sl.Err(err), "op", op)
 			}
 		}
 	}
@@ -234,27 +235,27 @@ func (s *ServiceApi) GetVideosByCategoryAndType(ctx context.Context, contentType
 	if err != nil {
 		switch {
 		case errors.Is(err, storage.ErrContentTypeNotFound):
-			logging.L(ctx).Warn("content type not found", sl.Err(err))
+			logging.L(ctx).Warn("content type not found", sl.Err(err), "op", op)
 			return nil, err
 		case errors.Is(err, storage.ErrNoCategoriesFound):
-			logging.L(ctx).Warn("no categories found", sl.Err(err))
+			logging.L(ctx).Warn("no categories found", sl.Err(err), "op", op)
 			return nil, err
 		case errors.Is(err, storage.ErrVideoNotFound):
-			logging.L(ctx).Warn("video not found", sl.Err(err))
+			logging.L(ctx).Warn("video not found", sl.Err(err), "op", op)
 			return nil, err
 		default:
-			logging.L(ctx).Error("Failed to get videos", sl.Err(err))
+			logging.L(ctx).Error("Failed to get videos", sl.Err(err), "op", op)
 			return nil, api.ErrStorageServerError
 		}
 	}
 
 	if s.cfg.Redis.Enable == true {
 		go func() {
-			ctxRedis, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctxRedis, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			if err = s.rdb.SetVideosByCategoryAndType(ctxRedis, typeID, catID, videos); err != nil {
-				logging.L(ctx).Warn("failed to set videos cache", sl.Err(err))
+				logging.L(ctx).Warn("failed to set videos cache", sl.Err(err), "op", op)
 			}
 		}()
 	}
@@ -291,7 +292,7 @@ func (s *ServiceApi) Feedback(ctx context.Context, feedback *api.Feedback) error
 
 	err := s.db.Feedback(ctx, feedback)
 	if err != nil {
-		logging.L(ctx).Error("feedback save error", sl.Err(err))
+		logging.L(ctx).Error("feedback save error", sl.Err(err), "op", op)
 		return api.ErrStorageServerError
 	}
 

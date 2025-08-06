@@ -3,10 +3,11 @@ package admin
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"strings"
 )
 
 func (s *ServiceAdmin) AddVideo(ctx context.Context, req *admin.Video) (int64, error) {
@@ -44,6 +45,10 @@ func (s *ServiceAdmin) AddVideo(ctx context.Context, req *admin.Video) (int64, e
 
 	video, err := s.db.AddVideo(ctx, req)
 	if err != nil {
+		if errors.Is(err, admin.ErrCategoryNotFound) {
+			logging.L(ctx).Warn("category not found", "op", op, "categories", req.Categories, sl.Err(err))
+			return 0, admin.ErrCategoryNotFound
+		}
 		logging.L(ctx).Error("failed to add video", "op", op, "video", video, sl.Err(err))
 		return 0, admin.ErrVideoSaveFailed
 	}

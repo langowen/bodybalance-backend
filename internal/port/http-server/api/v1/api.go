@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/deploy/config"
@@ -25,7 +27,6 @@ import (
 	mwMetrics "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"net/http"
 )
 
 type Handler struct {

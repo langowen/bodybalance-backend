@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/langowen/bodybalance-backend/internal/entities/admin"
-	"time"
 )
 
 // AddUser добавляет нового пользователя
