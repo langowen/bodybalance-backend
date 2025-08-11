@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 )
 
@@ -11,4 +12,5 @@ type Service interface {
 	GetVideo(ctx context.Context, videoStr string) (*api.Video, error)
 	GetVideosByCategoryAndType(ctx context.Context, contentType, category string) ([]api.Video, error)
 	Feedback(ctx context.Context, feedback *api.Feedback) error
+	HealthCheck(ctx context.Context) (*api.HealthCheck, error)
 }

@@ -2,9 +2,10 @@ package dto
 
 import (
 	"encoding/json"
-	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"log/slog"
 	"net/http"
+
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 )
 
 // VideoResponse представляет информацию о видео
@@ -40,6 +41,14 @@ type FeedbackResponse struct {
 	Email    string `json:"email,omitempty"`    // Email пользователя
 	Telegram string `json:"telegram,omitempty"` // Telegram пользователя
 	Message  string `json:"message"`            // Сообщение от пользователя
+}
+
+// HealthResponse предоставляет информацию о статусе сервера
+// @description Информация о доступности сервисов
+type HealthResponse struct {
+	Status      string `json:"status"`       // Статус сервиса (ok, error)
+	DbStatus    string `json:"db_status"`    // Статус подключения к БД (ok, error)
+	RedisStatus string `json:"redis_status"` // Статус подключения к Redis (ok, disabled, error)
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string, details ...string) {

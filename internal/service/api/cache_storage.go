@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 )
 
@@ -14,4 +15,5 @@ type CacheStorageApi interface {
 	SetVideo(ctx context.Context, videoID int64, video *api.Video) error
 	GetVideosByCategoryAndType(ctx context.Context, typeID, catID int64) ([]api.Video, error)
 	SetVideosByCategoryAndType(ctx context.Context, typeID, catID int64, videos []api.Video) error
+	HealthCheck(ctx context.Context) error
 }
