@@ -56,6 +56,7 @@ func (h *Handler) Router(r ...chi.Router) chi.Router {
 	router.Get("/category", h.getCategoriesByType)
 	router.Get("/login", h.checkAccount)
 	router.Post("/feedback", h.feedback)
+	router.Get("/health", h.Health)
 
 	return router
 }
@@ -346,4 +347,53 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dto.RespondWithJSON(w, http.StatusOK, "Feedback successfully saved")
+}
+
+// Health godoc
+// @Summary Проверка доступности сервиса (Health Check)
+// @Description Возвращает статус работы API, подключения к БД, Redis и версию сервиса
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.HealthResponse
+// @Failure 503 {object} dto.HealthResponse "Status: error"
+// @Router /health [get]
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.api.feedback"
+
+	logger := h.logger.With(
+		"handler", op,
+		"request_id", middleware.GetReqID(r.Context()),
+	)
+
+	ctx := logging.ContextWithLogger(r.Context(), logger)
+
+	health, err := h.service.HealthCheck(ctx)
+	if err != nil {
+		if errors.Is(err, api.ErrStorageServerError) {
+			res := dto.HealthResponse{
+				Status:   "error",
+				DbStatus: health.DBStatus,
+			}
+			dto.RespondWithJSON(w, http.StatusServiceUnavailable, res)
+			return
+		}
+		if errors.Is(err, api.ErrRedisError) {
+			res := dto.HealthResponse{
+				Status:      "error",
+				DbStatus:    health.DBStatus,
+				RedisStatus: health.RedisStatus,
+			}
+			dto.RespondWithJSON(w, http.StatusServiceUnavailable, res)
+			return
+		}
+	}
+
+	res := dto.HealthResponse{
+		Status:      "ok",
+		DbStatus:    health.DBStatus,
+		RedisStatus: health.RedisStatus,
+	}
+
+	dto.RespondWithJSON(w, http.StatusOK, res)
 }

@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/adapter/storage"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
-	"strings"
+	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
+	"github.com/theartofdevel/logging"
 )
 
 type Storage struct {
@@ -206,6 +209,17 @@ func (s *Storage) Feedback(ctx context.Context, feedback *api.Feedback) error {
 	).Scan(&id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func (s *Storage) HealthCheck(ctx context.Context) error {
+	const op = "storage.postgres.HealthCheck"
+
+	if err := s.db.Ping(ctx); err != nil {
+		logging.L(ctx).Error("postgres ping failed", sl.Err(err))
+		return fmt.Errorf("%s: ping failed: %w", op, err)
 	}
 
 	return nil

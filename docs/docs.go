@@ -1385,6 +1385,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/health": {
+            "get": {
+                "description": "Возвращает статус работы API, подключения к БД, Redis и версию сервиса",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Проверка доступности сервиса (Health Check)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Status: error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/img/{filename}": {
             "get": {
                 "description": "Send img file by filename",
@@ -1938,6 +1967,24 @@ const docTemplate = `{
                 },
                 "telegram": {
                     "description": "Telegram пользователя",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse": {
+            "description": "Информация о доступности сервисов",
+            "type": "object",
+            "properties": {
+                "db_status": {
+                    "description": "Статус подключения к БД (ok, error)",
+                    "type": "string"
+                },
+                "redis_status": {
+                    "description": "Статус подключения к Redis (ok, disabled, error)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Статус сервиса (ok, error)",
                     "type": "string"
                 }
             }

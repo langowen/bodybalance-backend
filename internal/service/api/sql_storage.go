@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 )
 
@@ -12,4 +13,5 @@ type SqlStorageApi interface {
 	CheckAccount(ctx context.Context, account *api.Account) (*api.Account, error)
 	GetVideo(ctx context.Context, videoID int64) (*api.Video, error)
 	Feedback(ctx context.Context, feedback *api.Feedback) error
+	HealthCheck(ctx context.Context) error
 }

@@ -12,9 +12,9 @@ import (
 
 var (
 	numWorkers        = 5                       // Количество параллельных горутин
-	requestsPerWorker = 100                     // Сколько запросов отсылает одна горутина
+	requestsPerWorker = 1000                    // Сколько запросов отсылает одна горутина
 	baseURL           = "https://body.7375.org" // Базовый URL по умолчанию
-	requestSetID      = 3                       // ID набора запросов по умолчанию
+	requestSetID      = 1                       // ID набора запросов по умолчанию
 	durationMinutes   = 0                       // Продолжительность теста в минутах (0 = использовать фиксированное количество запросов)
 	byTime            = false                   // Флаг для выбора режима работы (по времени или по количеству запросов)
 	maxConnsPerHost   = 100                     // Максимальное количество соединений на один хост
@@ -50,9 +50,12 @@ func main() {
 			{"/video/Vstuplenie.mp4"},
 			{"/video/Koleno_baza.mp4"},
 			{"/video/sample-5s.mp4"},
-			{"/v1/video_categories?type=2&category=1"},
-			{"/v1/video_categories?type=3&category=3"},
-			{"/v1/category?type=1"},
+			{"/img/Sheya16072025.svg"},
+			{"/img/placeholder_2.webp"},
+			{"/img/Koleno1972025.webp"},
+			{"/v1/video_categories?type=2&category=14"},
+			{"/v1/video_categories?type=3&category=24"},
+			{"/v1/category?type=2"},
 			{"/v1/category?type=3"},
 			{"/v1/login?username=base"},
 		},

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/entities/api"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
@@ -249,4 +250,14 @@ func (s *Storage) InvalidateCategoriesCache(ctx context.Context) error {
 // InvalidateAccountsCache удаляет весь кэш аккаунтов
 func (s *Storage) InvalidateAccountsCache(ctx context.Context) error {
 	return s.InvalidateCacheByPattern(ctx, "account:*")
+}
+
+func (s *Storage) HealthCheck(ctx context.Context) error {
+	const op = "storage.redis.HealthCheck"
+
+	if err := s.rdb.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("%s: failed to ping redis: %w", op, err)
+	}
+
+	return nil
 }

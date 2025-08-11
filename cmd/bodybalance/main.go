@@ -3,14 +3,15 @@ package main
 
 import (
 	"context"
-	"github.com/langowen/bodybalance-backend/deploy/config"
-	"github.com/langowen/bodybalance-backend/internal/app"
-	"github.com/langowen/bodybalance-backend/internal/port/http-server"
-	"github.com/theartofdevel/logging"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
+
+	"github.com/langowen/bodybalance-backend/deploy/config"
+	"github.com/langowen/bodybalance-backend/internal/app"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server"
+	"github.com/theartofdevel/logging"
 )
 
 var (

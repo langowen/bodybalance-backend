@@ -212,6 +212,19 @@ definitions:
         description: Telegram пользователя
         type: string
     type: object
+  github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse:
+    description: Информация о доступности сервисов
+    properties:
+      db_status:
+        description: Статус подключения к БД (ok, error)
+        type: string
+      redis_status:
+        description: Статус подключения к Redis (ok, disabled, error)
+        type: string
+      status:
+        description: Статус сервиса (ok, error)
+        type: string
+    type: object
   github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.VideoResponse:
     description: Информация о видео, включая URL, описание и категорию
     properties:
@@ -1120,6 +1133,26 @@ paths:
       summary: Submit feedback
       tags:
       - API v1
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает статус работы API, подключения к БД, Redis и версию
+        сервиса
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse'
+        "503":
+          description: 'Status: error'
+          schema:
+            $ref: '#/definitions/github_com_langowen_bodybalance-backend_internal_port_http-server_api_v1_dto.HealthResponse'
+      summary: Проверка доступности сервиса (Health Check)
+      tags:
+      - health
   /img/{filename}:
     get:
       consumes:

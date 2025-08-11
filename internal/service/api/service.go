@@ -299,6 +299,37 @@ func (s *ServiceApi) Feedback(ctx context.Context, feedback *api.Feedback) error
 	return nil
 }
 
+func (s *ServiceApi) HealthCheck(ctx context.Context) (*api.HealthCheck, error) {
+	const op = "service.HealthCheck"
+
+	health := &api.HealthCheck{}
+
+	err := s.db.HealthCheck(ctx)
+	if err != nil {
+		logging.L(ctx).Error("health check save error", sl.Err(err), "op", op)
+		health.DBStatus = err.Error()
+		return health, api.ErrStorageServerError
+	} else {
+		health.DBStatus = "ok"
+	}
+
+	if s.cfg.Redis.Enable == true {
+		err = s.rdb.HealthCheck(ctx)
+		if err != nil {
+			logging.L(ctx).Error("health check save error", sl.Err(err))
+			health.RedisStatus = err.Error()
+			return health, api.ErrRedisError
+		} else {
+			health.RedisStatus = "ok"
+		}
+	} else {
+		health.RedisStatus = "disabled"
+	}
+
+	return health, nil
+
+}
+
 func isValidEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
