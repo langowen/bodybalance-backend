@@ -161,7 +161,7 @@ func (h *Handler) getCategoriesByType(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	dto.RespondWithJSON(w, http.StatusOK, categories)
+	dto.RespondWithJSON(w, http.StatusOK, categoriesResponse)
 }
 
 // @Summary Get video by ID
