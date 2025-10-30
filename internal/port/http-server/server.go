@@ -16,6 +16,7 @@ import (
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/video"
 	mwLogger "github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/logger"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/metrics"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/middleware/ratelimit"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/theartofdevel/logging"
 )
@@ -76,6 +77,11 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(mwLogger.New(s.logger))
+
+	// Включаем ограничение на «плохие» запросы
+	badReqLimiter := ratelimit.NewSimpleLimiter(s.cfg.HTTPServer.MaxErrorDuration, s.cfg.HTTPServer.MaxErrorCount, s.cfg.HTTPServer.BanDuration)
+	r.Use(badReqLimiter.Middleware)
+
 	r.Use(middleware.Recoverer)
 
 	// API v1 с метриками

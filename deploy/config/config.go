@@ -1,13 +1,14 @@
 package config
 
 import (
+	"log"
+	"sync"
+	"time"
+
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 	"github.com/langowen/bodybalance-backend/pkg/lib/logger/sl"
 	"github.com/theartofdevel/logging"
-	"log"
-	"sync"
-	"time"
 )
 
 // Config содержит всю конфигурацию приложения.
@@ -36,11 +37,15 @@ type DatabaseConfig struct {
 }
 
 type HTTPServer struct {
-	Port        string        `yaml:"port" env:"HTTP_PORT" env-default:"8083"`
-	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"10m"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
-	SigningKey  string        `yaml:"signing_key" env:"HTTP_SIGNING_KEY" env-default:"MY_SIGNING_KEY"`
-	TokenTTL    time.Duration `yaml:"token_ttl" env:"HTTP_TOKEN_TTL" env-default:"1440h"`
+	Port             string        `yaml:"port" env:"HTTP_PORT" env-default:"8083"`
+	Timeout          time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"10m"`
+	IdleTimeout      time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
+	SigningKey       string        `yaml:"signing_key" env:"HTTP_SIGNING_KEY" env-default:"MY_SIGNING_KEY"`
+	TokenTTL         time.Duration `yaml:"token_ttl" env:"HTTP_TOKEN_TTL" env-default:"1440h"`
+	TimeLimitError   time.Duration `yaml:"time_limit" env:"HTTP_TIME_LIMIT" env-default:"10m"`
+	MaxErrorCount    int           `yaml:"max_error_count" env:"HTTP_MAX_ERROR_COUNT" env-default:"5"`
+	MaxErrorDuration time.Duration `yaml:"max_error_duration" env:"HTTP_MAX_ERROR_DURATION" env-default:"1m"`
+	BanDuration      time.Duration `yaml:"ban_duration" env:"HTTP_BAN_DURATION" env-default:"5m"`
 }
 
 type Media struct {
