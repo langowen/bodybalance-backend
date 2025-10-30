@@ -45,7 +45,7 @@ func (s *ServiceApi) GetTypeByAccount(ctx context.Context, username string) (*ap
 	if s.cfg.Redis.Enable == true {
 		res, err := s.rdb.GetAccount(ctx, &account)
 		if err == nil {
-			logging.L(ctx).Debug("serving from cache", "account_type", res.ContentType.Name, "op", op)
+			logging.L(ctx).Debug("account type fetched from redis cache", "account_type", res.ContentType.Name, "op", op)
 			return res, nil
 		}
 

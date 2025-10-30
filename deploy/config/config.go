@@ -43,9 +43,9 @@ type HTTPServer struct {
 	SigningKey       string        `yaml:"signing_key" env:"HTTP_SIGNING_KEY" env-default:"MY_SIGNING_KEY"`
 	TokenTTL         time.Duration `yaml:"token_ttl" env:"HTTP_TOKEN_TTL" env-default:"1440h"`
 	TimeLimitError   time.Duration `yaml:"time_limit" env:"HTTP_TIME_LIMIT" env-default:"10m"`
-	MaxErrorCount    int           `yaml:"max_error_count" env:"HTTP_MAX_ERROR_COUNT" env-default:"5"`
+	MaxErrorCount    int           `yaml:"max_error_count" env:"HTTP_MAX_ERROR_COUNT" env-default:"20"`
 	MaxErrorDuration time.Duration `yaml:"max_error_duration" env:"HTTP_MAX_ERROR_DURATION" env-default:"1m"`
-	BanDuration      time.Duration `yaml:"ban_duration" env:"HTTP_BAN_DURATION" env-default:"5m"`
+	BanDuration      time.Duration `yaml:"ban_duration" env:"HTTP_BAN_DURATION" env-default:"1h"`
 }
 
 type Media struct {
