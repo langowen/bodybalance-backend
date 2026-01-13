@@ -20,19 +20,19 @@ func TestDocsEndpointsAccessible(t *testing.T) {
 	}{
 		{
 			name:       "корневой путь документации",
-			path:       "/swagger/",
+			path:       "/",
 			wantStatus: http.StatusOK,
 			checkBody:  true,
 		},
 		{
 			name:       "swagger JSON спецификация",
-			path:       "/swagger/doc.json",
+			path:       "/doc.json",
 			wantStatus: http.StatusOK,
 			checkBody:  true,
 		},
 		{
 			name:       "несуществующий файл",
-			path:       "/swagger/nonexistent",
+			path:       "/nonexistent",
 			wantStatus: http.StatusNotFound,
 			checkBody:  false,
 		},
