@@ -37,7 +37,12 @@ jobs:
       - name: Generate Swagger documentation
         run: |
           echo "Generating Swagger documentation..."
-          go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/bodybalance/main.go --output ./docs --parseDependency --parseInternal
+          go run github.com/swaggo/swag/cmd/swag@latest init \
+            -g cmd/bodybalance/main.go \
+            --output ./internal/port/http-server/handler/docs/swagger \
+            --dir ./ \
+            --parseDependency \
+            --parseInternal
           echo "Swagger documentation generated successfully"
 
       - name: Run Unit Tests

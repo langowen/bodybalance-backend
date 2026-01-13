@@ -16,12 +16,13 @@ type Config struct {
 	Database    DatabaseConfig `yaml:"database"` // Конфигурация базы данных.
 	HTTPServer  HTTPServer     `yaml:"http_server"`
 	Media       Media          `yaml:"media"`
-	Docs        Docs           `yaml:"docs"`
+	Docs        Docs           `yaml:"swagger"`
 	Redis       Redis          `yaml:"redis"`
 	LogLevel    string         `yaml:"log_level" env:"LOG_LEVEL" env-default:"Info"`   // Режим логирования debug, info, warn, error
 	PatchLog    string         `yaml:"patch_log" env:"PATCH_LOG" env-default:""`       // Путь к папке для логов, если не указано, то логи будут в stdout
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
 	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod, local
+	Debug       bool           `env:"DEBUG" env-default:"false"`                       // Режим отладки pprof
 }
 
 // DatabaseConfig содержит конфигурацию для работы с базой данных.

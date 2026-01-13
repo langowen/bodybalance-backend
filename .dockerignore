@@ -17,9 +17,9 @@
 
 !config/*.yaml
 
-!/docs/*
+!/internal/port/http-server/handler/docs/swagger/*
 
-!/web/*
+!/internal/port/http-server/admin/web/*
 
 # !Makefile
 

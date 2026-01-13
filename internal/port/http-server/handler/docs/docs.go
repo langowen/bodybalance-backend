@@ -1,50 +1,49 @@
 package docs
 
 import (
-	"github.com/go-chi/chi/v5"
+	"embed"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
+
+	"github.com/go-chi/chi/v5"
 )
 
-type Config struct {
-	User     string
-	Password string
-}
+//go:embed swagger/swagger.json swagger/swagger.yaml swagger/rapidoc.html
+var swaggerFiles embed.FS
 
-func RegisterRoutes(r chi.Router, cfg Config) {
-	// Настройка Basic Auth
-	//docsAuth := middleware.BasicAuth("Restricted Docs", map[string]string{
-	//	cfg.User: cfg.Password,
-	//})
+func Routes() chi.Router {
+	r := chi.NewRouter()
 
-	projectRoot := getProjectRoot()
+	swaggerFS, err := fs.Sub(swaggerFiles, "swagger")
+	if err != nil {
+		panic(err)
+	}
 
-	r.Route("/swagger", func(r chi.Router) {
-		//r.Use(docsAuth)
+	fileServer := http.FileServer(http.FS(swaggerFS))
 
-		// Swagger JSON
-		r.Get("/doc.json", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			http.ServeFile(w, r, filepath.Join(projectRoot, "docs/swagger.json"))
-		})
-	})
-
-	// Группа защищенных роутов для документации
-	r.Route("/docs", func(r chi.Router) {
-		//r.Use(docsAuth)
-
-		// RapiDoc UI
-		staticPath := filepath.Join(projectRoot, "docs")
+	r.Route("/", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(staticPath, "rapidoc.html"))
+			data, err := fs.ReadFile(swaggerFS, "rapidoc.html")
+			if err != nil {
+				http.Error(w, "RapiDoc UI not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(data)
 		})
-		r.Handle("/*", http.StripPrefix("/docs", http.FileServer(http.Dir(staticPath))))
-	})
-}
 
-// getProjectRoot возвращает корневую директорию проекта
-var getProjectRoot = func() string {
-	dir, _ := os.Getwd()
-	return dir
+		r.Get("/doc.json", func(w http.ResponseWriter, r *http.Request) {
+			data, err := fs.ReadFile(swaggerFS, "swagger.json")
+			if err != nil {
+				http.Error(w, "Swagger spec not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.Write(data)
+		})
+
+		r.Handle("/*", fileServer)
+	})
+
+	return r
 }

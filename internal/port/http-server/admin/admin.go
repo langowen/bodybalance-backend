@@ -15,13 +15,20 @@
 package admin
 
 import (
+	"embed"
+	"fmt"
+	"io/fs"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/langowen/bodybalance-backend/deploy/config"
 	"github.com/langowen/bodybalance-backend/internal/app"
 	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/docs"
 	"github.com/theartofdevel/logging"
-	"net/http"
 )
+
+//go:embed web/*
+var staticFiles embed.FS
 
 type Handler struct {
 	logger  *logging.Logger
@@ -37,28 +44,19 @@ func New(app *app.App) *Handler {
 	}
 }
 
-func (h *Handler) Router(r ...chi.Router) chi.Router {
-	var router chi.Router
-	if len(r) > 0 {
-		router = r[0]
-	} else {
-		router = chi.NewRouter()
-	}
-
+func (h *Handler) Router(r chi.Router) chi.Router {
 	if h.cfg.Env == "prod" {
-		router.Use(h.SecurityHeadersMiddleware)
+		r.Use(h.SecurityHeadersMiddleware)
 	}
 
-	router.Post("/signin", h.signing)
-	router.Post("/logout", h.logout)
+	r.Post("/signin", h.signing)
+	r.Post("/logout", h.logout)
 
 	// Документация
-	docs.RegisterRoutes(router, docs.Config{
-		User:     h.cfg.Docs.User,
-		Password: h.cfg.Docs.Password,
-	})
+	docsRouter := docs.Routes()
+	r.Mount("/swagger", docsRouter)
 
-	router.Group(func(r chi.Router) {
+	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
 
 		// API для работы с файлами
@@ -105,9 +103,28 @@ func (h *Handler) Router(r ...chi.Router) chi.Router {
 		})
 	})
 
-	fs := http.StripPrefix("/admin/web", http.FileServer(http.Dir("./web")))
-	router.Handle("/web/*", fs)
-	router.Handle("/web", fs)
+	webFS, err := fs.Sub(staticFiles, "web")
+	if err != nil {
+		err = fmt.Errorf("admin: failed to initialize embedded filesystem: %w", err)
+		panic(err)
+	}
 
-	return router
+	fileServer := http.FileServer(http.FS(webFS))
+
+	// Группа для статических файлов
+	r.Route("/web", func(r chi.Router) {
+		r.Handle("/*", http.StripPrefix("/admin/web", fileServer))
+
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			data, err := fs.ReadFile(webFS, "index.html")
+			if err != nil {
+				http.Error(w, "Admin UI not found", http.StatusNotFound)
+				return
+			}
+
+			w.Write(data)
+		})
+	})
+
+	return r
 }

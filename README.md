@@ -29,7 +29,7 @@
 
 Для обновления документации после внесения изменений в коде необходимо запустить команду
 ```bash
-go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/bodybalance/main.go --output ./docs --parseDependency --parseInternal
+go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/bodybalance/main.go --output ./swagger --parseDependency --parseInternal
 ```
 
 ## Запуск

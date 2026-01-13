@@ -43,22 +43,15 @@ func New(app *app.App) *Handler {
 	}
 }
 
-func (h *Handler) Router(r ...chi.Router) chi.Router {
-	var router chi.Router
-	if len(r) > 0 {
-		router = r[0]
-	} else {
-		router = chi.NewRouter()
-	}
+func (h *Handler) Router(r chi.Router) chi.Router {
+	r.Get("/video_categories", h.getVideosByCategoryAndType)
+	r.Get("/video", h.getVideo)
+	r.Get("/category", h.getCategoriesByType)
+	r.Get("/login", h.checkAccount)
+	r.Post("/feedback", h.feedback)
+	r.Get("/health", h.Health)
 
-	router.Get("/video_categories", h.getVideosByCategoryAndType)
-	router.Get("/video", h.getVideo)
-	router.Get("/category", h.getCategoriesByType)
-	router.Get("/login", h.checkAccount)
-	router.Post("/feedback", h.feedback)
-	router.Get("/health", h.Health)
-
-	return router
+	return r
 }
 
 // @Summary Check account existence

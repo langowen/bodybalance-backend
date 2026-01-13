@@ -22,8 +22,6 @@ RUN apk add --no-cache tzdata
 
 COPY --from=builder /app/main ./
 COPY --from=builder /app/config/* ./config/
-COPY --from=builder /app/docs/* ./docs/
-COPY --from=builder /app/web/ ./web/
 RUN mkdir -p /app/data/video
 RUN mkdir -p /app/data/img
 

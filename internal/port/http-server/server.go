@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/bodybalance-backend/deploy/config"
@@ -49,7 +51,7 @@ func (s *Server) StartServer(ctx context.Context) <-chan struct{} {
 	doneChan := make(chan struct{})
 
 	go func() {
-		s.logger.Info("starting server", "port", s.cfg.HTTPServer.Port)
+		s.logger.Info("starting server", "port", s.cfg.HTTPServer.Port, "url", s.cfg.Media.BaseURL)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("failed to start server")
 		}
@@ -100,6 +102,16 @@ func (s *Server) setupRouter() *chi.Mux {
 
 	// Prometheus metrics endpoint
 	r.Handle("/metrics", promhttp.Handler())
+
+	if s.cfg.Debug {
+		users := map[string]string{
+			s.cfg.Docs.User: s.cfg.Docs.Password,
+		}
+
+		r.Use(middleware.BasicAuth("admin panel", users))
+		// API для pprof
+		r.Mount("/debug/pprof", http.DefaultServeMux)
+	}
 
 	return r
 }

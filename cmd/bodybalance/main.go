@@ -1,4 +1,4 @@
-//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --output ../../docs --parseDepth 3 --parseDependency --parseInternal
+//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --output ../../internal/port/http-server/handler/docs/swagger --parseDepth 3 --parseDependency --parseInternal
 package main
 
 import (

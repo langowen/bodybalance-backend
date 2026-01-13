@@ -1,135 +1,55 @@
-package docs
+package docs_test
 
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/langowen/bodybalance-backend/internal/port/http-server/handler/docs"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestRegisterRoutes_SwaggerJSON(t *testing.T) {
-	// Настройка тестового окружения
-	r := chi.NewRouter()
-	cfg := Config{User: "test", Password: "test"}
+func TestDocsEndpointsAccessible(t *testing.T) {
+	r := docs.Routes()
 
-	// Создаём временную директорию и файл swagger.json для теста
-	tempDir := t.TempDir()
-	docsDir := filepath.Join(tempDir, "docs")
-	require.NoError(t, os.MkdirAll(docsDir, 0755))
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+		checkBody  bool
+	}{
+		{
+			name:       "корневой путь документации",
+			path:       "/swagger/",
+			wantStatus: http.StatusOK,
+			checkBody:  true,
+		},
+		{
+			name:       "swagger JSON спецификация",
+			path:       "/swagger/doc.json",
+			wantStatus: http.StatusOK,
+			checkBody:  true,
+		},
+		{
+			name:       "несуществующий файл",
+			path:       "/swagger/nonexistent",
+			wantStatus: http.StatusNotFound,
+			checkBody:  false,
+		},
+	}
 
-	swaggerJSON := `{"swagger": "2.0", "info": {"title": "Test API"}}`
-	require.NoError(t, os.WriteFile(filepath.Join(docsDir, "swagger.json"), []byte(swaggerJSON), 0644))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			rec := httptest.NewRecorder()
 
-	// Подменяем функцию getProjectRoot для теста
-	originalGetProjectRoot := getProjectRoot
-	defer func() { getProjectRoot = originalGetProjectRoot }()
-	getProjectRoot = func() string { return tempDir }
+			r.ServeHTTP(rec, req)
 
-	// Регистрируем маршруты и выполняем запрос
-	RegisterRoutes(r, cfg)
+			assert.Equal(t, tt.wantStatus, rec.Code, "status code")
 
-	req := httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-
-	// Проверка результатов
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-	assert.JSONEq(t, swaggerJSON, rec.Body.String())
-}
-
-func TestRegisterRoutes_RapiDocHTML(t *testing.T) {
-	// Настройка тестового окружения
-	r := chi.NewRouter()
-	cfg := Config{User: "test", Password: "test"}
-
-	// Создаём временную директорию и файл rapidoc.html для теста
-	tempDir := t.TempDir()
-	docsDir := filepath.Join(tempDir, "docs")
-	require.NoError(t, os.MkdirAll(docsDir, 0755))
-
-	rapidocHTML := `<!DOCTYPE html><html><body><h1>RapiDoc Test</h1></body></html>`
-	require.NoError(t, os.WriteFile(filepath.Join(docsDir, "rapidoc.html"), []byte(rapidocHTML), 0644))
-
-	// Подменяем функцию getProjectRoot для теста
-	originalGetProjectRoot := getProjectRoot
-	defer func() { getProjectRoot = originalGetProjectRoot }()
-	getProjectRoot = func() string { return tempDir }
-
-	// Регистрируем маршруты и выполняем запрос
-	RegisterRoutes(r, cfg)
-
-	req := httptest.NewRequest(http.MethodGet, "/docs/", nil)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-
-	// Проверка результатов
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "RapiDoc Test")
-}
-
-func TestRegisterRoutes_FileNotFound(t *testing.T) {
-	// Настройка тестового окружения
-	r := chi.NewRouter()
-	cfg := Config{User: "test", Password: "test"}
-
-	// Создаём пустую временную директорию (без нужных файлов)
-	tempDir := t.TempDir()
-	docsDir := filepath.Join(tempDir, "docs")
-	require.NoError(t, os.MkdirAll(docsDir, 0755))
-
-	// Подменяем функцию getProjectRoot для теста
-	originalGetProjectRoot := getProjectRoot
-	defer func() { getProjectRoot = originalGetProjectRoot }()
-	getProjectRoot = func() string { return tempDir }
-
-	// Регистрируем маршруты и выполняем запрос
-	RegisterRoutes(r, cfg)
-
-	// Тест на отсутствие swagger.json
-	swaggerReq := httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil)
-	swaggerRec := httptest.NewRecorder()
-	r.ServeHTTP(swaggerRec, swaggerReq)
-	assert.Equal(t, http.StatusNotFound, swaggerRec.Code)
-
-	// Тест на отсутствие rapidoc.html
-	docsReq := httptest.NewRequest(http.MethodGet, "/docs/", nil)
-	docsRec := httptest.NewRecorder()
-	r.ServeHTTP(docsRec, docsReq)
-	assert.Equal(t, http.StatusNotFound, docsRec.Code)
-}
-
-func TestRegisterRoutes_StaticFiles(t *testing.T) {
-	// Настройка тестового окружения
-	r := chi.NewRouter()
-	cfg := Config{User: "test", Password: "test"}
-
-	// Создаём временную директорию и файл style.css для теста
-	tempDir := t.TempDir()
-	docsDir := filepath.Join(tempDir, "docs")
-	require.NoError(t, os.MkdirAll(docsDir, 0755))
-
-	cssContent := `body { color: red; }`
-	require.NoError(t, os.WriteFile(filepath.Join(docsDir, "style.css"), []byte(cssContent), 0644))
-
-	// Подменяем функцию getProjectRoot для теста
-	originalGetProjectRoot := getProjectRoot
-	defer func() { getProjectRoot = originalGetProjectRoot }()
-	getProjectRoot = func() string { return tempDir }
-
-	// Регистрируем маршруты и выполняем запрос
-	RegisterRoutes(r, cfg)
-
-	req := httptest.NewRequest(http.MethodGet, "/docs/style.css", nil)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-
-	// Проверка результатов
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "body { color: red; }")
+			if tt.checkBody && tt.wantStatus == http.StatusOK {
+				assert.NotEmpty(t, rec.Body.String(), "body should not be empty")
+			}
+		})
+	}
 }
