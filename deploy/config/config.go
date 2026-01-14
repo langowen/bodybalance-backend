@@ -23,6 +23,7 @@ type Config struct {
 	PatchConfig string         `env:"PATCH_CONFIG" env-default:"./config/config.yaml"` // Путь к конфигурационному файлу.
 	Env         string         `env:"ENV" env-default:"dev"`                           //dev, prod, local
 	Debug       bool           `env:"DEBUG" env-default:"false"`                       // Режим отладки pprof
+	DebugPort   string         `env:"DEBUG_PORT" env-default:"8080"`
 }
 
 // DatabaseConfig содержит конфигурацию для работы с базой данных.

@@ -3,6 +3,7 @@ package http_server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,6 +58,17 @@ func (s *Server) StartServer(ctx context.Context) <-chan struct{} {
 		}
 	}()
 
+	if s.cfg.Debug {
+		go func() {
+			s.logger.Info("Profiler server starting on", "port", s.cfg.DebugPort)
+			s.logger.Info(fmt.Sprintf("Access profiler at http://localhost:%s/debug/pprof/", s.cfg.DebugPort))
+
+			if err := http.ListenAndServe(":"+s.cfg.DebugPort, nil); err != nil {
+				s.logger.Error("Profiler server error: %v", err)
+			}
+		}()
+	}
+
 	go func() {
 		<-ctx.Done()
 
@@ -104,11 +116,7 @@ func (s *Server) setupRouter() *chi.Mux {
 	r.Handle("/metrics", promhttp.Handler())
 
 	if s.cfg.Debug {
-		users := map[string]string{
-			s.cfg.Docs.User: s.cfg.Docs.Password,
-		}
 
-		r.Use(middleware.BasicAuth("admin panel", users))
 		// API для pprof
 		r.Mount("/debug/pprof", http.DefaultServeMux)
 	}
