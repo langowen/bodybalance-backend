@@ -64,7 +64,7 @@ func (s *Server) StartServer(ctx context.Context) <-chan struct{} {
 			s.logger.Info(fmt.Sprintf("Access profiler at http://localhost:%s/debug/pprof/", s.cfg.DebugPort))
 
 			if err := http.ListenAndServe(":"+s.cfg.DebugPort, nil); err != nil {
-				s.logger.Error("Profiler server error: %v", err)
+				s.logger.Error("Profiler server error", "err", err)
 			}
 		}()
 	}
